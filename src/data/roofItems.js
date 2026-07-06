@@ -19,6 +19,7 @@ export const ROOF_ITEMS = [
   },
   {
     id: 'ri1', lbl: 'Edge Flashings', flags: ['P'],
+    compactOptionPairRow: true,
     fields: [
       { t: 'radio', l: 'Type', o: ['Drip Edge', 'Critter Guard'] },
       { t: 'radio', l: 'Material', o: ['Galvanized', 'Aluminum'] },

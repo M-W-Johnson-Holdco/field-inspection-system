@@ -1651,6 +1651,25 @@ button:disabled {
   grid-template-columns: minmax(0, 6rem) minmax(0, 1fr);
 }
 
+.field-row--pair-row-compact {
+  grid-template-columns: repeat(2, max-content);
+  justify-content: start;
+  gap: 8px;
+}
+
+.ri-fields-grid .field-row--pair-row-compact .field-group,
+.ri-fields-grid .field-row--pair-row-compact .field-group--option-select {
+  min-width: 0;
+  max-width: max-content;
+}
+
+.ri-fields-grid .field-row--pair-row-compact .field-group--compact .field-select,
+.ri-fields-grid .field-row--pair-row-compact .field-group--compact .compact-select {
+  width: auto;
+  min-width: 6.5rem;
+  max-width: 8.25rem;
+}
+
 .ri-fields-grid .field-row--pair-row-size-type .field-group,
 .ri-fields-grid .field-row--pair-row-size-type .field-group--option-select {
   min-width: 0;
@@ -3133,6 +3152,26 @@ summary.field-select.field-select--placeholder {
       minmax(0, calc(var(--grid-col-min, 8.5rem) + 2rem));
     justify-content: start;
     gap: 8px 12px;
+  }
+
+  .field-row--pair-row-compact {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(2, max-content);
+    justify-content: start;
+    gap: 8px 12px;
+  }
+
+  .ri-fields-grid .field-row--pair-row-compact .field-group--option-select {
+    min-width: 0;
+    max-width: max-content;
+  }
+
+  .ri-fields-grid .field-row--pair-row-compact .field-group--compact .field-select,
+  .ri-fields-grid .field-row--pair-row-compact .field-group--compact .compact-select {
+    width: auto;
+    min-width: 6.5rem;
+    max-width: 8.25rem;
   }
 
   .ri-fields-grid .field-row--pair-row-size-type .field-group,

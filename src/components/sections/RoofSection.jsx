@@ -251,7 +251,7 @@ function CheckItem({ itemDef, trigPhoto }) {
     removeRoofPhoto, data,
   } = useInspection()
 
-  const { id, lbl, flags, fields = [], addMore, addMoreLabel, subFields, addMoreAtTop, subItemPhotos, subItemDamaged, subFieldsUseMaterialColumnWidth, subItemSizeCounters, subItemTotalCounter } = itemDef
+  const { id, lbl, flags, fields = [], addMore, addMoreLabel, subFields, addMoreAtTop, subItemPhotos, subItemDamaged, subFieldsUseMaterialColumnWidth, subItemSizeCounters, subItemTotalCounter, compactOptionPairRow } = itemDef
   const item = data.roofData[id]
   const { excluded, subItems, photos } = item
 
@@ -422,6 +422,7 @@ function CheckItem({ itemDef, trigPhoto }) {
           {fields.length > 0 && (
             <FieldsGrid
               fields={fields}
+              compactOptionPairRow={compactOptionPairRow}
               renderField={f => (
                 <FieldRenderer
                   key={f.l}

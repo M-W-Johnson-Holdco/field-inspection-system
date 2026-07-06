@@ -1,6 +1,6 @@
 import { groupFieldsForGrid, fieldsGridStyle, materialOptionColumnStyle, clusterGroupsForGrid } from '../utils/fieldGrid'
 
-export default function FieldsGrid({ fields, renderField, children, gridStyle: gridStyleOverride }) {
+export default function FieldsGrid({ fields, renderField, children, gridStyle: gridStyleOverride, compactOptionPairRow = false }) {
   const groups = clusterGroupsForGrid(groupFieldsForGrid(fields))
   const gridStyle = gridStyleOverride || fieldsGridStyle(fields)
 
@@ -12,6 +12,7 @@ export default function FieldsGrid({ fields, renderField, children, gridStyle: g
             'field-row',
             group.pairRowSizeType && 'field-row--pair-row-size-type',
             group.pairRow && 'field-row--pair-row',
+            group.pairRow && compactOptionPairRow && 'field-row--pair-row-compact',
             group.ynPairRow && 'field-row--yn-pair',
             group.qtyRow && 'field-row--qty-row',
           ].filter(Boolean).join(' ')
