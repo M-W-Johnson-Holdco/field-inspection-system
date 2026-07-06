@@ -1,85 +1,38 @@
-import { useRef, useState } from 'react'
-import { Camera, ChevronDown, FolderOpen } from 'lucide-react'
+import { useRef } from 'react'
+import { ChevronDown } from 'lucide-react'
 import { useInspection } from '../../context/InspectionContext'
+import PhotoZone from '../PhotoZone'
+import FieldsGrid from '../FieldsGrid'
+import DamageDescriptionInput from '../DamageDescriptionInput'
+import DimensionLwInput from '../DimensionLwInput'
+import MeasurementInput, { isLinearMeasurementField } from '../MeasurementInput'
 import { ROOF_ITEMS, SUBSECTIONS } from '../../data/roofItems'
-import { fieldGroupClass } from '../../utils/fieldLayout'
+import { fieldGroupProps } from '../../utils/fieldLayout'
+import { fieldSelectClass, materialOptionColumnStyle, withSelectPlaceholderClass, visibleFieldsForValues } from '../../utils/fieldGrid'
 import { formatPitch, parsePitchNumerator } from '../../utils/pitch'
+import useExpandedSection from '../../hooks/useExpandedSection'
 
 // ── Field Renderer ─────────────────────────────────────────────────
-function isLinearMeasurementField(field) {
-  return field.t === 'num' && /\bLF\b/i.test(field.l)
-}
-
-function parseMeasurement(value) {
-  const text = String(value || '').trim()
-  if (!text) return { feet: '', inches: '' }
-  const feetMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:'|ft|feet)?/i)
-  const inchesMatch = text.match(/(?:'|ft|feet)\s*(\d+(?:\.\d+)?)\s*(?:"|in|inches)?/i)
-    || text.match(/(\d+(?:\.\d+)?)\s*(?:"|in|inches)/i)
-  return {
-    feet: feetMatch ? feetMatch[1] : '',
-    inches: inchesMatch ? inchesMatch[1] : '',
-  }
-}
-
-function formatMeasurement(feet, inches) {
-  const ft = String(feet || '').trim()
-  const inch = String(inches || '').trim()
-  if (!ft && !inch) return ''
-  if (!inch) return `${ft}'`
-  return `${ft || '0'}' ${inch}"`
-}
-
-function MeasurementInput({ field, value, onChange }) {
-  const { feet, inches } = parseMeasurement(value)
-  const update = (part, nextValue) => {
-    onChange(formatMeasurement(part === 'feet' ? nextValue : feet, part === 'inches' ? nextValue : inches))
-  }
-
-  return (
-    <div className={fieldGroupClass(field)}>
-      <label className="form-label">{field.l}</label>
-      <div className="measurement-input">
-        <label className="measurement-input__part">
-          <input
-            className="field-input measurement-input__field"
-            type="text"
-            inputMode="decimal"
-            pattern="[0-9.]*"
-            value={feet}
-            placeholder="0"
-            onChange={e => update('feet', e.target.value)}
-          />
-          <span className="measurement-input__unit">ft</span>
-        </label>
-        <label className="measurement-input__part">
-          <input
-            className="field-input measurement-input__field"
-            type="text"
-            inputMode="decimal"
-            pattern="[0-9.]*"
-            value={inches}
-            placeholder="0"
-            onChange={e => update('inches', e.target.value)}
-          />
-          <span className="measurement-input__unit">in</span>
-        </label>
-      </div>
-    </div>
-  )
-}
-
 function PitchInput({ field, value, onChange }) {
-  const placeholderNum = parsePitchNumerator(field.p, 4)
-  const numerator = value ? parsePitchNumerator(value, 0) : null
+  const placeholder = field.p || '4/12'
+  const displayValue = value ? formatPitch(parsePitchNumerator(value, 0)) : ''
 
   function adjust(delta) {
     const base = value ? parsePitchNumerator(value, 0) : 0
     onChange(formatPitch(base + delta))
   }
 
+  function handleChange(e) {
+    const raw = e.target.value.trim()
+    if (!raw) {
+      onChange('')
+      return
+    }
+    onChange(formatPitch(parsePitchNumerator(raw, 0)))
+  }
+
   return (
-    <div className={fieldGroupClass(field)}>
+    <div {...fieldGroupProps(field)}>
       <label className="form-label">{field.l}</label>
       <div className="number-stepper number-stepper--pitch">
         <button
@@ -93,23 +46,13 @@ function PitchInput({ field, value, onChange }) {
         <div className="number-stepper__pitch-value">
           <input
             className="field-input number-stepper__input number-stepper__pitch-input"
-            type="number"
+            type="text"
             inputMode="numeric"
-            min="0"
-            step="1"
-            value={numerator == null ? '' : numerator}
-            placeholder={String(placeholderNum)}
-            aria-label={`${field.l} numerator`}
-            onChange={e => {
-              const raw = e.target.value
-              if (raw === '') {
-                onChange('')
-                return
-              }
-              onChange(formatPitch(raw))
-            }}
+            value={displayValue}
+            placeholder={placeholder}
+            aria-label={field.l}
+            onChange={handleChange}
           />
-          <span className="number-stepper__pitch-suffix" aria-hidden="true">/12</span>
         </div>
         <button
           type="button"
@@ -124,21 +67,35 @@ function PitchInput({ field, value, onChange }) {
   )
 }
 
-function FieldRenderer({ field, value, onChange }) {
+function FieldRenderer({ field, value, onChange, subFields, onSubFieldChange }) {
   const { t, l, o, p } = field
   const lbl = <label className="form-label">{l}</label>
+
+  if (t === 'lwxw') {
+    const lengthKey = field.lengthKey || 'Length (in)'
+    const widthKey = field.widthKey || 'Width (in)'
+    return (
+      <DimensionLwInput
+        field={field}
+        lengthValue={subFields?.[lengthKey] ?? ''}
+        widthValue={subFields?.[widthKey] ?? ''}
+        onLengthChange={val => onSubFieldChange(lengthKey, val)}
+        onWidthChange={val => onSubFieldChange(widthKey, val)}
+      />
+    )
+  }
 
   if (t === 'yn' || t === 'radio') {
     const opts = t === 'yn' ? ['Yes', 'No'] : o
     return (
-      <div className={fieldGroupClass(field)}>
+      <div {...fieldGroupProps(field)}>
         {lbl}
         <select
-          className="field-select compact-select"
+          className={fieldSelectClass(field)}
           value={value || ''}
           onChange={e => onChange(e.target.value)}
         >
-          <option value="">Select...</option>
+          <option value="">Select</option>
           {opts.map(opt => (
             <option key={opt} value={opt}>{opt}</option>
           ))}
@@ -150,11 +107,11 @@ function FieldRenderer({ field, value, onChange }) {
   if (t === 'multiRadio' || t === 'multi') {
     const arr = Array.isArray(value) ? value : []
     return (
-      <div className={fieldGroupClass(field)}>
+      <div {...fieldGroupProps(field)}>
         {lbl}
         <details className="multi-select">
-          <summary className="multi-select__summary">
-            <span>{arr.length ? arr.join(', ') : 'Select...'}</span>
+          <summary className={withSelectPlaceholderClass('multi-select__summary', arr.length ? arr.join(', ') : '')}>
+            <span>{arr.length ? arr.join(', ') : 'Select'}</span>
             <ChevronDown className="multi-select__icon" aria-hidden="true" />
           </summary>
           <div className="multi-select__menu">
@@ -188,7 +145,7 @@ function FieldRenderer({ field, value, onChange }) {
 
   if (t === 'select') {
     return (
-      <div className={fieldGroupClass(field)}>
+      <div {...fieldGroupProps(field)}>
         {lbl}
         <select
           className="field-select"
@@ -205,7 +162,7 @@ function FieldRenderer({ field, value, onChange }) {
 
   if (t === 'textarea') {
     return (
-      <div className={fieldGroupClass(field)}>
+      <div {...fieldGroupProps(field)}>
         {lbl}
         <textarea
           className="field-textarea"
@@ -235,7 +192,7 @@ function FieldRenderer({ field, value, onChange }) {
     }
 
     return (
-      <div className={fieldGroupClass(field)}>
+      <div {...fieldGroupProps(field)}>
         {lbl}
         <div className="number-stepper">
           <button
@@ -271,7 +228,7 @@ function FieldRenderer({ field, value, onChange }) {
   }
 
   return (
-    <div className={fieldGroupClass(field)}>
+    <div {...fieldGroupProps(field)}>
       {lbl}
       <input
         className="field-input"
@@ -286,52 +243,6 @@ function FieldRenderer({ field, value, onChange }) {
   )
 }
 
-// ── Photo Zone ────────────────────────────────────────────────────
-function PhotoZone({ itemId, photos, trigPhoto, onRemove }) {
-  return (
-    <div className="ri-photo-zone field-group field-group--compact">
-      <span className="ri-photo-label">Photos</span>
-      {photos.length > 0 && (
-        <div className="ri-photo-row">
-          {photos.map((src, i) => (
-            <div key={i} className="ri-photo-thumb">
-              <img src={src} alt="" />
-              <button
-                type="button"
-                className="ri-photo-del"
-                onClick={() => onRemove(itemId, i)}
-                aria-label="Remove photo"
-              >
-                ×
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-      <div className="ri-photo-btns">
-        <button
-          type="button"
-          className="ri-btn-photo ri-btn-photo--cam"
-          onClick={() => trigPhoto(itemId, 'cam')}
-          aria-label="Add photo from camera"
-          title="Camera"
-        >
-          <Camera size={16} aria-hidden="true" />
-        </button>
-        <button
-          type="button"
-          className="ri-btn-photo ri-btn-photo--gal"
-          onClick={() => trigPhoto(itemId, 'gal')}
-          aria-label="Add photo from gallery"
-          title="Gallery"
-        >
-          <FolderOpen size={16} aria-hidden="true" />
-        </button>
-      </div>
-    </div>
-  )
-}
-
 // ── Check Item ────────────────────────────────────────────────────
 function CheckItem({ itemDef, trigPhoto }) {
   const {
@@ -340,13 +251,141 @@ function CheckItem({ itemDef, trigPhoto }) {
     removeRoofPhoto, data,
   } = useInspection()
 
-  const { id, lbl, flags, fields, addMore, addMoreLabel, subFields } = itemDef
+  const { id, lbl, flags, fields = [], addMore, addMoreLabel, subFields, addMoreAtTop, subItemPhotos, subItemDamaged, subFieldsUseMaterialColumnWidth, subItemSizeCounters, subItemTotalCounter } = itemDef
   const item = data.roofData[id]
   const { excluded, subItems, photos } = item
 
   const hasP = flags.includes('P')
-  const hasM = flags.includes('M')
   const hasD = flags.includes('D')
+  const subItemLabel = (addMoreLabel || 'Item').replace('Add ', '')
+  const showItemPhotos = hasP && !subItemPhotos
+
+  const sizeCounts = subItemSizeCounters
+    ? Object.fromEntries(
+        subItemSizeCounters.sizes.map(size => [size, 0]),
+      )
+    : null
+
+  if (sizeCounts) {
+    for (const sub of subItems || []) {
+      let size = sub.fields?.[subItemSizeCounters.field]
+      if (size == null || size === '' || size === 'Select') continue
+      if (subItemSizeCounters.matchPrefix) {
+        const raw = String(size)
+        const key = subItemSizeCounters.sizes.find(s => raw.startsWith(s))
+        if (key && key in sizeCounts) sizeCounts[key] += 1
+        continue
+      }
+      size = String(size).replace(/"/g, '')
+      if (size in sizeCounts) sizeCounts[size] += 1
+    }
+  }
+
+  function renderSizeCounters() {
+    if (!subItemSizeCounters || !sizeCounts) return null
+
+    const counterClass = [
+      'ri-size-counters',
+      subItemSizeCounters.compact && 'ri-size-counters--compact',
+    ].filter(Boolean).join(' ')
+
+    return (
+      <div className={counterClass} aria-label={`${lbl} counts by ${subItemSizeCounters.counterLabel || 'size'}`}>
+        {subItemSizeCounters.sizes.map(size => {
+          const suffix = subItemSizeCounters.labelSuffix ?? '"'
+          return (
+          <div key={size} className="ri-size-counter" aria-label={`${size}${suffix}: ${sizeCounts[size]}`}>
+            <span className="ri-size-counter__label">{size}{suffix}</span>
+            <span className="ri-size-counter__value">{sizeCounts[size]}</span>
+          </div>
+          )
+        })}
+      </div>
+    )
+  }
+
+  function renderTotalCounter() {
+    if (!subItemTotalCounter) return null
+    const count = (subItems || []).length
+    const label = subItemTotalCounter.label || 'Count'
+
+    return (
+      <div className="ri-size-counters ri-size-counters--compact" aria-label={`${lbl} ${label}`}>
+        <div className="ri-size-counter" aria-label={`${label}: ${count}`}>
+          <span className="ri-size-counter__label">{label}</span>
+          <span className="ri-size-counter__value">{count}</span>
+        </div>
+      </div>
+    )
+  }
+
+  function renderSubItems() {
+    if (!addMore) return null
+
+    return (
+      <div className="ri-sub-items">
+        {subItems.map((sub, idx) => (
+          <div key={idx} className="ri-sub-card">
+            <div className="ri-sub-card__top">
+              <span className="ri-sub-card__title">
+                {subItemLabel} #{idx + 1}
+              </span>
+              <button
+                type="button"
+                className="ri-btn-remove"
+                onClick={() => removeRoofSubItem(id, idx)}
+              >
+                Remove
+              </button>
+            </div>
+            {subFields && subFields.length > 0 && (
+              <FieldsGrid
+                fields={visibleFieldsForValues(subFields, sub.fields || {})}
+                gridStyle={subFieldsUseMaterialColumnWidth ? materialOptionColumnStyle() : undefined}
+                renderField={f => (
+                  <FieldRenderer
+                    key={f.l}
+                    field={f}
+                    value={sub.fields[f.l]}
+                    subFields={sub.fields}
+                    onChange={val => updateRoofSubField(id, idx, f.l, val)}
+                    onSubFieldChange={(label, val) => updateRoofSubField(id, idx, label, val)}
+                  />
+                )}
+              />
+            )}
+            {subItemDamaged && sub.fields['Damaged'] === 'Yes' && (
+              <div className="ri-damage-row">
+                <label className="form-label">Damage Description</label>
+                <DamageDescriptionInput
+                  placeholder="Describe damage..."
+                  value={sub.fields['_damage'] || ''}
+                  onChange={val => updateRoofSubField(id, idx, '_damage', val)}
+                />
+              </div>
+            )}
+            {hasP && subItemPhotos && (
+              <PhotoZone
+                entityId={`${id}__sub_${idx}`}
+                photos={sub.photos || []}
+                trigPhoto={trigPhoto}
+                onRemove={removeRoofPhoto}
+              />
+            )}
+          </div>
+        ))}
+        {!addMoreAtTop && (
+          <button
+            type="button"
+            className="ri-btn-add-sub"
+            onClick={() => addRoofSubItem(id)}
+          >
+            + {addMoreLabel}
+          </button>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className={`ri-item${excluded ? ' ri-item--excluded' : ''}`}>
@@ -367,30 +406,41 @@ function CheckItem({ itemDef, trigPhoto }) {
       {!excluded && (
         <div className="ri-item__body">
 
-          <div className="ri-flag-row">
-            {hasP && <span className="ri-flag ri-flag--photo">PHOTO</span>}
-            {hasM && <span className="ri-flag ri-flag--measure">MEASURE</span>}
-            {hasD && item.fields['Damaged'] === 'Yes' && <span className="ri-flag ri-flag--damage">DAMAGE</span>}
-          </div>
+          {renderSizeCounters()}
+          {renderTotalCounter()}
 
-          <div className="ri-fields-grid">
-            {fields.map(f => (
-              <FieldRenderer
-                key={f.l}
-                field={f}
-                value={item.fields[f.l]}
-                onChange={val => updateRoofField(id, f.l, val)}
-              />
-            ))}
-            {hasP && (
-              <PhotoZone
-                itemId={id}
-                photos={photos}
-                trigPhoto={trigPhoto}
-                onRemove={removeRoofPhoto}
-              />
-            )}
-          </div>
+          {addMore && addMoreAtTop && (
+            <button
+              type="button"
+              className="ri-btn-add-sub ri-btn-add-sub--top"
+              onClick={() => addRoofSubItem(id)}
+            >
+              + {addMoreLabel}
+            </button>
+          )}
+
+          {fields.length > 0 && (
+            <FieldsGrid
+              fields={fields}
+              renderField={f => (
+                <FieldRenderer
+                  key={f.l}
+                  field={f}
+                  value={item.fields[f.l]}
+                  onChange={val => updateRoofField(id, f.l, val)}
+                />
+              )}
+            >
+              {showItemPhotos && (
+                <PhotoZone
+                  entityId={id}
+                  photos={photos}
+                  trigPhoto={trigPhoto}
+                  onRemove={removeRoofPhoto}
+                />
+              )}
+            </FieldsGrid>
+          )}
 
           {hasD && (
             <FieldRenderer
@@ -403,54 +453,15 @@ function CheckItem({ itemDef, trigPhoto }) {
           {hasD && item.fields['Damaged'] === 'Yes' && (
             <div className="ri-damage-row">
               <label className="form-label">Damage Description</label>
-              <textarea
-                className="ri-damage-input"
+              <DamageDescriptionInput
                 placeholder="Describe damage..."
                 value={item.fields['_damage'] || ''}
-                onChange={e => updateRoofField(id, '_damage', e.target.value)}
+                onChange={val => updateRoofField(id, '_damage', val)}
               />
             </div>
           )}
 
-          {addMore && (
-            <div className="ri-sub-items">
-              {subItems.map((sub, idx) => (
-                <div key={idx} className="ri-sub-card">
-                  <div className="ri-sub-card__top">
-                    <span className="ri-sub-card__title">
-                      {(addMoreLabel || 'Item').replace('Add ', '')} #{idx + 1}
-                    </span>
-                    <button
-                      type="button"
-                      className="ri-btn-remove"
-                      onClick={() => removeRoofSubItem(id, idx)}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                  {subFields && subFields.length > 0 && (
-                    <div className="ri-fields-grid">
-                      {subFields.map(f => (
-                        <FieldRenderer
-                          key={f.l}
-                          field={f}
-                          value={sub.fields[f.l]}
-                          onChange={val => updateRoofSubField(id, idx, f.l, val)}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-              <button
-                type="button"
-                className="ri-btn-add-sub"
-                onClick={() => addRoofSubItem(id)}
-              >
-                + {addMoreLabel}
-              </button>
-            </div>
-          )}
+          {renderSubItems()}
 
         </div>
       )}
@@ -459,8 +470,8 @@ function CheckItem({ itemDef, trigPhoto }) {
 }
 
 // ── Sub-section Card ──────────────────────────────────────────────
-function SubSectionCard({ title, items, trigPhoto }) {
-  const [isOpen, setIsOpen] = useState(false)
+function SubSectionCard({ sectionKey, title, items, trigPhoto }) {
+  const [isOpen, setIsOpen] = useExpandedSection(sectionKey, false)
 
   return (
     <section className={`app-card ri-card${isOpen ? ' ri-card--open' : ''}`}>
@@ -541,6 +552,7 @@ export default function RoofSection() {
       {subsections.map(({ title, items }) => (
         <SubSectionCard
           key={title}
+          sectionKey={`roof:${title}`}
           title={title}
           items={items}
           trigPhoto={trigPhoto}

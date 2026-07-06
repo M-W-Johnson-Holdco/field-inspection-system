@@ -133,6 +133,12 @@ export async function saveInspectionToDrive(token, inspectionData, inspectorName
   for (const [itemId, item] of Object.entries(clean.roofData || {})) {
     ;(item.photos || []).forEach((url, i) => photos.push({ name: `roof_${itemId}_${i + 1}.jpg`, url }))
     item.photos = []
+    ;(item.subItems || []).forEach((sub, subIndex) => {
+      ;(sub.photos || []).forEach((url, i) => {
+        photos.push({ name: `roof_${itemId}_sub${subIndex + 1}_${i + 1}.jpg`, url })
+      })
+      sub.photos = []
+    })
   }
   for (const [cellKey, cell] of Object.entries(clean.elevData || {})) {
     ;(cell.photos || []).forEach((url, i) => photos.push({ name: `elev_${cellKey}_${i + 1}.jpg`, url }))

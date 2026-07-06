@@ -1,73 +1,16 @@
-import { useRef, useState } from 'react'
-import { Camera, ChevronDown, FolderOpen } from 'lucide-react'
+import { useRef } from 'react'
+import { ChevronDown } from 'lucide-react'
 import { useInspection } from '../../context/InspectionContext'
+import PhotoZone from '../PhotoZone'
+import FieldsGrid from '../FieldsGrid'
+import DamageDescriptionInput from '../DamageDescriptionInput'
+import MeasurementInput, { isLinearMeasurementField } from '../MeasurementInput'
 import { EXTERIOR_ITEMS, EXTERIOR_SUBSECTIONS } from '../../data/exteriorItems'
-import { fieldGroupClass } from '../../utils/fieldLayout'
+import { fieldGroupProps } from '../../utils/fieldLayout'
+import { fieldSelectClass, withSelectPlaceholderClass } from '../../utils/fieldGrid'
+import useExpandedSection from '../../hooks/useExpandedSection'
 
 // ── Field Renderer ─────────────────────────────────────────────────
-function isLinearMeasurementField(field) {
-  return field.t === 'num' && /\bLF\b/i.test(field.l)
-}
-
-function parseMeasurement(value) {
-  const text = String(value || '').trim()
-  if (!text) return { feet: '', inches: '' }
-  const feetMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:'|ft|feet)?/i)
-  const inchesMatch = text.match(/(?:'|ft|feet)\s*(\d+(?:\.\d+)?)\s*(?:"|in|inches)?/i)
-    || text.match(/(\d+(?:\.\d+)?)\s*(?:"|in|inches)/i)
-  return {
-    feet: feetMatch ? feetMatch[1] : '',
-    inches: inchesMatch ? inchesMatch[1] : '',
-  }
-}
-
-function formatMeasurement(feet, inches) {
-  const ft = String(feet || '').trim()
-  const inch = String(inches || '').trim()
-  if (!ft && !inch) return ''
-  if (!inch) return `${ft}'`
-  return `${ft || '0'}' ${inch}"`
-}
-
-function MeasurementInput({ field, value, onChange }) {
-  const { feet, inches } = parseMeasurement(value)
-  const update = (part, nextValue) => {
-    onChange(formatMeasurement(part === 'feet' ? nextValue : feet, part === 'inches' ? nextValue : inches))
-  }
-
-  return (
-    <div className={fieldGroupClass(field)}>
-      <label className="form-label">{field.l}</label>
-      <div className="measurement-input">
-        <label className="measurement-input__part">
-          <input
-            className="field-input measurement-input__field"
-            type="text"
-            inputMode="decimal"
-            pattern="[0-9.]*"
-            value={feet}
-            placeholder="0"
-            onChange={e => update('feet', e.target.value)}
-          />
-          <span className="measurement-input__unit">ft</span>
-        </label>
-        <label className="measurement-input__part">
-          <input
-            className="field-input measurement-input__field"
-            type="text"
-            inputMode="decimal"
-            pattern="[0-9.]*"
-            value={inches}
-            placeholder="0"
-            onChange={e => update('inches', e.target.value)}
-          />
-          <span className="measurement-input__unit">in</span>
-        </label>
-      </div>
-    </div>
-  )
-}
-
 function FieldRenderer({ field, value, onChange }) {
   const { t, l, o, p } = field
   const lbl = <label className="form-label">{l}</label>
@@ -75,14 +18,14 @@ function FieldRenderer({ field, value, onChange }) {
   if (t === 'yn' || t === 'radio') {
     const opts = t === 'yn' ? ['Yes', 'No'] : o
     return (
-      <div className={fieldGroupClass(field)}>
+      <div {...fieldGroupProps(field)}>
         {lbl}
         <select
-          className="field-select compact-select"
+          className={fieldSelectClass(field)}
           value={value || ''}
           onChange={e => onChange(e.target.value)}
         >
-          <option value="">Select...</option>
+          <option value="">Select</option>
           {opts.map(opt => <option key={opt} value={opt}>{opt}</option>)}
         </select>
       </div>
@@ -92,11 +35,11 @@ function FieldRenderer({ field, value, onChange }) {
   if (t === 'multiRadio' || t === 'multi' || t === 'toggleMulti') {
     const arr = Array.isArray(value) ? value : []
     return (
-      <div className={fieldGroupClass(field)}>
+      <div {...fieldGroupProps(field)}>
         {lbl}
         <details className="multi-select">
-          <summary className="multi-select__summary">
-            <span>{arr.length ? arr.join(', ') : 'Select...'}</span>
+          <summary className={withSelectPlaceholderClass('multi-select__summary', arr.length ? arr.join(', ') : '')}>
+            <span>{arr.length ? arr.join(', ') : 'Select'}</span>
             <ChevronDown className="multi-select__icon" aria-hidden="true" />
           </summary>
           <div className="multi-select__menu">
@@ -123,7 +66,7 @@ function FieldRenderer({ field, value, onChange }) {
 
   if (t === 'textarea') {
     return (
-      <div className={fieldGroupClass(field)}>
+      <div {...fieldGroupProps(field)}>
         {lbl}
         <textarea
           className="field-textarea"
@@ -147,7 +90,7 @@ function FieldRenderer({ field, value, onChange }) {
     }
     const inputCh = Math.max(String(value || p || '').length, 3)
     return (
-      <div className={fieldGroupClass(field)}>
+      <div {...fieldGroupProps(field)}>
         {lbl}
         <div className="number-stepper">
           <button type="button" className="number-stepper__btn" onClick={() => adjustValue(-1)} aria-label={`Decrease ${l}`}>−</button>
@@ -169,7 +112,7 @@ function FieldRenderer({ field, value, onChange }) {
 
   const inputCh = Math.max(String(value || p || '').length, 3)
   return (
-    <div className={fieldGroupClass(field)}>
+    <div {...fieldGroupProps(field)}>
       {lbl}
       <input
         className="field-input"
@@ -183,33 +126,6 @@ function FieldRenderer({ field, value, onChange }) {
   )
 }
 
-// ── Photo Zone ────────────────────────────────────────────────────
-function PhotoZone({ itemId, photos, trigPhoto, onRemove }) {
-  return (
-    <div className="ri-photo-zone field-group field-group--compact">
-      <span className="ri-photo-label">Photos</span>
-      {photos.length > 0 && (
-        <div className="ri-photo-row">
-          {photos.map((src, i) => (
-            <div key={i} className="ri-photo-thumb">
-              <img src={src} alt="" />
-              <button type="button" className="ri-photo-del" onClick={() => onRemove(itemId, i)} aria-label="Remove photo">×</button>
-            </div>
-          ))}
-        </div>
-      )}
-      <div className="ri-photo-btns">
-        <button type="button" className="ri-btn-photo ri-btn-photo--cam" onClick={() => trigPhoto(itemId, 'cam')} aria-label="Camera" title="Camera">
-          <Camera size={16} aria-hidden="true" />
-        </button>
-        <button type="button" className="ri-btn-photo ri-btn-photo--gal" onClick={() => trigPhoto(itemId, 'gal')} aria-label="Gallery" title="Gallery">
-          <FolderOpen size={16} aria-hidden="true" />
-        </button>
-      </div>
-    </div>
-  )
-}
-
 // ── Exterior Item Card ────────────────────────────────────────────
 function ExteriorItem({ itemDef, trigPhoto }) {
   const { toggleExteriorExclude, updateExteriorField, removeExteriorPhoto, data } = useInspection()
@@ -218,7 +134,6 @@ function ExteriorItem({ itemDef, trigPhoto }) {
   const { excluded, photos } = item
 
   const hasP = flags.includes('P')
-  const hasM = flags.includes('M')
   const hasD = flags.includes('D')
   const damageStatus = item.fields._damagePresent || (item.fields._damage ? 'Yes' : '')
 
@@ -243,43 +158,37 @@ function ExteriorItem({ itemDef, trigPhoto }) {
 
       {!excluded && (
         <div className="ri-item__body">
-          {flags.length > 0 && (
-            <div className="ri-flag-row">
-              {hasP && <span className="ri-flag ri-flag--photo">PHOTO</span>}
-              {hasM && <span className="ri-flag ri-flag--measure">MEASURE</span>}
-              {hasD && <span className="ri-flag ri-flag--damage">DAMAGE</span>}
-            </div>
-          )}
-
-          <div className="ri-fields-grid">
-            {fields.map(f => (
+          <FieldsGrid
+            fields={fields}
+            renderField={f => (
               <FieldRenderer
                 key={f.l}
                 field={f}
                 value={item.fields[f.l]}
                 onChange={val => updateExteriorField(id, f.l, val)}
               />
-            ))}
+            )}
+          >
             {hasP && (
               <PhotoZone
-                itemId={id}
+                entityId={id}
                 photos={photos}
                 trigPhoto={trigPhoto}
                 onRemove={removeExteriorPhoto}
               />
             )}
-          </div>
+          </FieldsGrid>
 
           {hasD && (
             <div className="ri-damage-row">
               <div className="field-group field-group--compact">
                 <label className="form-label">Damaged</label>
                 <select
-                  className="field-select compact-select"
+                  className="field-select compact-select compact-select--yn"
                   value={damageStatus}
                   onChange={e => handleDamageStatus(e.target.value)}
                 >
-                  <option value="">Select...</option>
+                  <option value="">Select</option>
                   <option value="Yes">Yes</option>
                   <option value="No">No</option>
                 </select>
@@ -287,11 +196,10 @@ function ExteriorItem({ itemDef, trigPhoto }) {
               {damageStatus === 'Yes' && (
                 <>
                   <label className="form-label">{damageLabel || 'Damage Notes'}</label>
-                  <textarea
-                    className="ri-damage-input"
+                  <DamageDescriptionInput
                     placeholder={damagePlaceholder || 'Describe damage...'}
                     value={item.fields['_damage'] || ''}
-                    onChange={e => updateExteriorField(id, '_damage', e.target.value)}
+                    onChange={val => updateExteriorField(id, '_damage', val)}
                   />
                 </>
               )}
@@ -305,8 +213,8 @@ function ExteriorItem({ itemDef, trigPhoto }) {
 }
 
 // ── Sub-section Card ──────────────────────────────────────────────
-function SubSectionCard({ title, items, trigPhoto }) {
-  const [isOpen, setIsOpen] = useState(false)
+function SubSectionCard({ sectionKey, title, items, trigPhoto }) {
+  const [isOpen, setIsOpen] = useExpandedSection(sectionKey, false)
 
   return (
     <section className={`app-card ri-card${isOpen ? ' ri-card--open' : ''}`}>
@@ -392,6 +300,7 @@ export default function ExteriorSection() {
       {groups.map(group => (
         <SubSectionCard
           key={group.label}
+          sectionKey={`exterior:${group.label}`}
           title={group.label}
           items={group.items}
           trigPhoto={trigPhoto}

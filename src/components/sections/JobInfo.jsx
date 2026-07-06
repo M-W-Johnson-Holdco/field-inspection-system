@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { useInspection } from '../../context/InspectionContext'
 import { filterInsuranceCompanies } from '../../data/insuranceCompanies'
+import { withSelectPlaceholderClass } from '../../utils/fieldGrid'
+import useExpandedSection from '../../hooks/useExpandedSection'
 
 const CONTACT_OPTIONS = ['Phone', 'Email', 'Text']
 const EMPTY_ADDRESS = { address1: '', address2: '', city: '', state: '', zipcode: '' }
@@ -90,7 +92,7 @@ function InsuranceField({ value, onChange }) {
 }
 
 function JobInfoGroup({ title, headingId, defaultOpen = true, children }) {
-  const [isOpen, setIsOpen] = useState(defaultOpen)
+  const [isOpen, setIsOpen] = useExpandedSection(`jobInfo:${headingId}`, defaultOpen)
   const panelId = `${headingId}-panel`
 
   return (
@@ -127,7 +129,7 @@ export default function JobInfo() {
   const [addressOpen, setAddressOpen] = useState(false)
   const [addressDraft, setAddressDraft] = useState({ ...EMPTY_ADDRESS, ...(ji.addrParts || {}) })
   const [addressTouched, setAddressTouched] = useState(false)
-  const [isOpen, setIsOpen] = useState(true)
+  const [isOpen, setIsOpen] = useExpandedSection('jobInfo:main', true)
 
   function field(id, label, props = {}) {
     const { full, validation, required, ...inputProps } = props
@@ -253,11 +255,11 @@ export default function JobInfo() {
                 <div className="form-field form-field--full">
                   <label className="form-label">Separate Contact?</label>
                   <select
-                    className="field-select compact-select"
+                    className={withSelectPlaceholderClass('field-select compact-select', ji.hasSeparateContact)}
                     value={ji.hasSeparateContact || ''}
                     onChange={e => setSeparateContact(e.target.value)}
                   >
-                    <option value="">Select...</option>
+                    <option value="">Select</option>
                     <option value="No">No</option>
                     <option value="Yes">Yes</option>
                   </select>
@@ -265,20 +267,23 @@ export default function JobInfo() {
 
                 {(ji.hasSeparateContact === 'Yes') && (
                   <>
-                    {field('contactName', 'Contact Name', { full: true, placeholder: 'Full name' })}
-                    {field('contactPhone', 'Contact Phone', { type: 'tel', inputMode: 'tel', placeholder: '(214) 555-0101', validation: 'phone' })}
-                    {field('contactEmail', 'Contact Email', { type: 'email', placeholder: 'contact@email.com', validation: 'email' })}
+                    {field('contactName', 'Contact Name', { full: true, placeholder: 'Full name', required: true })}
+                    {field('contactPhone', 'Contact Phone', { type: 'tel', inputMode: 'tel', placeholder: '(214) 555-0101', validation: 'phone', required: true })}
+                    {field('contactEmail', 'Contact Email', { type: 'email', placeholder: 'contact@email.com', validation: 'email', required: true })}
                   </>
                 )}
 
                 <div className="form-field form-field--full">
                   <label className="form-label">Preferred Contact Method</label>
-                  <details className="multi-select">
-                    <summary className="multi-select__summary">
-                      <span>{(ji.preferredContact || []).length ? ji.preferredContact.join(', ') : 'Select...'}</span>
-                      <ChevronDown className="multi-select__icon" aria-hidden="true" />
+                  <details className="multi-select multi-select--field-select">
+                    <summary className={withSelectPlaceholderClass('field-select compact-select', (ji.preferredContact || []).length ? ji.preferredContact.join(', ') : '')}>
+                      {(ji.preferredContact || []).length ? ji.preferredContact.join(', ') : 'Select'}
                     </summary>
-                    <div className="multi-select__menu">
+                    <div
+                      className="multi-select__menu"
+                      onMouseDown={e => e.preventDefault()}
+                      onClick={e => e.stopPropagation()}
+                    >
                       {CONTACT_OPTIONS.map(opt => (
                         <label key={opt} className="multi-select__option">
                           <input
@@ -291,13 +296,6 @@ export default function JobInfo() {
                       ))}
                     </div>
                   </details>
-                  {(ji.preferredContact || []).length > 0 && (
-                    <div className="multi-select__selected" aria-label="Selected preferred contact methods">
-                      {ji.preferredContact.map(opt => (
-                        <span key={opt} className="multi-select__chip">{opt}</span>
-                      ))}
-                    </div>
-                  )}
                 </div>
               </div>
             </JobInfoGroup>

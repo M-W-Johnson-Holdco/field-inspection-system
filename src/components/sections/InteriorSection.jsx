@@ -1,6 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
-import { Camera, ChevronDown, FolderOpen, Plus, Trash2 } from 'lucide-react'
+import { useEffect, useRef } from 'react'
+import { ChevronDown, Plus, Trash2 } from 'lucide-react'
 import { useInspection } from '../../context/InspectionContext'
+import PhotoZone from '../PhotoZone'
+import DamageDescriptionInput from '../DamageDescriptionInput'
+import useExpandedSection from '../../hooks/useExpandedSection'
 
 const ROOM_PRESETS = [
   'Living Room', 'Master Bedroom', 'Bedroom', 'Kitchen',
@@ -21,53 +24,18 @@ function DamageField({ label, yesNoValue, notesValue, onYesNo, onNotes }) {
           value={yesNoValue || ''}
           onChange={e => onYesNo(e.target.value)}
         >
-          <option value="">Select…</option>
+          <option value="">Select</option>
           <option value="Yes">Yes</option>
           <option value="No">No</option>
         </select>
       </div>
       {yesNoValue === 'Yes' && (
-        <textarea
-          className="ri-damage-input"
+        <DamageDescriptionInput
           placeholder={`Describe ${label.toLowerCase()}…`}
           value={notesValue || ''}
-          onChange={e => onNotes(e.target.value)}
+          onChange={onNotes}
         />
       )}
-    </div>
-  )
-}
-
-// ── Photo Zone ────────────────────────────────────────────────────
-function PhotoZone({ roomId, photos, trigPhoto, onRemove }) {
-  return (
-    <div className="ri-photo-zone">
-      <span className="ri-photo-label">Photos</span>
-      {photos.length > 0 && (
-        <div className="ri-photo-row">
-          {photos.map((src, i) => (
-            <div key={i} className="ri-photo-thumb">
-              <img src={src} alt="" />
-              <button
-                type="button"
-                className="ri-photo-del"
-                onClick={() => onRemove(roomId, i)}
-                aria-label="Remove photo"
-              >
-                ×
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-      <div className="ri-photo-btns">
-        <button type="button" className="ri-btn-photo ri-btn-photo--cam" onClick={() => trigPhoto(roomId, 'cam')} aria-label="Camera" title="Camera">
-          <Camera size={16} aria-hidden="true" />
-        </button>
-        <button type="button" className="ri-btn-photo ri-btn-photo--gal" onClick={() => trigPhoto(roomId, 'gal')} aria-label="Gallery" title="Gallery">
-          <FolderOpen size={16} aria-hidden="true" />
-        </button>
-      </div>
     </div>
   )
 }
@@ -75,7 +43,7 @@ function PhotoZone({ roomId, photos, trigPhoto, onRemove }) {
 // ── Room Card ─────────────────────────────────────────────────────
 function RoomCard({ room, trigPhoto }) {
   const { updateInteriorRoom, removeInteriorRoom, removeInteriorPhoto } = useInspection()
-  const [open, setOpen] = useState(true)
+  const [open, setOpen] = useExpandedSection(`interior:room:${room.id}`, true)
   const f = room.fields
   const set = (field, val) => updateInteriorRoom(room.id, field, val)
 
@@ -124,7 +92,7 @@ function RoomCard({ room, trigPhoto }) {
                   value={room.name || ''}
                   onChange={e => updateInteriorRoom(room.id, '_name', e.target.value)}
                 >
-                  <option value="">Select…</option>
+                  <option value="">Select</option>
                   {ROOM_PRESETS.map(r => (
                     <option key={r} value={r}>{r}</option>
                   ))}
@@ -149,7 +117,7 @@ function RoomCard({ room, trigPhoto }) {
                   value={f.story || ''}
                   onChange={e => set('story', e.target.value)}
                 >
-                  <option value="">Select…</option>
+                  <option value="">Select</option>
                   {STORY_OPTS.map(s => (
                     <option key={s} value={s}>{s}</option>
                   ))}
@@ -201,10 +169,11 @@ function RoomCard({ room, trigPhoto }) {
             </div>
 
             <PhotoZone
-              roomId={room.id}
+              entityId={room.id}
               photos={room.photos}
               trigPhoto={trigPhoto}
               onRemove={removeInteriorPhoto}
+              fullWidth={false}
             />
           </div>
         </div>

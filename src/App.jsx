@@ -27,21 +27,39 @@ function AppRoutes() {
 
 export default function App() {
   useEffect(() => {
-    const savedY = Number(sessionStorage.getItem('tcScrollY') || 0)
-    if (savedY > 0) {
-      setTimeout(() => window.scrollTo(0, savedY), 80)
+    function isToolbarTarget(event) {
+      return event.target instanceof Element && Boolean(event.target.closest('.action-bar'))
     }
 
-    function saveScroll() {
-      sessionStorage.setItem('tcScrollY', String(window.scrollY))
+    function preventPageGesture(event) {
+      if (isToolbarTarget(event)) return
+      event.preventDefault()
     }
 
-    window.addEventListener('scroll', saveScroll, { passive: true })
-    window.addEventListener('beforeunload', saveScroll)
+    function preventPagePinch(event) {
+      if (event.touches.length > 1 && !isToolbarTarget(event)) {
+        event.preventDefault()
+      }
+    }
+
+    function preventPageWheelZoom(event) {
+      if (event.ctrlKey && !isToolbarTarget(event)) {
+        event.preventDefault()
+      }
+    }
+
+    document.addEventListener('gesturestart', preventPageGesture, { passive: false })
+    document.addEventListener('gesturechange', preventPageGesture, { passive: false })
+    document.addEventListener('gestureend', preventPageGesture, { passive: false })
+    document.addEventListener('touchmove', preventPagePinch, { passive: false })
+    document.addEventListener('wheel', preventPageWheelZoom, { passive: false })
 
     return () => {
-      window.removeEventListener('scroll', saveScroll)
-      window.removeEventListener('beforeunload', saveScroll)
+      document.removeEventListener('gesturestart', preventPageGesture)
+      document.removeEventListener('gesturechange', preventPageGesture)
+      document.removeEventListener('gestureend', preventPageGesture)
+      document.removeEventListener('touchmove', preventPagePinch)
+      document.removeEventListener('wheel', preventPageWheelZoom)
     }
   }, [])
 

@@ -13,7 +13,7 @@ export default function XmlImportModal({ parsed, existing, onApply, onClose }) {
     rows.push({ label: 'Ridge Vent — Length (LF)', value: `${lineLengths.RIDGE} LF`, overwrite: Boolean(existing?.ridgeLF) })
   }
   if (valleyPresent) {
-    rows.push({ label: 'Valley — Present', value: 'Yes', overwrite: Boolean(existing?.valleyPresent) })
+    rows.push({ label: 'Valley', value: 'Include in inspection', overwrite: Boolean(existing?.valleyIncluded) })
   }
 
   const hasOverwrites = rows.some(r => r.overwrite)

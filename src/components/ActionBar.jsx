@@ -10,8 +10,17 @@ import { ArrowLeft, ArrowRight, RotateCcw, Save, ExternalLink, CheckCircle, Aler
 const TOTAL_TABS = 6
 const TOOLBAR_SCALE_KEY = 'tc_toolbar_scale'
 const TOOLBAR_SCALE_MIN = 0.75
-const TOOLBAR_SCALE_MAX = 1.6
-const TOOLBAR_SCALE_DEFAULT = 1
+const TOOLBAR_SCALE_MAX = 2.5
+const TOOLBAR_SCALE_DEFAULT = 2
+const TOOLBAR_VIEWPORT_MARGIN = 20
+
+function getViewportMaxToolbarScale(barEl) {
+  if (!barEl) return TOOLBAR_SCALE_MAX
+  const available = window.innerWidth - TOOLBAR_VIEWPORT_MARGIN
+  const unscaledWidth = barEl.offsetWidth
+  if (!unscaledWidth) return TOOLBAR_SCALE_MAX
+  return available / unscaledWidth
+}
 
 function readToolbarScale() {
   const stored = Number(localStorage.getItem(TOOLBAR_SCALE_KEY))
@@ -19,8 +28,12 @@ function readToolbarScale() {
   return Math.min(TOOLBAR_SCALE_MAX, Math.max(TOOLBAR_SCALE_MIN, stored))
 }
 
-function clampToolbarScale(value) {
-  return Math.min(TOOLBAR_SCALE_MAX, Math.max(TOOLBAR_SCALE_MIN, value))
+function clampToolbarScale(value, barEl = null) {
+  let next = Math.min(TOOLBAR_SCALE_MAX, Math.max(TOOLBAR_SCALE_MIN, value))
+  if (barEl) {
+    next = Math.min(next, getViewportMaxToolbarScale(barEl))
+  }
+  return next
 }
 
 function getTouchDistance(touches) {
@@ -48,6 +61,17 @@ function getJobInfoSaveError(jobInfo) {
   if (!isValidEmail(jobInfo?.email)) {
     return { field: 'email', message: 'Enter a valid customer email before saving.' }
   }
+  if (jobInfo?.hasSeparateContact === 'Yes') {
+    if (!String(jobInfo?.contactName || '').trim()) {
+      return { field: 'contactName', message: 'Contact name is required when separate contact is enabled.' }
+    }
+    if (phoneDigits(jobInfo?.contactPhone).length !== 10) {
+      return { field: 'contactPhone', message: 'Enter a 10-digit contact phone when separate contact is enabled.' }
+    }
+    if (!isValidEmail(jobInfo?.contactEmail)) {
+      return { field: 'contactEmail', message: 'Enter a valid contact email when separate contact is enabled.' }
+    }
+  }
   return null
 }
 
@@ -72,6 +96,26 @@ export default function ActionBar() {
   }, [toolbarScale])
 
   useEffect(() => {
+    function syncScaleToViewport() {
+      const bar = actionBarRef.current
+      if (!bar) return
+      const next = clampToolbarScale(toolbarScaleRef.current, bar)
+      if (next === toolbarScaleRef.current) return
+      toolbarScaleRef.current = next
+      setToolbarScale(next)
+      localStorage.setItem(TOOLBAR_SCALE_KEY, String(next))
+    }
+
+    syncScaleToViewport()
+    const frame = requestAnimationFrame(syncScaleToViewport)
+    window.addEventListener('resize', syncScaleToViewport)
+    return () => {
+      cancelAnimationFrame(frame)
+      window.removeEventListener('resize', syncScaleToViewport)
+    }
+  }, [])
+
+  useEffect(() => {
     const bar = actionBarRef.current
     if (!bar) return undefined
 
@@ -88,7 +132,7 @@ export default function ActionBar() {
       e.preventDefault()
       const distance = getTouchDistance(e.touches)
       const ratio = distance / pinchStateRef.current.startDistance
-      const next = clampToolbarScale(pinchStateRef.current.startScale * ratio)
+      const next = clampToolbarScale(pinchStateRef.current.startScale * ratio, bar)
       toolbarScaleRef.current = next
       setToolbarScale(next)
     }
@@ -106,7 +150,7 @@ export default function ActionBar() {
     function handleWheel(e) {
       if (!e.ctrlKey) return
       e.preventDefault()
-      const next = clampToolbarScale(toolbarScaleRef.current + (e.deltaY > 0 ? -0.04 : 0.04))
+      const next = clampToolbarScale(toolbarScaleRef.current + (e.deltaY > 0 ? -0.04 : 0.04), bar)
       toolbarScaleRef.current = next
       setToolbarScale(next)
       localStorage.setItem(TOOLBAR_SCALE_KEY, String(next))
@@ -324,7 +368,7 @@ export default function ActionBar() {
             addr: data.jobInfo?.addr,
             pitch: data.roofData?.ri0?.fields?.['Predominant Pitch'],
             ridgeLF: data.roofData?.ri6?.fields?.['Length (LF)'],
-            valleyPresent: data.roofData?.ri5?.fields?.['Present'] === 'Yes',
+            valleyIncluded: !data.roofData?.ri5?.excluded,
           }}
           onApply={handleXmlApply}
           onClose={() => setXmlParsed(null)}

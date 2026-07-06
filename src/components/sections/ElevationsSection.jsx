@@ -1,8 +1,12 @@
 import { useRef, useState } from 'react'
-import { Camera, ChevronDown, FolderOpen } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 import { useInspection } from '../../context/InspectionContext'
+import PhotoZone from '../PhotoZone'
+import FieldsGrid from '../FieldsGrid'
+import DamageDescriptionInput from '../DamageDescriptionInput'
 import { ELEV_ITEMS, DIRECTIONS } from '../../data/elevItems'
-import { fieldGroupClass } from '../../utils/fieldLayout'
+import { fieldGroupProps } from '../../utils/fieldLayout'
+import { fieldSelectClass, withSelectPlaceholderClass } from '../../utils/fieldGrid'
 
 // ── Field Renderer — mirrors Cursor's RoofSection pattern ─────────
 function FieldRenderer({ field, value, onChange }) {
@@ -12,14 +16,14 @@ function FieldRenderer({ field, value, onChange }) {
   if (t === 'yn' || t === 'radio') {
     const opts = t === 'yn' ? ['Yes', 'No'] : o
     return (
-      <div className={fieldGroupClass(field)}>
+      <div {...fieldGroupProps(field)}>
         {lbl}
         <select
-          className="field-select compact-select"
+          className={fieldSelectClass(field)}
           value={value || ''}
           onChange={e => onChange(e.target.value)}
         >
-          <option value="">Select…</option>
+          <option value="">Select</option>
           {opts.map(opt => (
             <option key={opt} value={opt}>{opt}</option>
           ))}
@@ -31,11 +35,11 @@ function FieldRenderer({ field, value, onChange }) {
   if (t === 'multiRadio' || t === 'multi') {
     const arr = Array.isArray(value) ? value : []
     return (
-      <div className={fieldGroupClass(field)}>
+      <div {...fieldGroupProps(field)}>
         {lbl}
         <details className="multi-select">
-          <summary className="multi-select__summary">
-            <span>{arr.length ? arr.join(', ') : 'Select…'}</span>
+          <summary className={withSelectPlaceholderClass('multi-select__summary', arr.length ? arr.join(', ') : '')}>
+            <span>{arr.length ? arr.join(', ') : 'Select'}</span>
             <ChevronDown className="multi-select__icon" aria-hidden="true" />
           </summary>
           <div className="multi-select__menu">
@@ -69,7 +73,7 @@ function FieldRenderer({ field, value, onChange }) {
 
   if (t === 'select') {
     return (
-      <div className={fieldGroupClass(field)}>
+      <div {...fieldGroupProps(field)}>
         {lbl}
         <select
           className="field-select"
@@ -86,7 +90,7 @@ function FieldRenderer({ field, value, onChange }) {
 
   if (t === 'textarea') {
     return (
-      <div className={fieldGroupClass(field)}>
+      <div {...fieldGroupProps(field)}>
         {lbl}
         <textarea
           className="field-textarea"
@@ -102,7 +106,7 @@ function FieldRenderer({ field, value, onChange }) {
     const cur = value === '' || value == null ? 0 : Number(value)
     const adj = n => onChange(String(Math.max(0, (Number.isFinite(cur) ? cur : 0) + n)))
     return (
-      <div className={fieldGroupClass(field)}>
+      <div {...fieldGroupProps(field)}>
         {lbl}
         <div className="number-stepper">
           <button type="button" className="number-stepper__btn" onClick={() => adj(-1)}>−</button>
@@ -135,52 +139,6 @@ function FieldRenderer({ field, value, onChange }) {
   )
 }
 
-// ── Photo Zone ────────────────────────────────────────────────────
-function PhotoZone({ cellKey, photos, trigPhoto, onRemove }) {
-  return (
-    <div className="ri-photo-zone field-group field-group--compact">
-      <span className="ri-photo-label">Photos</span>
-      {photos.length > 0 && (
-        <div className="ri-photo-row">
-          {photos.map((src, i) => (
-            <div key={i} className="ri-photo-thumb">
-              <img src={src} alt="" />
-              <button
-                type="button"
-                className="ri-photo-del"
-                onClick={() => onRemove(cellKey, i)}
-                aria-label="Remove photo"
-              >
-                ×
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-      <div className="ri-photo-btns">
-        <button
-          type="button"
-          className="ri-btn-photo ri-btn-photo--cam"
-          onClick={() => trigPhoto(cellKey, 'cam')}
-          aria-label="Camera"
-          title="Camera"
-        >
-          <Camera size={16} aria-hidden="true" />
-        </button>
-        <button
-          type="button"
-          className="ri-btn-photo ri-btn-photo--gal"
-          onClick={() => trigPhoto(cellKey, 'gal')}
-          aria-label="Gallery"
-          title="Gallery"
-        >
-          <FolderOpen size={16} aria-hidden="true" />
-        </button>
-      </div>
-    </div>
-  )
-}
-
 // ── Elevation Item Row ────────────────────────────────────────────
 function ElevItem({ itemDef, direction, trigPhoto }) {
   const { updateElevField, toggleElevExclude, removeElevPhoto, data } = useInspection()
@@ -206,31 +164,32 @@ function ElevItem({ itemDef, direction, trigPhoto }) {
 
       {!excluded && (
         <div className="ri-item__body">
-          <div className="ri-fields-grid">
-            {itemDef.fields.map(f => (
+          <FieldsGrid
+            fields={itemDef.fields}
+            renderField={f => (
               <FieldRenderer
                 key={f.l}
                 field={f}
                 value={cell.fields[f.l]}
                 onChange={val => updateElevField(cellKey, f.l, val)}
               />
-            ))}
+            )}
+          >
             <PhotoZone
-              cellKey={cellKey}
+              entityId={cellKey}
               photos={photos}
               trigPhoto={trigPhoto}
               onRemove={removeElevPhoto}
             />
-          </div>
+          </FieldsGrid>
 
           {cell.fields['Damaged'] === 'Yes' && (
             <div className="ri-damage-row">
               <label className="form-label">Damage Description</label>
-              <textarea
-                className="ri-damage-input"
+              <DamageDescriptionInput
                 placeholder="Describe visible damage…"
                 value={cell.fields['_damage'] || ''}
-                onChange={e => updateElevField(cellKey, '_damage', e.target.value)}
+                onChange={val => updateElevField(cellKey, '_damage', val)}
               />
             </div>
           )}

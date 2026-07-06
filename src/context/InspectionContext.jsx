@@ -3,6 +3,8 @@ import { idbSave, idbLoad } from '../lib/idb'
 import { ROOF_ITEMS } from '../data/roofItems'
 import { ELEV_ITEMS, DIRECTIONS } from '../data/elevItems'
 import { EXTERIOR_ITEMS } from '../data/exteriorItems'
+import { formatPitch, parsePitchNumerator } from '../utils/pitch'
+import { isFieldVisible } from '../utils/fieldGrid'
 
 const InspectionContext = createContext(null)
 
@@ -50,7 +52,7 @@ function isFilled(value) {
   if (Array.isArray(value)) return value.length > 0
   if (value == null) return false
   const normalized = String(value).trim()
-  return normalized !== '' && normalized !== 'Select...' && normalized !== 'Select…'
+  return normalized !== '' && normalized !== 'Select' && normalized !== 'Select...' && normalized !== 'Select…'
 }
 
 function isValidPhone(value) {
@@ -76,6 +78,15 @@ function countValue(value, totals, validator) {
   if (validator ? validator(value) : isFilled(value)) totals.filled += 1
 }
 
+function countSubFieldValue(field, subFields, totals) {
+  if (field.t === 'lwxw') {
+    countValue(subFields?.[field.lengthKey || 'Length (in)'], totals)
+    countValue(subFields?.[field.widthKey || 'Width (in)'], totals)
+    return
+  }
+  countValue(subFields?.[field.l], totals)
+}
+
 function calculateCompletion(data) {
   const totals = { filled: 0, total: 0 }
   const ji = data.jobInfo || {}
@@ -98,7 +109,13 @@ function calculateCompletion(data) {
     ;(itemDef.fields || []).forEach(field => countValue(item.fields?.[field.l], totals))
     if (itemDef.flags?.includes('D')) countValue(item.fields?._damage, totals)
     ;(item.subItems || []).forEach(sub => {
-      ;(itemDef.subFields || []).forEach(field => countValue(sub.fields?.[field.l], totals))
+      ;(itemDef.subFields || []).forEach(field => {
+        if (!isFieldVisible(field, sub.fields)) return
+        countSubFieldValue(field, sub.fields, totals)
+      })
+      if (itemDef.subItemDamaged && sub.fields?.Damaged === 'Yes') {
+        countValue(sub.fields?._damage, totals)
+      }
     })
   })
 
@@ -128,12 +145,858 @@ function calculateCompletion(data) {
   return { ...totals, percent }
 }
 
+const PIPE_JACK_SIZE_LABELS = [
+  { field: 'Qty 1.5"', size: '1.5' },
+  { field: 'Qty 2"', size: '2' },
+  { field: 'Qty 3"', size: '3' },
+  { field: 'Qty 4"', size: '4' },
+]
+
+const EXHAUST_STACK_TYPES = ['Flange', 'Stack', 'Cap']
+
+function normalizeChimneySizeValue(val) {
+  if (!val) return ''
+  const v = String(val).trim()
+  if (v === 'Small' || v.startsWith('Small')) return 'Small (width < 24")'
+  if (v === 'Medium' || v.startsWith('Medium')) return 'Medium (width 24"–36")'
+  if (v === 'Large' || v.startsWith('Large')) return 'Large (width > 36")'
+  return v
+}
+
+function normalizePipeJackSize(value) {
+  if (value == null || value === '') return value
+  if (value === 'Select') return value
+  return String(value).replace(/"/g, '')
+}
+
+function normalizePipeJackSubFields(fields = {}) {
+  const next = { ...fields }
+  if (next.Size != null && next['Size (inches)'] == null) {
+    next['Size (inches)'] = normalizePipeJackSize(next.Size)
+    delete next.Size
+  } else if (next['Size (inches)'] != null) {
+    next['Size (inches)'] = normalizePipeJackSize(next['Size (inches)'])
+  }
+  return next
+}
+
+function migratePipeJackFields(fields = {}) {
+  const subItems = []
+  const sharedType = fields.Type || ''
+  const sharedPainted = fields.Painted || ''
+
+  PIPE_JACK_SIZE_LABELS.forEach(({ field, size }) => {
+    const qty = Math.max(0, Number(fields[field]) || 0)
+    for (let i = 0; i < qty; i += 1) {
+      subItems.push({
+        fields: {
+          'Size (inches)': size,
+          ...(sharedType ? { Type: sharedType } : {}),
+          ...(sharedPainted ? { Painted: sharedPainted } : {}),
+        },
+        photos: [],
+      })
+    }
+  })
+
+  if (!subItems.length && (sharedType || sharedPainted)) {
+    subItems.push({
+      fields: {
+        ...(sharedType ? { Type: sharedType } : {}),
+        ...(sharedPainted ? { Painted: sharedPainted } : {}),
+      },
+      photos: [],
+    })
+  }
+
+  return subItems
+}
+
+function normalizeRoofSubItem(sub) {
+  return {
+    fields: normalizePipeJackSubFields(sub?.fields),
+    photos: Array.isArray(sub?.photos) ? sub.photos : [],
+  }
+}
+
+function normalizeRoofData(roofData = {}) {
+  let next = { ...roofData }
+  next = normalizeRi11(next)
+  next = normalizeRi12(next)
+  next = normalizeRi14(next)
+  next = normalizeRi17(next)
+  next = normalizeFlashingItems(next)
+  next = normalizeRi21(next)
+  next = normalizeRi22(next)
+  next = normalizeRi23(next)
+  return next
+}
+
+function hasLegacyChimneyTopLevel(fields = {}) {
+  return fields.Qty != null
+    || fields['Size / Width'] != null
+    || fields['Counter Flashing'] != null
+    || fields.Painted != null
+    || fields.Damaged != null
+    || fields['Chimney Condition / Leak Hazard Notes'] != null
+}
+
+function normalizeChimneySubItem(sub) {
+  const fields = { ...(sub?.fields || {}) }
+  if (fields['Size / Width']) {
+    fields['Size / Width'] = normalizeChimneySizeValue(fields['Size / Width'])
+  }
+  return {
+    fields,
+    photos: Array.isArray(sub?.photos) ? sub.photos : [],
+  }
+}
+
+function migrateChimneyFields(ri17) {
+  const fields = ri17.fields || {}
+  const existing = (ri17.subItems || []).map(normalizeChimneySubItem)
+  if (existing.length) return existing
+
+  const qty = Math.max(0, Number(fields.Qty) || 0)
+  const shared = {
+    ...(fields['Size / Width'] ? { 'Size / Width': normalizeChimneySizeValue(fields['Size / Width']) } : {}),
+    ...(fields['Counter Flashing'] ? { 'Counter Flashing': fields['Counter Flashing'] } : {}),
+    ...(fields.Painted ? { Painted: fields.Painted } : {}),
+    ...(fields.Damaged ? { Damaged: fields.Damaged } : {}),
+    ...(fields._damage ? { _damage: fields._damage } : {}),
+  }
+  const hasData = Object.keys(shared).length > 0
+  const count = qty > 0 ? qty : (hasData ? 1 : 0)
+  const subItems = []
+
+  for (let i = 0; i < count; i += 1) {
+    subItems.push({
+      fields: { ...shared },
+      photos: i === 0 ? (ri17.photos || []) : [],
+    })
+  }
+
+  return subItems
+}
+
+function normalizeRi17(roofData) {
+  const next = { ...roofData }
+  const ri17 = next.ri17
+  if (!ri17) return next
+
+  const fields = ri17.fields || {}
+  if (hasLegacyChimneyTopLevel(fields)) {
+    next.ri17 = {
+      ...ri17,
+      fields: {},
+      subItems: migrateChimneyFields(ri17),
+      photos: [],
+    }
+    return next
+  }
+
+  const normalizedSubItems = (ri17.subItems || []).map(normalizeChimneySubItem)
+  const subItemsChanged = normalizedSubItems.some((sub, index) => {
+    const original = ri17.subItems?.[index]
+    return JSON.stringify(sub.fields) !== JSON.stringify(original?.fields || {})
+      || !Array.isArray(original?.photos)
+  })
+
+  if (subItemsChanged) {
+    next.ri17 = { ...ri17, subItems: normalizedSubItems }
+  }
+
+  return next
+}
+
+const FLASHING_ITEM_IDS = ['ri18', 'ri19', 'ri20']
+
+function hasLegacyFlashingTopLevel(fields = {}) {
+  return fields.Painted != null
+    || fields.Damaged != null
+    || fields['Length (LF)'] != null
+    || fields._damage != null
+}
+
+function normalizeFlashingSubItem(sub) {
+  return {
+    fields: { ...(sub?.fields || {}) },
+    photos: Array.isArray(sub?.photos) ? sub.photos : [],
+  }
+}
+
+function migrateFlashingFields(item) {
+  const fields = item.fields || {}
+  const existing = (item.subItems || []).map(normalizeFlashingSubItem)
+  if (existing.length) return existing
+
+  if (!hasLegacyFlashingTopLevel(fields)) return []
+
+  return [{
+    fields: {
+      ...(fields['Length (LF)'] ? { 'Length (LF)': fields['Length (LF)'] } : {}),
+      ...(fields.Painted ? { Painted: fields.Painted } : {}),
+      ...(fields.Damaged ? { Damaged: fields.Damaged } : {}),
+      ...(fields._damage ? { _damage: fields._damage } : {}),
+    },
+    photos: item.photos || [],
+  }]
+}
+
+function normalizeFlashingItems(roofData) {
+  let next = { ...roofData }
+
+  for (const itemId of FLASHING_ITEM_IDS) {
+    const item = next[itemId]
+    if (!item) continue
+
+    const fields = item.fields || {}
+    if (hasLegacyFlashingTopLevel(fields)) {
+      next[itemId] = {
+        ...item,
+        fields: {},
+        subItems: migrateFlashingFields(item),
+        photos: [],
+      }
+      continue
+    }
+
+    const normalizedSubItems = (item.subItems || []).map(normalizeFlashingSubItem)
+    const subItemsChanged = normalizedSubItems.some((sub, index) => {
+      const original = item.subItems?.[index]
+      return JSON.stringify(sub.fields) !== JSON.stringify(original?.fields || {})
+        || !Array.isArray(original?.photos)
+    })
+
+    if (subItemsChanged) {
+      next[itemId] = { ...item, subItems: normalizedSubItems }
+    }
+  }
+
+  return next
+}
+
+function hasLegacyCorniceTopLevel(fields = {}) {
+  return fields.Type != null
+    || fields.Qty != null
+    || fields.Story != null
+}
+
+function normalizeCorniceSubItem(sub) {
+  const fields = { ...(sub?.fields || {}) }
+  if (fields.Story != null && fields.Story !== '') {
+    fields.Story = String(fields.Story)
+  }
+  if (fields.Qty != null && fields.Qty !== '') {
+    fields.Qty = String(fields.Qty)
+  }
+  return {
+    fields,
+    photos: Array.isArray(sub?.photos) ? sub.photos : [],
+  }
+}
+
+function migrateCorniceFields(ri21) {
+  const fields = ri21.fields || {}
+  const existing = (ri21.subItems || []).map(normalizeCorniceSubItem)
+  if (existing.length) return existing
+
+  const type = fields.Type || ''
+  const story = fields.Story != null && fields.Story !== '' ? String(fields.Story) : ''
+  const qty = Math.max(0, Number(fields.Qty) || 0)
+  const hasData = type || story || fields.Qty != null
+
+  if (!hasData) return []
+
+  if (qty > 1) {
+    return Array.from({ length: qty }, (_, index) => ({
+      fields: {
+        ...(type ? { Type: type } : {}),
+        ...(story ? { Story: story } : {}),
+      },
+      photos: index === 0 ? (ri21.photos || []) : [],
+    }))
+  }
+
+  return [{
+    fields: {
+      ...(type ? { Type: type } : {}),
+      ...(story ? { Story: story } : {}),
+      ...(fields.Qty != null && fields.Qty !== '' ? { Qty: String(fields.Qty) } : {}),
+    },
+    photos: ri21.photos || [],
+  }]
+}
+
+function normalizeRi21(roofData) {
+  const next = { ...roofData }
+  const ri21 = next.ri21
+  if (!ri21) return next
+
+  const fields = ri21.fields || {}
+  if (hasLegacyCorniceTopLevel(fields)) {
+    next.ri21 = {
+      ...ri21,
+      fields: {},
+      subItems: migrateCorniceFields(ri21),
+      photos: [],
+    }
+    return next
+  }
+
+  const normalizedSubItems = (ri21.subItems || []).map(normalizeCorniceSubItem)
+  const subItemsChanged = normalizedSubItems.some((sub, index) => {
+    const original = ri21.subItems?.[index]
+    return JSON.stringify(sub.fields) !== JSON.stringify(original?.fields || {})
+      || !Array.isArray(original?.photos)
+  })
+
+  if (subItemsChanged) {
+    next.ri21 = { ...ri21, subItems: normalizedSubItems }
+  }
+
+  return next
+}
+
+function hasLegacyLowSlopeTopLevel(fields = {}) {
+  return fields.Location != null
+    || fields['Style / Grade'] != null
+    || fields.Pitch != null
+    || fields.Damaged != null
+    || fields['Exposed Rafters'] != null
+    || fields._damage != null
+}
+
+function normalizeLowSlopePitch(value) {
+  if (value == null || value === '') return ''
+  return formatPitch(parsePitchNumerator(value, 0))
+}
+
+function normalizeLowSlopeSubItem(sub) {
+  const fields = { ...(sub?.fields || {}) }
+  if (fields.Pitch != null && fields.Pitch !== '') {
+    fields.Pitch = normalizeLowSlopePitch(fields.Pitch)
+  }
+  return {
+    fields,
+    photos: Array.isArray(sub?.photos) ? sub.photos : [],
+  }
+}
+
+function migrateLowSlopeFields(ri22) {
+  const fields = ri22.fields || {}
+  const existing = (ri22.subItems || []).map(normalizeLowSlopeSubItem)
+  if (existing.length) return existing
+
+  if (!hasLegacyLowSlopeTopLevel(fields)) return []
+
+  return [{
+    fields: {
+      ...(fields.Location ? { Location: fields.Location } : {}),
+      ...(fields['Style / Grade'] ? { 'Style / Grade': fields['Style / Grade'] } : {}),
+      ...(fields['Exposed Rafters'] ? { 'Exposed Rafters': fields['Exposed Rafters'] } : {}),
+      ...(fields.Pitch ? { Pitch: normalizeLowSlopePitch(fields.Pitch) } : {}),
+      ...(fields.Damaged ? { Damaged: fields.Damaged } : {}),
+      ...(fields._damage ? { _damage: fields._damage } : {}),
+    },
+    photos: ri22.photos || [],
+  }]
+}
+
+function normalizeRi22(roofData) {
+  const next = { ...roofData }
+  const ri22 = next.ri22
+  if (!ri22) return next
+
+  const fields = ri22.fields || {}
+  if (hasLegacyLowSlopeTopLevel(fields)) {
+    next.ri22 = {
+      ...ri22,
+      fields: {},
+      subItems: migrateLowSlopeFields(ri22),
+      photos: [],
+    }
+    return next
+  }
+
+  const normalizedSubItems = (ri22.subItems || []).map(normalizeLowSlopeSubItem)
+  const subItemsChanged = normalizedSubItems.some((sub, index) => {
+    const original = ri22.subItems?.[index]
+    return JSON.stringify(sub.fields) !== JSON.stringify(original?.fields || {})
+      || !Array.isArray(original?.photos)
+  })
+
+  if (subItemsChanged) {
+    next.ri22 = { ...ri22, subItems: normalizedSubItems }
+  }
+
+  return next
+}
+
+function hasLegacyOtherStructureTopLevel(fields = {}) {
+  return fields.Type != null
+    || fields['Style / Grade'] != null
+    || fields.Pitch != null
+    || fields.Damaged != null
+    || fields._damage != null
+}
+
+function normalizeOtherStructureSubItem(sub) {
+  const fields = { ...(sub?.fields || {}) }
+  if (fields.Pitch != null && fields.Pitch !== '') {
+    fields.Pitch = normalizeLowSlopePitch(fields.Pitch)
+  }
+  return {
+    fields,
+    photos: Array.isArray(sub?.photos) ? sub.photos : [],
+  }
+}
+
+function migrateOtherStructureFields(ri23) {
+  const fields = ri23.fields || {}
+  const existing = (ri23.subItems || []).map(normalizeOtherStructureSubItem)
+  if (existing.length) return existing
+
+  if (!hasLegacyOtherStructureTopLevel(fields)) return []
+
+  return [{
+    fields: {
+      ...(fields.Type ? { Type: fields.Type } : {}),
+      ...(fields['Style / Grade'] ? { 'Style / Grade': fields['Style / Grade'] } : {}),
+      ...(fields.Pitch ? { Pitch: normalizeLowSlopePitch(fields.Pitch) } : {}),
+      ...(fields.Damaged ? { Damaged: fields.Damaged } : {}),
+      ...(fields._damage ? { _damage: fields._damage } : {}),
+    },
+    photos: ri23.photos || [],
+  }]
+}
+
+function normalizeRi23(roofData) {
+  const next = { ...roofData }
+  const ri23 = next.ri23
+  if (!ri23) return next
+
+  const fields = ri23.fields || {}
+  if (hasLegacyOtherStructureTopLevel(fields)) {
+    next.ri23 = {
+      ...ri23,
+      fields: {},
+      subItems: migrateOtherStructureFields(ri23),
+      photos: [],
+    }
+    return next
+  }
+
+  const normalizedSubItems = (ri23.subItems || []).map(normalizeOtherStructureSubItem)
+  const subItemsChanged = normalizedSubItems.some((sub, index) => {
+    const original = ri23.subItems?.[index]
+    return JSON.stringify(sub.fields) !== JSON.stringify(original?.fields || {})
+      || !Array.isArray(original?.photos)
+  })
+
+  if (subItemsChanged) {
+    next.ri23 = { ...ri23, subItems: normalizedSubItems }
+  }
+
+  return next
+}
+
+function normalizeRi11(roofData) {
+  const next = { ...roofData }
+  const ri11 = next.ri11
+  if (!ri11) return next
+
+  const fields = ri11.fields || {}
+  const hasLegacyQty = PIPE_JACK_SIZE_LABELS.some(({ field }) => fields[field] != null && fields[field] !== '')
+  const hasLegacyTopLevel = fields.Type != null || fields.Painted != null
+
+  if (!(ri11.subItems || []).length && (hasLegacyQty || hasLegacyTopLevel)) {
+    next.ri11 = {
+      ...ri11,
+      fields: {},
+      subItems: migratePipeJackFields(fields),
+      photos: ri11.photos || [],
+    }
+    return next
+  }
+
+  const normalizedSubItems = (ri11.subItems || []).map(normalizeRoofSubItem)
+  const subItemsChanged = normalizedSubItems.some((sub, index) => {
+    const original = ri11.subItems?.[index]
+    return JSON.stringify(sub.fields) !== JSON.stringify(original?.fields || {})
+      || !Array.isArray(original?.photos)
+  })
+
+  if (subItemsChanged) {
+    next.ri11 = { ...ri11, subItems: normalizedSubItems }
+  }
+
+  return next
+}
+
+function isLegacyExhaustStackSubItem(sub) {
+  const fields = sub?.fields || {}
+  return (fields['Width (inches)'] != null && fields['Width (inches)'] !== '')
+    || (fields.Width != null && fields.Width !== '')
+    || (fields.Qty != null && fields.Qty !== '')
+}
+
+function normalizeExhaustStackSubItem(sub) {
+  return {
+    fields: { ...(sub?.fields || {}) },
+    photos: Array.isArray(sub?.photos) ? sub.photos : [],
+  }
+}
+
+function migrateExhaustStackFields(ri12) {
+  const fields = ri12.fields || {}
+  const subItems = []
+  const sharedPainted = fields.Painted || ''
+  const sharedDamaged = fields.Damaged || ''
+  const damageTo = fields['Damage To']
+  const damageTypes = Array.isArray(damageTo)
+    ? damageTo.filter(type => EXHAUST_STACK_TYPES.includes(type))
+    : (damageTo && EXHAUST_STACK_TYPES.includes(damageTo) ? [damageTo] : [])
+
+  ;(ri12.subItems || []).forEach(sub => {
+    if (isLegacyExhaustStackSubItem(sub)) {
+      const qty = Math.max(0, Number(sub.fields?.Qty) || 0)
+      const count = qty > 0 ? qty : 1
+      for (let i = 0; i < count; i += 1) {
+        subItems.push({
+          fields: {
+            ...(sharedPainted ? { Painted: sharedPainted } : {}),
+            ...(sub.fields?.Painted ? { Painted: sub.fields.Painted } : {}),
+            ...(sharedDamaged ? { Damaged: sharedDamaged } : {}),
+            ...(sub.fields?.Damaged ? { Damaged: sub.fields.Damaged } : {}),
+            ...(sub.fields?._damage ? { _damage: sub.fields._damage } : {}),
+          },
+          photos: i === 0 ? (sub.photos || []) : [],
+        })
+      }
+      return
+    }
+
+    subItems.push(normalizeExhaustStackSubItem(sub))
+  })
+
+  if (!subItems.length && damageTypes.length) {
+    damageTypes.forEach(type => {
+      subItems.push({
+        fields: {
+          Type: type,
+          ...(sharedPainted ? { Painted: sharedPainted } : {}),
+          ...(sharedDamaged ? { Damaged: sharedDamaged } : {}),
+        },
+        photos: [],
+      })
+    })
+  } else if (!subItems.length && (sharedPainted || sharedDamaged)) {
+    subItems.push({
+      fields: {
+        ...(sharedPainted ? { Painted: sharedPainted } : {}),
+        ...(sharedDamaged ? { Damaged: sharedDamaged } : {}),
+      },
+      photos: [],
+    })
+  }
+
+  return subItems
+}
+
+function normalizeRi12(roofData) {
+  const next = { ...roofData }
+  const ri12 = next.ri12
+  if (!ri12) return next
+
+  const fields = ri12.fields || {}
+  const hasLegacyTopLevel = fields['Damage To'] != null
+    || fields.Painted != null
+    || fields.Damaged != null
+  const hasLegacySubs = (ri12.subItems || []).some(isLegacyExhaustStackSubItem)
+
+  if (hasLegacyTopLevel || hasLegacySubs) {
+    next.ri12 = {
+      ...ri12,
+      fields: {},
+      subItems: migrateExhaustStackFields(ri12),
+      photos: ri12.photos || [],
+    }
+  }
+
+  return next
+}
+
+function parseLegacySkylightSize(text) {
+  if (!text) return {}
+  const match = String(text).trim().match(/(\d+(?:\.\d+)?)\s*(?:in|"|''|″)?\s*[x×]\s*(\d+(?:\.\d+)?)/i)
+  if (!match) return {}
+  return { 'Length (in)': match[1], 'Width (in)': match[2] }
+}
+
+function isLegacySkylightSubItem(sub) {
+  const fields = sub?.fields || {}
+  return fields['Size (L x W)'] != null && fields['Size (L x W)'] !== ''
+}
+
+function normalizeSkylightSubItem(sub) {
+  return {
+    fields: { ...(sub?.fields || {}) },
+    photos: Array.isArray(sub?.photos) ? sub.photos : [],
+  }
+}
+
+function migrateSkylightFields(ri14) {
+  const fields = ri14.fields || {}
+  const subItems = []
+  const sharedStyle = fields.Style || ''
+  const sharedMount = fields.Mount || ''
+  const sharedDamaged = fields.Damaged || ''
+  const sharedDamage = fields._damage || ''
+
+  ;(ri14.subItems || []).forEach(sub => {
+    if (isLegacySkylightSubItem(sub)) {
+      const sizeParts = parseLegacySkylightSize(sub.fields?.['Size (L x W)'])
+      subItems.push({
+        fields: {
+          ...sizeParts,
+          ...(sharedStyle ? { Style: sharedStyle } : {}),
+          ...(sub.fields?.Style ? { Style: sub.fields.Style } : {}),
+          ...(sharedMount ? { Mount: sharedMount } : {}),
+          ...(sub.fields?.Mount ? { Mount: sub.fields.Mount } : {}),
+          ...(sharedDamaged ? { Damaged: sharedDamaged } : {}),
+          ...(sub.fields?.Damaged ? { Damaged: sub.fields.Damaged } : {}),
+          ...(sub.fields?._damage || sharedDamage ? { _damage: sub.fields._damage || sharedDamage } : {}),
+        },
+        photos: sub.photos || [],
+      })
+      return
+    }
+
+    subItems.push(normalizeSkylightSubItem(sub))
+  })
+
+  if (!subItems.length && (sharedStyle || sharedMount || sharedDamaged || sharedDamage)) {
+    subItems.push({
+      fields: {
+        ...(sharedStyle ? { Style: sharedStyle } : {}),
+        ...(sharedMount ? { Mount: sharedMount } : {}),
+        ...(sharedDamaged ? { Damaged: sharedDamaged } : {}),
+        ...(sharedDamage ? { _damage: sharedDamage } : {}),
+      },
+      photos: ri14.photos || [],
+    })
+  }
+
+  return subItems
+}
+
+function normalizeRi14(roofData) {
+  const next = { ...roofData }
+  const ri14 = next.ri14
+  if (!ri14) return next
+
+  const fields = ri14.fields || {}
+  const hasLegacyTopLevel = fields.Style != null
+    || fields.Mount != null
+    || fields.Damaged != null
+    || fields._damage != null
+  const hasLegacySubs = (ri14.subItems || []).some(isLegacySkylightSubItem)
+
+  if (hasLegacyTopLevel || hasLegacySubs) {
+    next.ri14 = {
+      ...ri14,
+      fields: {},
+      subItems: migrateSkylightFields(ri14),
+      photos: [],
+    }
+  }
+
+  return next
+}
+
+function parseRoofPhotoTarget(target) {
+  const match = String(target).match(/^(.+)__sub_(\d+)$/)
+  if (match) return { itemId: match[1], subIndex: Number(match[2]) }
+  return { itemId: target, subIndex: null }
+}
+
+function buildPipeJackSubItemsFromParsed(roof = {}) {
+  const subItems = []
+  const sharedType = roof.pipeJackType || ''
+  const sharedPainted = roof.pipeJackPainted || ''
+  const qtyMap = [
+    ['pipeJack15qty', '1.5'],
+    ['pipeJack2qty', '2'],
+    ['pipeJack3qty', '3'],
+    ['pipeJack4qty', '4'],
+  ]
+
+  qtyMap.forEach(([key, size]) => {
+    const qty = Math.max(0, Number(roof[key]) || 0)
+    for (let i = 0; i < qty; i += 1) {
+      subItems.push({
+        fields: {
+          'Size (inches)': size,
+          ...(sharedType ? { Type: sharedType } : {}),
+          ...(sharedPainted ? { Painted: sharedPainted } : {}),
+        },
+        photos: [],
+      })
+    }
+  })
+
+  if (!subItems.length && (sharedType || sharedPainted)) {
+    subItems.push({
+      fields: {
+        ...(sharedType ? { Type: sharedType } : {}),
+        ...(sharedPainted ? { Painted: sharedPainted } : {}),
+      },
+      photos: [],
+    })
+  }
+
+  return subItems
+}
+
+function buildExhaustStackSubItemsFromParsed(roof = {}) {
+  const subItems = []
+  const sharedPainted = roof.exhaustStackPainted || ''
+  const sharedDamaged = roof.exhaustStackDamaged || ''
+  const damageTo = roof.exhaustStackDamageTo
+  const damageTypes = Array.isArray(damageTo)
+    ? damageTo.filter(type => EXHAUST_STACK_TYPES.includes(type))
+    : (damageTo && EXHAUST_STACK_TYPES.includes(damageTo) ? [damageTo] : [])
+
+  damageTypes.forEach(type => {
+    subItems.push({
+      fields: {
+        Type: type,
+        ...(sharedPainted ? { Painted: sharedPainted } : {}),
+        ...(sharedDamaged ? { Damaged: sharedDamaged } : {}),
+      },
+      photos: [],
+    })
+  })
+
+  if (!subItems.length && (sharedPainted || sharedDamaged)) {
+    subItems.push({
+      fields: {
+        ...(sharedPainted ? { Painted: sharedPainted } : {}),
+        ...(sharedDamaged ? { Damaged: sharedDamaged } : {}),
+      },
+      photos: [],
+    })
+  }
+
+  return subItems
+}
+
+function buildChimneySubItemsFromParsed(roof = {}) {
+  const size = normalizeChimneySizeValue(roof.chimneySize || '')
+  const counterFlashing = roof.counterFlashingCondition || ''
+  const painted = roof.chimneyPainted || ''
+  const damaged = roof.chimneyDamaged || ''
+  const qty = Math.max(0, Number(roof.chimneyQty) || 0)
+  const hasData = size || counterFlashing || painted || damaged
+  const count = qty > 0 ? qty : (hasData ? 1 : 0)
+  const subItems = []
+
+  for (let i = 0; i < count; i += 1) {
+    subItems.push({
+      fields: {
+        ...(size ? { 'Size / Width': size } : {}),
+        ...(counterFlashing ? { 'Counter Flashing': counterFlashing } : {}),
+        ...(painted ? { Painted: painted } : {}),
+        ...(damaged ? { Damaged: damaged } : {}),
+      },
+      photos: [],
+    })
+  }
+
+  return subItems
+}
+
+const FLASHING_IMPORT_CONFIG = [
+  { itemId: 'ri18', painted: 'stepFlashingPainted', damaged: 'stepFlashingDamaged', present: 'stepFlashingPresent' },
+  { itemId: 'ri19', painted: 'counterFlashingPainted', damaged: 'counterFlashingDamaged', present: 'counterFlashingPresent' },
+  { itemId: 'ri20', painted: 'lFlashingPainted', damaged: 'lFlashingDamaged', present: 'lFlashingPresent' },
+]
+
+function isPresentValue(value) {
+  if (value == null || value === '') return null
+  const normalized = String(value).trim().toLowerCase()
+  if (['yes', 'true', '1'].includes(normalized)) return true
+  if (['no', 'false', '0'].includes(normalized)) return false
+  return null
+}
+
+function buildFlashingSubItemsFromParsed(roof = {}, config) {
+  const painted = roof[config.painted] || ''
+  const damaged = roof[config.damaged] || ''
+  const present = isPresentValue(config.present ? roof[config.present] : null)
+  const lengthLf = config.lengthLf ? (roof[config.lengthLf] || '') : ''
+
+  if (present === false) return []
+
+  const hasData = painted || damaged || lengthLf || present === true
+  if (!hasData) return []
+
+  return [{
+    fields: {
+      ...(lengthLf ? { 'Length (LF)': String(lengthLf) } : {}),
+      ...(painted ? { Painted: painted } : {}),
+      ...(damaged ? { Damaged: damaged } : {}),
+    },
+    photos: [],
+  }]
+}
+
+function buildLowSlopeSubItemsFromParsed(roof = {}) {
+  const location = roof.lowSlopeLocation || ''
+  const grade = roof.lowSlopeGrade || ''
+  const pitch = roof.lowSlopePitch ? normalizeLowSlopePitch(roof.lowSlopePitch) : ''
+  const damaged = roof.lowSlopeDamaged || ''
+  const exposedRafters = roof.exposedRafters || ''
+  const hasData = location || grade || pitch || damaged || exposedRafters
+
+  if (!hasData) return []
+
+  return [{
+    fields: {
+      ...(location ? { Location: location } : {}),
+      ...(grade ? { 'Style / Grade': grade } : {}),
+      ...(exposedRafters ? { 'Exposed Rafters': exposedRafters } : {}),
+      ...(pitch ? { Pitch: pitch } : {}),
+      ...(damaged ? { Damaged: damaged } : {}),
+    },
+    photos: [],
+  }]
+}
+
 export function InspectionProvider({ children }) {
   const [data, setData] = useState(INITIAL_STATE)
   const [activeTab, setActiveTabState] = useState(0)
+  const [expandedSections, setExpandedSectionsState] = useState({})
   const [saveStatus, setSaveStatus] = useState('saved')
   const [driveSaveStatus, setDriveSaveStatus] = useState('unsaved')
   const saveTimer = useRef(null)
+  const dataRef = useRef(data)
+  const activeTabRef = useRef(activeTab)
+  const expandedRef = useRef(expandedSections)
+
+  dataRef.current = data
+  activeTabRef.current = activeTab
+  expandedRef.current = expandedSections
+
+  function persistSnapshot(inspectionData, overrides = {}) {
+    return idbSave('current', {
+      ...inspectionData,
+      activeTab: activeTabRef.current,
+      expandedSections: expandedRef.current,
+      ...overrides,
+    })
+  }
 
   useEffect(() => {
     idbLoad('current').then(saved => {
@@ -144,13 +1007,16 @@ export function InspectionProvider({ children }) {
           ...INITIAL_STATE,
           ...saved,
           jobInfo,
-          roofData: { ...INITIAL_ROOF_DATA, ...(saved.roofData || {}) },
+          roofData: normalizeRoofData({ ...INITIAL_ROOF_DATA, ...(saved.roofData || {}) }),
           elevData: { ...INITIAL_ELEV_DATA, ...(saved.elevData || {}) },
           interiorData: saved.interiorData || INITIAL_INTERIOR_DATA,
           exteriorData: { ...INITIAL_EXTERIOR_DATA, ...(saved.exteriorData || {}) },
           notesData: { ...INITIAL_NOTES_DATA, ...(saved.notesData || {}) },
         })
         if (Number.isInteger(saved.activeTab)) setActiveTabState(saved.activeTab)
+        if (saved.expandedSections && typeof saved.expandedSections === 'object') {
+          setExpandedSectionsState(saved.expandedSections)
+        }
       }
     }).catch(() => {})
   }, [])
@@ -161,16 +1027,30 @@ export function InspectionProvider({ children }) {
     clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(() => {
       setSaveStatus('saving')
-      idbSave('current', { ...newData, activeTab })
+      persistSnapshot(newData)
         .then(() => setSaveStatus('saved'))
         .catch(() => setSaveStatus('unsaved'))
     }, 3000)
   }
 
+  function setSectionExpanded(key, valueOrUpdater) {
+    setExpandedSectionsState(prev => {
+      const stored = Object.prototype.hasOwnProperty.call(prev, key) ? prev[key] : undefined
+      const value = typeof valueOrUpdater === 'function'
+        ? valueOrUpdater(stored)
+        : valueOrUpdater
+      const next = { ...prev, [key]: value }
+      expandedRef.current = next
+      persistSnapshot(dataRef.current).catch(() => {})
+      return next
+    })
+  }
+
   function setActiveTab(nextTab) {
     setActiveTabState(prev => {
       const resolved = typeof nextTab === 'function' ? nextTab(prev) : nextTab
-      idbSave('current', { ...data, activeTab: resolved }).catch(() => {})
+      activeTabRef.current = resolved
+      persistSnapshot(dataRef.current, { activeTab: resolved }).catch(() => {})
       return resolved
     })
   }
@@ -206,7 +1086,16 @@ export function InspectionProvider({ children }) {
   function addRoofSubItem(itemId) {
     setData(prev => {
       const item = prev.roofData[itemId]
-      const next = { ...prev, roofData: { ...prev.roofData, [itemId]: { ...item, subItems: [...item.subItems, { fields: {} }] } } }
+      const next = {
+        ...prev,
+        roofData: {
+          ...prev.roofData,
+          [itemId]: {
+            ...item,
+            subItems: [...item.subItems, { fields: {}, photos: [] }],
+          },
+        },
+      }
       scheduleSave(next)
       return next
     })
@@ -224,28 +1113,187 @@ export function InspectionProvider({ children }) {
   function updateRoofSubField(itemId, index, label, value) {
     setData(prev => {
       const item = prev.roofData[itemId]
-      const subItems = item.subItems.map((sub, i) =>
-        i === index ? { ...sub, fields: { ...sub.fields, [label]: value } } : sub
-      )
+      const subItems = item.subItems.map((sub, i) => {
+        if (i !== index) return sub
+        const fields = { ...sub.fields, [label]: value }
+        if (label === 'Damaged' && value !== 'Yes') delete fields._damage
+        if (label === 'Location' && value !== 'Other') delete fields['(Other)']
+        return { ...sub, fields }
+      })
       const next = { ...prev, roofData: { ...prev.roofData, [itemId]: { ...item, subItems } } }
       scheduleSave(next)
       return next
     })
   }
 
-  function addRoofPhoto(itemId, dataUrl) {
+  function addRoofPhoto(target, dataUrl) {
+    const { itemId, subIndex } = parseRoofPhotoTarget(target)
     setData(prev => {
       const item = prev.roofData[itemId]
+      if (!item) return prev
+
+      if (subIndex != null) {
+        const subItems = item.subItems.map((sub, i) =>
+          i === subIndex
+            ? { ...sub, photos: [...(sub.photos || []), dataUrl] }
+            : sub
+        )
+        const next = { ...prev, roofData: { ...prev.roofData, [itemId]: { ...item, subItems } } }
+        scheduleSave(next)
+        return next
+      }
+
       const next = { ...prev, roofData: { ...prev.roofData, [itemId]: { ...item, photos: [...item.photos, dataUrl] } } }
       scheduleSave(next)
       return next
     })
   }
 
-  function removeRoofPhoto(itemId, index) {
+  function removeRoofPhoto(target, index) {
+    const { itemId, subIndex } = parseRoofPhotoTarget(target)
     setData(prev => {
       const item = prev.roofData[itemId]
-      const next = { ...prev, roofData: { ...prev.roofData, [itemId]: { ...item, photos: item.photos.filter((_, i) => i !== index) } } }
+      if (!item) return prev
+
+      if (subIndex != null) {
+        const subItems = item.subItems.map((sub, i) =>
+          i === subIndex
+            ? { ...sub, photos: (sub.photos || []).filter((_, photoIndex) => photoIndex !== index) }
+            : sub
+        )
+        const next = { ...prev, roofData: { ...prev.roofData, [itemId]: { ...item, subItems } } }
+        scheduleSave(next)
+        return next
+      }
+
+      const next = {
+        ...prev,
+        roofData: {
+          ...prev.roofData,
+          [itemId]: { ...item, photos: item.photos.filter((_, i) => i !== index) },
+        },
+      }
+      scheduleSave(next)
+      return next
+    })
+  }
+
+  function importRoofPipeJacks(roof = {}) {
+    const subItems = buildPipeJackSubItemsFromParsed(roof)
+    if (!subItems.length) return
+
+    setData(prev => {
+      const item = prev.roofData.ri11
+      const next = {
+        ...prev,
+        roofData: {
+          ...prev.roofData,
+          ri11: {
+            ...item,
+            excluded: false,
+            fields: {},
+            subItems,
+          },
+        },
+      }
+      scheduleSave(next)
+      return next
+    })
+  }
+
+  function importRoofExhaustStacks(roof = {}) {
+    const subItems = buildExhaustStackSubItemsFromParsed(roof)
+    if (!subItems.length) return
+
+    setData(prev => {
+      const item = prev.roofData.ri12
+      const next = {
+        ...prev,
+        roofData: {
+          ...prev.roofData,
+          ri12: {
+            ...item,
+            excluded: false,
+            fields: {},
+            subItems,
+          },
+        },
+      }
+      scheduleSave(next)
+      return next
+    })
+  }
+
+  function importRoofChimneys(roof = {}) {
+    const subItems = buildChimneySubItemsFromParsed(roof)
+    if (!subItems.length) return
+
+    setData(prev => {
+      const item = prev.roofData.ri17
+      const next = {
+        ...prev,
+        roofData: {
+          ...prev.roofData,
+          ri17: {
+            ...item,
+            excluded: false,
+            fields: {},
+            subItems,
+          },
+        },
+      }
+      scheduleSave(next)
+      return next
+    })
+  }
+
+  function importRoofFlashingItems(roof = {}) {
+    const updates = FLASHING_IMPORT_CONFIG
+      .map(config => ({
+        itemId: config.itemId,
+        subItems: buildFlashingSubItemsFromParsed(roof, config),
+      }))
+      .filter(entry => entry.subItems.length)
+
+    if (!updates.length) return
+
+    setData(prev => {
+      let roofData = { ...prev.roofData }
+      for (const { itemId, subItems } of updates) {
+        roofData = {
+          ...roofData,
+          [itemId]: {
+            ...roofData[itemId],
+            excluded: false,
+            fields: {},
+            subItems,
+          },
+        }
+      }
+      const next = { ...prev, roofData }
+      scheduleSave(next)
+      return next
+    })
+  }
+
+  function importRoofLowSlopeItems(roof = {}) {
+    const subItems = buildLowSlopeSubItemsFromParsed(roof)
+    if (!subItems.length) return
+
+    setData(prev => {
+      const item = prev.roofData.ri22
+      const next = {
+        ...prev,
+        roofData: {
+          ...prev.roofData,
+          ri22: {
+            ...item,
+            excluded: false,
+            fields: {},
+            subItems,
+          },
+        },
+      }
       scheduleSave(next)
       return next
     })
@@ -431,7 +1479,7 @@ export function InspectionProvider({ children }) {
 
       if (parsed.valleyPresent) {
         const ri5 = roofData.ri5
-        roofData.ri5 = { ...ri5, fields: { ...ri5.fields, 'Present': 'Yes' } }
+        roofData.ri5 = { ...ri5, excluded: false }
       }
 
       if (parsed.lineLengths?.RIDGE > 0) {
@@ -447,7 +1495,7 @@ export function InspectionProvider({ children }) {
 
   function manualSave() {
     setSaveStatus('saving')
-    idbSave('current', { ...data, activeTab })
+    persistSnapshot(data)
       .then(() => setSaveStatus('saved'))
       .catch(() => setSaveStatus('unsaved'))
   }
@@ -459,7 +1507,7 @@ export function InspectionProvider({ children }) {
       ...INITIAL_STATE,
       ...saved,
       jobInfo,
-      roofData: { ...INITIAL_ROOF_DATA, ...(saved.roofData || {}) },
+      roofData: normalizeRoofData({ ...INITIAL_ROOF_DATA, ...(saved.roofData || {}) }),
       elevData: { ...INITIAL_ELEV_DATA, ...(saved.elevData || {}) },
       interiorData: saved.interiorData || INITIAL_INTERIOR_DATA,
       exteriorData: { ...INITIAL_EXTERIOR_DATA, ...(saved.exteriorData || {}) },
@@ -467,7 +1515,11 @@ export function InspectionProvider({ children }) {
     }
     setData(next)
     setActiveTabState(0)
-    idbSave('current', { ...next, activeTab: 0 })
+    if (saved.expandedSections && typeof saved.expandedSections === 'object') {
+      setExpandedSectionsState(saved.expandedSections)
+      expandedRef.current = saved.expandedSections
+    }
+    persistSnapshot(next, { activeTab: 0 })
     setSaveStatus('saved')
     setDriveSaveStatus('saved')
   }
@@ -476,7 +1528,9 @@ export function InspectionProvider({ children }) {
     if (!confirm('Reset all data? This cannot be undone.')) return
     setData(INITIAL_STATE)
     setActiveTabState(0)
-    idbSave('current', { ...INITIAL_STATE, activeTab: 0 })
+    setExpandedSectionsState({})
+    expandedRef.current = {}
+    persistSnapshot(INITIAL_STATE, { activeTab: 0, expandedSections: {} })
     setSaveStatus('saved')
     setDriveSaveStatus('unsaved')
   }
@@ -484,7 +1538,9 @@ export function InspectionProvider({ children }) {
   function startNewInspection() {
     setData(INITIAL_STATE)
     setActiveTabState(0)
-    idbSave('current', { ...INITIAL_STATE, activeTab: 0 })
+    setExpandedSectionsState({})
+    expandedRef.current = {}
+    persistSnapshot(INITIAL_STATE, { activeTab: 0, expandedSections: {} })
     setSaveStatus('saved')
     setDriveSaveStatus('unsaved')
   }
@@ -494,9 +1550,10 @@ export function InspectionProvider({ children }) {
   return (
     <InspectionContext.Provider value={{
       data, activeTab, setActiveTab,
+      expandedSections, setSectionExpanded,
       saveStatus, driveSaveStatus, setDriveSaveStatus, completion, updateJobInfo, manualSave, resetAll, startNewInspection, loadInspection, applyXmlImport,
       toggleRoofExclude, updateRoofField,
-      addRoofSubItem, removeRoofSubItem, updateRoofSubField,
+      addRoofSubItem, removeRoofSubItem, updateRoofSubField, importRoofPipeJacks, importRoofExhaustStacks, importRoofChimneys, importRoofFlashingItems, importRoofLowSlopeItems,
       addRoofPhoto, removeRoofPhoto,
       toggleElevExclude, updateElevField,
       addElevPhoto, removeElevPhoto,
