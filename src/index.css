@@ -817,7 +817,7 @@ button:disabled {
   justify-content: center;
   gap: 4px;
   padding: 5px;
-  transform: translateX(-50%) scale(var(--toolbar-scale, 2));
+  transform: translateX(-50%) scale(var(--toolbar-scale, 2.2));
   transform-origin: center bottom;
   border: 1px solid rgba(148, 163, 184, 0.28);
   border-radius: 999px;

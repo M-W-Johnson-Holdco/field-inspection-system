@@ -11,7 +11,7 @@ const TOTAL_TABS = 6
 const TOOLBAR_SCALE_KEY = 'tc_toolbar_scale'
 const TOOLBAR_SCALE_MIN = 0.75
 const TOOLBAR_SCALE_MAX = 2.5
-const TOOLBAR_SCALE_DEFAULT = 2
+const TOOLBAR_SCALE_DEFAULT = 2.2
 const TOOLBAR_VIEWPORT_MARGIN = 20
 
 function getViewportMaxToolbarScale(barEl) {
