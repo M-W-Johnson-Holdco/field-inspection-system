@@ -4,25 +4,35 @@ import { useInspection } from '../../context/InspectionContext'
 import PhotoZone from '../PhotoZone'
 import DamageDescriptionInput from '../DamageDescriptionInput'
 import useExpandedSection from '../../hooks/useExpandedSection'
+import { fieldGroupProps } from '../../utils/fieldLayout'
+import { fieldSelectClass, withSelectPlaceholderClass } from '../../utils/fieldGrid'
 
 const ROOM_PRESETS = [
-  'Living Room', 'Master Bedroom', 'Bedroom', 'Kitchen',
-  'Dining Room', 'Bathroom', 'Master Bathroom', 'Hallway',
-  'Laundry Room', 'Garage', 'Office / Study', 'Attic', 'Other',
+  'Attic', 'Bathroom', 'Bedroom', 'Dining Room', 'Garage', 'Hallway',
+  'Kitchen', 'Laundry Room', 'Living Room', 'Master Bathroom', 'Master Bedroom',
+  'Office / Study', 'Other',
 ]
 
-const STORY_OPTS = ['1st Floor', '2nd Floor', '3rd Floor', 'Attic']
+const STORY_OPTS = ['Basement', '1st Floor', '2nd Floor', '3rd Floor', 'Attic']
 
 // ── Damage Field Pair ─────────────────────────────────────────────
 function DamageField({ label, yesNoValue, notesValue, onYesNo, onNotes }) {
+  const ynField = { t: 'yn', l: label }
+
+  function handleYesNo(val) {
+    onYesNo(val)
+    if (val === 'No') onNotes('n/a')
+    else if (val !== 'Yes') onNotes('')
+  }
+
   return (
     <div className="int-damage-field">
-      <div className="field-group">
+      <div {...fieldGroupProps(ynField)}>
         <label className="form-label">{label}</label>
         <select
-          className="field-select compact-select"
+          className={withSelectPlaceholderClass(fieldSelectClass(ynField), yesNoValue)}
           value={yesNoValue || ''}
-          onChange={e => onYesNo(e.target.value)}
+          onChange={e => handleYesNo(e.target.value)}
         >
           <option value="">Select</option>
           <option value="Yes">Yes</option>
@@ -47,8 +57,14 @@ function RoomCard({ room, trigPhoto }) {
   const f = room.fields
   const set = (field, val) => updateInteriorRoom(room.id, field, val)
 
-  const hasDamage = f.ceilingDamage === 'Yes' || f.wallDamage === 'Yes' ||
-    f.floorDamage === 'Yes' || f.moldPresent === 'Yes'
+  const damageTags = [
+    f.ceilingDamage === 'Yes' && 'Ceiling Damage',
+    f.wallDamage    === 'Yes' && 'Wall Damage',
+    f.floorDamage   === 'Yes' && 'Floor Damage',
+    f.moldPresent   === 'Yes' && 'Mold / Mildew',
+  ].filter(Boolean)
+
+  const hasDamage = damageTags.length > 0
 
   return (
     <div className={`app-card int-room-card${hasDamage ? ' int-room-card--damage' : ''}`}>
@@ -61,10 +77,12 @@ function RoomCard({ room, trigPhoto }) {
           onClick={() => setOpen(o => !o)}
         >
           <span className="int-room-title">
-            {room.name || 'Unnamed Room'}
+            {room.name?.startsWith('Other - ') && room.customName ? room.customName : (room.name || 'Unnamed Room')}
             {f.story ? <span className="int-room-story">{f.story}</span> : null}
           </span>
-          {hasDamage && <span className="int-damage-badge">DAMAGE</span>}
+          {damageTags.map(tag => (
+            <span key={tag} className="int-damage-badge">{tag}</span>
+          ))}
           <ChevronDown className={`int-room-chevron${open ? ' int-room-chevron--open' : ''}`} aria-hidden="true" />
         </button>
         <button
@@ -89,7 +107,7 @@ function RoomCard({ room, trigPhoto }) {
                 <label className="form-label">Room / Location</label>
                 <select
                   className="field-select"
-                  value={room.name || ''}
+                  value={room.name?.startsWith('Other - ') ? 'Other' : (room.name || '')}
                   onChange={e => updateInteriorRoom(room.id, '_name', e.target.value)}
                 >
                   <option value="">Select</option>
@@ -98,9 +116,9 @@ function RoomCard({ room, trigPhoto }) {
                   ))}
                 </select>
               </div>
-              {(room.name === 'Other' || !ROOM_PRESETS.includes(room.name)) && room.name !== '' && (
+              {(room.name === 'Other' || room.name?.startsWith('Other - ')) && (
                 <div className="field-group">
-                  <label className="form-label">Custom Name</label>
+                  <label className="form-label">OTHER ROOM/LOCATION</label>
                   <input
                     className="field-input int-custom-name-input"
                     type="text"

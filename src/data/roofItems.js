@@ -21,15 +21,15 @@ export const ROOF_ITEMS = [
     id: 'ri1', lbl: 'Edge Flashings', flags: ['P'],
     compactOptionPairRow: true,
     fields: [
-      { t: 'radio', l: 'Type', o: ['Drip Edge', 'Critter Guard'] },
-      { t: 'radio', l: 'Material', o: ['Galvanized', 'Aluminum'] },
+      { t: 'radio', l: 'Type', o: ['Critter Guard', 'Drip Edge'] },
+      { t: 'radio', l: 'Material', o: ['Aluminum', 'Galvanized'] },
       { t: 'yn', l: 'Painted' },
     ],
   },
   {
     id: 'ri2', lbl: 'Underlayment', flags: ['P'],
     fields: [
-      { t: 'radio', l: 'Grade', o: ['Synthetic', 'Felt', 'Unknown'] },
+      { t: 'radio', l: 'Grade', o: ['Felt', 'Synthetic', 'Unknown'] },
       { t: 'num', l: 'Layers' },
     ],
   },
@@ -43,13 +43,13 @@ export const ROOF_ITEMS = [
   {
     id: 'ri4', lbl: 'Starter Shingle', flags: ['P'],
     fields: [
-      { t: 'radio', l: 'Style', o: ['Starter Strip', '3-Tab'] },
+      { t: 'radio', l: 'Style', o: ['3-Tab', 'Starter Strip'] },
     ],
   },
   {
     id: 'ri5', lbl: 'Valley', flags: ['P'],
     fields: [
-      { t: 'radio', l: 'Style', o: ['Ice & Water', 'W-Valley', 'Valley Metal'] },
+      { t: 'radio', l: 'Style', o: ['Ice & Water', 'Valley Metal', 'W-Valley'] },
     ],
   },
   {
@@ -112,10 +112,10 @@ export const ROOF_ITEMS = [
     addMoreLabel: 'Add Exhaust Stack',
     subItemPhotos: true,
     subItemDamaged: true,
-    subItemSizeCounters: { field: 'Type', sizes: ['Flange', 'Stack', 'Cap'], labelSuffix: '', counterLabel: 'type', compact: true },
+    subItemSizeCounters: { field: 'Type', sizes: ['Cap', 'Flange', 'Stack'], labelSuffix: '', counterLabel: 'type', compact: true },
     fields: [],
     subFields: [
-      { t: 'select', l: 'Type', o: ['Select', 'Flange', 'Stack', 'Cap'] },
+      { t: 'select', l: 'Type', o: ['Select', 'Cap', 'Flange', 'Stack'] },
       { t: 'yn', l: 'Painted' },
       { t: 'yn', l: 'Damaged' },
     ],
@@ -136,7 +136,7 @@ export const ROOF_ITEMS = [
     subItemSizeCounters: { field: 'Style', sizes: ['Fixed', 'Venting', 'Tubular'], labelSuffix: '', counterLabel: 'style', compact: true },
     fields: [],
     subFields: [
-      { t: 'select', l: 'Style', o: ['Select', 'Fixed', 'Venting', 'Tubular'] },
+      { t: 'select', l: 'Style', o: ['Select', 'Fixed', 'Tubular', 'Venting'] },
       { t: 'select', l: 'Mount', o: ['Select', 'Flush Mount', 'Curb Mount'] },
       { t: 'lwxw', l: 'Size (L x W – Inches)', lengthKey: 'Length (in)', widthKey: 'Width (in)' },
       { t: 'yn', l: 'Damaged' },
@@ -221,7 +221,7 @@ export const ROOF_ITEMS = [
     subItemSizeCounters: { field: 'Type', sizes: ['Shingles', 'Metal'], labelSuffix: '', counterLabel: 'type', compact: true },
     fields: [],
     subFields: [
-      { t: 'select', l: 'Type', o: ['Select', 'Shingles', 'Metal'] },
+      { t: 'select', l: 'Type', o: ['Select', 'Metal', 'Shingles'] },
       { t: 'num', l: 'Story', p: '1' },
       { t: 'num', l: 'Qty' },
     ],
@@ -232,10 +232,10 @@ export const ROOF_ITEMS = [
     addMoreLabel: 'Add Low Slope',
     subItemPhotos: true,
     subItemDamaged: true,
-    subItemSizeCounters: { field: 'Location', sizes: ['Front Porch', 'Back Porch', 'Other'], labelSuffix: '', counterLabel: 'location', compact: true },
+    subItemSizeCounters: { field: 'Location', sizes: ['Back Porch', 'Front Porch', 'Other'], labelSuffix: '', counterLabel: 'location', compact: true },
     fields: [],
     subFields: [
-      { t: 'select', l: 'Location', fullRow: true, o: ['Select', 'Front Porch', 'Back Porch', 'Other'] },
+      { t: 'select', l: 'Location', fullRow: true, o: ['Select', 'Back Porch', 'Front Porch', 'Other'] },
       { t: 'txt', l: '(Other)', showWhen: { field: 'Location', equals: 'Other' }, full: true },
       { t: 'txt', l: 'Style / Grade', p: 'e.g. TPO, Mod.Bitumen, EPDM', full: true },
       { t: 'yn', l: 'Exposed Rafters' },

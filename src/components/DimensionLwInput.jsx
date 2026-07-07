@@ -1,8 +1,8 @@
 import { fieldGroupProps } from '../utils/fieldLayout'
 
-function NumberStepperPart({ label, value, onChange }) {
+function NumberStepperPart({ label, value, onChange, placeholder = '0' }) {
   const current = value === '' || value == null ? 0 : Number(value)
-  const inputCh = Math.max(String(value || '0').length, 1)
+  const inputCh = Math.max(String(value || placeholder || '').length, 3)
 
   function adjust(delta) {
     const base = Number.isFinite(current) ? current : 0
@@ -29,7 +29,7 @@ function NumberStepperPart({ label, value, onChange }) {
           min="0"
           step="1"
           value={value || ''}
-          placeholder="0"
+          placeholder={placeholder}
           aria-label={label}
           onChange={e => onChange(e.target.value)}
         />

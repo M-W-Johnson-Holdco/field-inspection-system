@@ -123,34 +123,128 @@ export async function loadInspectionFromDrive(token, folderId) {
   return res.json()
 }
 
+// Maps roof item IDs → [section folder name, item folder name]
+const ROOF_ITEM_PATH = {
+  ri0:  ['1a-general_roof',              'shingle_style'],
+  ri1:  ['1a-general_roof',              'edge_flashings'],
+  ri2:  ['1a-general_roof',              'underlayment'],
+  ri3:  ['1a-general_roof',              'ridge_cap'],
+  ri4:  ['1a-general_roof',              'starter_shingle'],
+  ri5:  ['1a-general_roof',              'valley'],
+  ri6:  ['1b-ventilation',               'ridge_vent'],
+  ri7:  ['1b-ventilation',               'box_vents'],
+  ri8:  ['1b-ventilation',               'turbines'],
+  ri9:  ['1b-ventilation',               'power_vents'],
+  ri10: ['1b-ventilation',               'solar_vents'],
+  ri11: ['1c-pipe_jacks_and_exhaust',    'pipe_jacks'],
+  ri12: ['1c-pipe_jacks_and_exhaust',    'exhaust_stacks'],
+  ri13: ['1d-kickouts',                  'kickouts'],
+  ri14: ['1e-skylights_and_flashings',   'skylights'],
+  ri15: ['1e-skylights_and_flashings',   'rain_diverter'],
+  ri16: ['1e-skylights_and_flashings',   'power_meter_mast'],
+  ri17: ['1e-skylights_and_flashings',   'chimney_flashing'],
+  ri18: ['1e-skylights_and_flashings',   'step_flashing'],
+  ri19: ['1e-skylights_and_flashings',   'counter_flashing'],
+  ri20: ['1e-skylights_and_flashings',   'l_flashing'],
+  ri21: ['1e-skylights_and_flashings',   'cornice_gables'],
+  ri22: ['1f-low_slope_and_other',       'low_slope'],
+  ri23: ['1f-low_slope_and_other',       'other_structures'],
+}
+
+// Maps elevation item IDs → folder name
+const ELEV_ITEM_FOLDER = {
+  ev0:  'siding',
+  ev1:  'fascia',
+  ev2:  'soffit',
+  ev3:  'gutters',
+  ev4:  'downspouts',
+  ev5:  'window_screens',
+  ev6:  'shutters',
+  ev7:  'entry_doors',
+  ev8:  'garage_doors',
+  ev9:  'ac_condenser',
+  ev10: 'other_notes',
+}
+
+// Maps exterior item IDs → [section folder, item folder]
+const EXTERIOR_ITEM_PATH = {
+  ei_fence:   ['4a-fencing_and_gates',           'fence'],
+  ei_gates:   ['4a-fencing_and_gates',           'gates'],
+  ei_pool:    ['4b-pool_and_outdoor_equipment',  'pool'],
+  ei_outdoor: ['4c-outdoor_structures',          'outdoor_items'],
+  ei_site:    ['4d-site_access',                 'site_access'],
+}
+
+function slugify(str) {
+  return String(str || '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')
+}
+
+
 export async function saveInspectionToDrive(token, inspectionData, inspectorName) {
   const jobFolderId = await ensureFolder(token, folderName(inspectionData.jobInfo, inspectorName), SHARED_DRIVE_ID)
 
-  // Strip photos from JSON payload; collect them for separate upload
+  // Strip photos from JSON payload; collect { path: string[], name: string, url: string }
   const photos = []
   const clean = JSON.parse(JSON.stringify(inspectionData))
 
+  // ── Roof ──────────────────────────────────────────────────────────
   for (const [itemId, item] of Object.entries(clean.roofData || {})) {
-    ;(item.photos || []).forEach((url, i) => photos.push({ name: `roof_${itemId}_${i + 1}.jpg`, url }))
+    const pathParts = ROOF_ITEM_PATH[itemId]
+    if (!pathParts) continue
+    const [section, itemFolder] = pathParts
+
+    // Item-level photos (no sub-items)
+    ;(item.photos || []).forEach((url, i) => {
+      photos.push({ path: ['photos', '1-roof', section, itemFolder], name: `${i + 1}.jpg`, url })
+    })
     item.photos = []
+
+    // Sub-item photos (pipe jacks, skylights, etc.)
     ;(item.subItems || []).forEach((sub, subIndex) => {
       ;(sub.photos || []).forEach((url, i) => {
-        photos.push({ name: `roof_${itemId}_sub${subIndex + 1}_${i + 1}.jpg`, url })
+        const subFolder = `${subIndex + 1}-${slugify(itemFolder.replace(/s$/, ''))}`
+        photos.push({ path: ['photos', '1-roof', section, itemFolder, subFolder], name: `${i + 1}.jpg`, url })
       })
       sub.photos = []
     })
   }
+
+  // ── Elevations ────────────────────────────────────────────────────
+  const DIRECTIONS = ['Front', 'Right', 'Rear', 'Left']
   for (const [cellKey, cell] of Object.entries(clean.elevData || {})) {
-    ;(cell.photos || []).forEach((url, i) => photos.push({ name: `elev_${cellKey}_${i + 1}.jpg`, url }))
+    const parts = cellKey.split('_')
+    const itemId = parts[0]
+    const dir = parts.slice(1).join('_')
+    const dirSlug = slugify(dir)
+    const itemFolder = ELEV_ITEM_FOLDER[itemId] || slugify(itemId)
+    ;(cell.photos || []).forEach((url, i) => {
+      photos.push({ path: ['photos', '2-elevations', dirSlug, itemFolder], name: `${i + 1}.jpg`, url })
+    })
     cell.photos = []
   }
+
+  // ── Exterior ──────────────────────────────────────────────────────
+  for (const [itemId, item] of Object.entries(clean.exteriorData || {})) {
+    const pathParts = EXTERIOR_ITEM_PATH[itemId]
+    if (!pathParts) continue
+    const [section, itemFolder] = pathParts
+    ;(item.photos || []).forEach((url, i) => {
+      photos.push({ path: ['photos', '3-exterior', section, itemFolder], name: `${i + 1}.jpg`, url })
+    })
+    if (item.photos) item.photos = []
+  }
+
+  // ── Interior ──────────────────────────────────────────────────────
   ;(clean.interiorData?.rooms || []).forEach(room => {
-    const label = room.name || room.id
-    ;(room.photos || []).forEach((url, i) => photos.push({ name: `interior_${label}_${i + 1}.jpg`, url }))
+    const displayName = room.customName || room.name || room.id
+    const roomSlug = slugify(displayName)
+    ;(room.photos || []).forEach((url, i) => {
+      photos.push({ path: ['photos', '4-interior', roomSlug], name: `${i + 1}.jpg`, url })
+    })
     room.photos = []
   })
 
-  // Upload inspection.json
+  // ── Upload inspection.json ─────────────────────────────────────────
   const jsonBlob = new Blob([JSON.stringify(clean, null, 2)], { type: 'application/json' })
   const existingJsonId = await findByName(token, 'inspection.json', 'application/json', jobFolderId)
   if (existingJsonId) {
@@ -159,14 +253,32 @@ export async function saveInspectionToDrive(token, inspectionData, inspectorName
     await multipartUpload(token, jobFolderId, 'inspection.json', 'application/json', jsonBlob)
   }
 
-  // Upload photos
+  // Cache folder IDs to avoid redundant Drive API lookups
+  const folderCache = new Map()
+  async function cachedEnsurePath(segments) {
+    let parentId = jobFolderId
+    for (const seg of segments) {
+      const cacheKey = `${parentId}/${seg}`
+      if (folderCache.has(cacheKey)) {
+        parentId = folderCache.get(cacheKey)
+      } else {
+        const id = await ensureFolder(token, seg, parentId)
+        folderCache.set(cacheKey, id)
+        parentId = id
+      }
+    }
+    return parentId
+  }
+
+  // ── Upload photos ──────────────────────────────────────────────────
   for (const photo of photos) {
+    const folderId = await cachedEnsurePath(photo.path)
     const blob = dataUrlToBlob(photo.url)
-    const existingId = await findByName(token, photo.name, null, jobFolderId)
+    const existingId = await findByName(token, photo.name, null, folderId)
     if (existingId) {
       await patchFile(token, existingId, blob.type, blob)
     } else {
-      await multipartUpload(token, jobFolderId, photo.name, blob.type, blob)
+      await multipartUpload(token, folderId, photo.name, blob.type, blob)
     }
   }
 

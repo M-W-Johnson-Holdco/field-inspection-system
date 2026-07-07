@@ -1,9 +1,9 @@
 import { fieldGroupProps } from '../utils/fieldLayout'
 import { formatMeasurement, isLinearMeasurementField, parseMeasurement } from '../utils/measurement'
 
-function MeasurementStepper({ label, value, onChange }) {
+function MeasurementStepper({ label, value, onChange, placeholder = '0' }) {
   const current = value === '' || value == null ? 0 : Number(value)
-  const inputCh = Math.max(String(value || '0').length, 1)
+  const inputCh = Math.max(String(value || placeholder || '').length, 3)
 
   function adjust(delta) {
     const base = Number.isFinite(current) ? current : 0
@@ -11,37 +11,35 @@ function MeasurementStepper({ label, value, onChange }) {
   }
 
   return (
-    <div className="measurement-input__part">
-      <div className="number-stepper">
-        <button
-          type="button"
-          className="number-stepper__btn"
-          aria-label={`Decrease ${label}`}
-          onClick={() => adjust(-1)}
-        >
-          −
-        </button>
-        <input
-          className="field-input number-stepper__input"
-          style={{ '--field-ch': inputCh }}
-          type="number"
-          inputMode="numeric"
-          min="0"
-          step="1"
-          value={value || ''}
-          placeholder="0"
-          aria-label={label}
-          onChange={e => onChange(e.target.value)}
-        />
-        <button
-          type="button"
-          className="number-stepper__btn"
-          aria-label={`Increase ${label}`}
-          onClick={() => adjust(1)}
-        >
-          +
-        </button>
-      </div>
+    <div className="number-stepper">
+      <button
+        type="button"
+        className="number-stepper__btn"
+        aria-label={`Decrease ${label}`}
+        onClick={() => adjust(-1)}
+      >
+        −
+      </button>
+      <input
+        className="field-input number-stepper__input"
+        style={{ '--field-ch': inputCh }}
+        type="number"
+        inputMode="numeric"
+        min="0"
+        step="1"
+        value={value || ''}
+        placeholder={placeholder}
+        aria-label={label}
+        onChange={e => onChange(e.target.value)}
+      />
+      <button
+        type="button"
+        className="number-stepper__btn"
+        aria-label={`Increase ${label}`}
+        onClick={() => adjust(1)}
+      >
+        +
+      </button>
     </div>
   )
 }
@@ -54,13 +52,12 @@ export default function MeasurementInput({ field, value, onChange }) {
     return (
       <div {...fieldGroupProps(field)}>
         <label className="form-label">{field.l}</label>
-        <div className="measurement-input">
-          <MeasurementStepper
-            label={`${field.l} feet`}
-            value={display}
-            onChange={onChange}
-          />
-        </div>
+        <MeasurementStepper
+          label={`${field.l} feet`}
+          value={display}
+          placeholder={field.p || '0'}
+          onChange={onChange}
+        />
       </div>
     )
   }
@@ -78,16 +75,20 @@ export default function MeasurementInput({ field, value, onChange }) {
     <div {...fieldGroupProps(field)}>
       <label className="form-label">{field.l}</label>
       <div className="measurement-input">
-        <MeasurementStepper
-          label={`${field.l} feet`}
-          value={feet}
-          onChange={nextValue => update('feet', nextValue)}
-        />
-        <MeasurementStepper
-          label={`${field.l} inches`}
-          value={inches}
-          onChange={nextValue => update('inches', nextValue)}
-        />
+        <div className="measurement-input__part">
+          <MeasurementStepper
+            label={`${field.l} feet`}
+            value={feet}
+            onChange={nextValue => update('feet', nextValue)}
+          />
+        </div>
+        <div className="measurement-input__part">
+          <MeasurementStepper
+            label={`${field.l} inches`}
+            value={inches}
+            onChange={nextValue => update('inches', nextValue)}
+          />
+        </div>
       </div>
     </div>
   )

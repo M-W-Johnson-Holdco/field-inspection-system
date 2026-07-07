@@ -3,7 +3,10 @@ import { ROOF_ITEMS } from '../data/roofItems'
 
 export function isFieldVisible(field, values = {}) {
   if (!field.showWhen) return true
-  return values[field.showWhen.field] === field.showWhen.equals
+  const actual = values[field.showWhen.field]
+  const expected = field.showWhen.equals
+  if (typeof actual === 'string' && actual.startsWith(`${expected} - `)) return true
+  return actual === expected
 }
 
 export function visibleFieldsForValues(fields = [], values = {}) {
@@ -87,7 +90,30 @@ export function shouldStackUnderPrevious(previousField, currentField, fields, in
   return false
 }
 
+function isShingleStyleFieldsPattern(fields) {
+  return fields.length === 4
+    && fields[0].t === 'multiRadio' && fields[0].l === 'Style'
+    && fields[1].t === 'num' && fields[1].l === 'Stories'
+    && fields[2].t === 'num' && fields[2].l === 'Layers'
+    && fields[3].t === 'pitch'
+}
+
 export function groupFieldsForGrid(fields) {
+  if (isShingleStyleFieldsPattern(fields)) {
+    return [
+      { type: 'single', field: fields[0] },
+      {
+        type: 'row',
+        qtyRow: true,
+        groups: [
+          { type: 'single', field: fields[1] },
+          { type: 'single', field: fields[2] },
+        ],
+      },
+      { type: 'single', field: fields[3] },
+    ]
+  }
+
   if (isLengthTypePaintedPattern(fields)) {
     return [
       { type: 'single', field: fields[1] },
@@ -101,6 +127,7 @@ export function groupFieldsForGrid(fields) {
       {
         type: 'row',
         pairRow: true,
+        pairRowCompact: true,
         groups: [
           { type: 'single', field: fields[0] },
           { type: 'single', field: fields[1] },

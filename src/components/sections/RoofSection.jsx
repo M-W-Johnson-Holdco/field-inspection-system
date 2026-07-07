@@ -277,7 +277,9 @@ function CheckItem({ itemDef, trigPhoto }) {
         continue
       }
       size = String(size).replace(/"/g, '')
-      if (size in sizeCounts) sizeCounts[size] += 1
+      if (size in sizeCounts) { sizeCounts[size] += 1; continue }
+      const prefixMatch = Object.keys(sizeCounts).find(k => size.startsWith(`${k} - `))
+      if (prefixMatch) sizeCounts[prefixMatch] += 1
     }
   }
 
@@ -342,16 +344,23 @@ function CheckItem({ itemDef, trigPhoto }) {
               <FieldsGrid
                 fields={visibleFieldsForValues(subFields, sub.fields || {})}
                 gridStyle={subFieldsUseMaterialColumnWidth ? materialOptionColumnStyle() : undefined}
-                renderField={f => (
-                  <FieldRenderer
-                    key={f.l}
-                    field={f}
-                    value={sub.fields[f.l]}
-                    subFields={sub.fields}
-                    onChange={val => updateRoofSubField(id, idx, f.l, val)}
-                    onSubFieldChange={(label, val) => updateRoofSubField(id, idx, label, val)}
-                  />
-                )}
+                renderField={f => {
+                  let fieldValue = sub.fields[f.l]
+                  if (f.l === '(Other)') {
+                    const loc = sub.fields['Location'] || ''
+                    fieldValue = loc.startsWith('Other - ') ? loc.slice(8) : ''
+                  }
+                  return (
+                    <FieldRenderer
+                      key={f.l}
+                      field={f}
+                      value={fieldValue}
+                      subFields={sub.fields}
+                      onChange={val => updateRoofSubField(id, idx, f.l, val)}
+                      onSubFieldChange={(label, val) => updateRoofSubField(id, idx, label, val)}
+                    />
+                  )
+                }}
               />
             )}
             {subItemDamaged && sub.fields['Damaged'] === 'Yes' && (
@@ -447,7 +456,11 @@ function CheckItem({ itemDef, trigPhoto }) {
             <FieldRenderer
               field={{ t: 'yn', l: 'Damaged' }}
               value={item.fields['Damaged']}
-              onChange={val => updateRoofField(id, 'Damaged', val)}
+              onChange={val => {
+                updateRoofField(id, 'Damaged', val)
+                if (val === 'No') updateRoofField(id, '_damage', 'n/a')
+                else if (val !== 'Yes') updateRoofField(id, '_damage', '')
+              }}
             />
           )}
 

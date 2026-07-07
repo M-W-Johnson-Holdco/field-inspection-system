@@ -139,7 +139,8 @@ function ExteriorItem({ itemDef, trigPhoto }) {
 
   function handleDamageStatus(nextStatus) {
     updateExteriorField(id, '_damagePresent', nextStatus)
-    if (nextStatus !== 'Yes') updateExteriorField(id, '_damage', '')
+    if (nextStatus === 'No') updateExteriorField(id, '_damage', 'n/a')
+    else if (nextStatus !== 'Yes') updateExteriorField(id, '_damage', '')
   }
 
   return (

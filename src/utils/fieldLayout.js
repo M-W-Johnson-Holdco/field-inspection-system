@@ -6,11 +6,11 @@ function hasLongLabel(field) {
 }
 
 function usesStepperRow(field) {
-  return field.t === 'num' || field.t === 'pitch'
+  return field.t === 'num' || field.t === 'pitch' || field.t === 'lwxw'
 }
 
 function buildFieldGroupClass(field, extra = '') {
-  const layout = ['multiRadio', 'multi', 'toggleMulti', 'textarea', 'lwxw'].includes(field.t)
+  const layout = ['multiRadio', 'multi', 'toggleMulti', 'textarea'].includes(field.t)
     || field.full
     ? 'field-group--full'
     : 'field-group--compact'

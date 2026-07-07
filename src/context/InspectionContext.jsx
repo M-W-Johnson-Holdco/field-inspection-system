@@ -14,8 +14,11 @@ const INITIAL_ROOF_DATA = Object.fromEntries(
 
 const INITIAL_ELEV_DATA = Object.fromEntries(
   ELEV_ITEMS.flatMap(item =>
-    DIRECTIONS.map(dir => [`${item.id}_${dir}`, { excluded: false, fields: {}, photos: [] }])
-  )
+    DIRECTIONS.map(dir => {
+      const defaultFields = item.id === 'ev3' ? { 'Size (Inches)': '4' } : {}
+      return [`${item.id}_${dir}`, { excluded: false, fields: defaultFields, photos: [] }]
+    }),
+  ),
 )
 
 const INITIAL_INTERIOR_DATA = { rooms: [] }
@@ -130,8 +133,7 @@ function calculateCompletion(data) {
   })
 
   ;(data.interiorData?.rooms || []).forEach(room => {
-    countValue(room.name, totals)
-    if (room.name === 'Other') countValue(room.customName, totals)
+    countValue(room.name && room.name !== 'Other' ? room.name : null, totals)
     ;['story', 'ceilingDamage', 'wallDamage', 'floorDamage', 'moldPresent'].forEach(key => {
       countValue(room.fields?.[key], totals)
     })
@@ -153,6 +155,45 @@ const PIPE_JACK_SIZE_LABELS = [
 ]
 
 const EXHAUST_STACK_TYPES = ['Flange', 'Stack', 'Cap']
+
+function normalizeGutterSizeValue(val) {
+  if (val == null || val === '' || val === 'Select') return ''
+  const match = String(val).match(/(\d+(?:\.\d+)?)/)
+  return match ? match[1] : String(val).trim()
+}
+
+function normalizeElevGutterCell(cell) {
+  if (!cell) return cell
+  const fields = { ...(cell.fields || {}) }
+
+  if (fields.Size != null) {
+    const parsed = normalizeGutterSizeValue(fields.Size)
+    if (parsed && fields['Size (Inches)'] == null) fields['Size (Inches)'] = parsed
+    delete fields.Size
+  }
+
+  if (fields['Size (Inches)'] != null && fields['Size (Inches)'] !== '') {
+    fields['Size (Inches)'] = normalizeGutterSizeValue(fields['Size (Inches)'])
+  } else if (fields['Size (Inches)'] == null || fields['Size (Inches)'] === '') {
+    fields['Size (Inches)'] = '4'
+  }
+
+  return { ...cell, fields }
+}
+
+function normalizeElevData(elevData = {}) {
+  const next = { ...elevData }
+  for (const key of Object.keys(next)) {
+    if (key.startsWith('ev3_')) next[key] = normalizeElevGutterCell(next[key])
+  }
+  for (const dir of DIRECTIONS) {
+    const key = `ev3_${dir}`
+    if (!next[key]) {
+      next[key] = normalizeElevGutterCell({ excluded: false, fields: {}, photos: [] })
+    }
+  }
+  return next
+}
 
 function normalizeChimneySizeValue(val) {
   if (!val) return ''
@@ -1008,7 +1049,7 @@ export function InspectionProvider({ children }) {
           ...saved,
           jobInfo,
           roofData: normalizeRoofData({ ...INITIAL_ROOF_DATA, ...(saved.roofData || {}) }),
-          elevData: { ...INITIAL_ELEV_DATA, ...(saved.elevData || {}) },
+          elevData: normalizeElevData({ ...INITIAL_ELEV_DATA, ...(saved.elevData || {}) }),
           interiorData: saved.interiorData || INITIAL_INTERIOR_DATA,
           exteriorData: { ...INITIAL_EXTERIOR_DATA, ...(saved.exteriorData || {}) },
           notesData: { ...INITIAL_NOTES_DATA, ...(saved.notesData || {}) },
@@ -1116,8 +1157,16 @@ export function InspectionProvider({ children }) {
       const subItems = item.subItems.map((sub, i) => {
         if (i !== index) return sub
         const fields = { ...sub.fields, [label]: value }
-        if (label === 'Damaged' && value !== 'Yes') delete fields._damage
-        if (label === 'Location' && value !== 'Other') delete fields['(Other)']
+        if (label === 'Damaged' && value === 'No') fields._damage = 'n/a'
+        if (label === 'Damaged' && value !== 'Yes' && value !== 'No') delete fields._damage
+        if (label === 'Location') {
+          delete fields['(Other)']
+          if (value === 'Other') fields['Location'] = 'Other'
+        }
+        if (label === '(Other)') {
+          fields['Location'] = value ? `Other - ${value}` : 'Other'
+          delete fields['(Other)']
+        }
         return { ...sub, fields }
       })
       const next = { ...prev, roofData: { ...prev.roofData, [itemId]: { ...item, subItems } } }
@@ -1370,8 +1419,8 @@ export function InspectionProvider({ children }) {
     setData(prev => {
       const rooms = prev.interiorData.rooms.map(r => {
         if (r.id !== roomId) return r
-        if (field === '_name') return { ...r, name: value }
-        if (field === '_customName') return { ...r, customName: value }
+        if (field === '_name') return { ...r, name: value, customName: '' }
+        if (field === '_customName') return { ...r, name: value ? `Other - ${value}` : 'Other', customName: value }
         return { ...r, fields: { ...r.fields, [field]: value } }
       })
       const next = { ...prev, interiorData: { rooms } }
@@ -1508,7 +1557,7 @@ export function InspectionProvider({ children }) {
       ...saved,
       jobInfo,
       roofData: normalizeRoofData({ ...INITIAL_ROOF_DATA, ...(saved.roofData || {}) }),
-      elevData: { ...INITIAL_ELEV_DATA, ...(saved.elevData || {}) },
+      elevData: normalizeElevData({ ...INITIAL_ELEV_DATA, ...(saved.elevData || {}) }),
       interiorData: saved.interiorData || INITIAL_INTERIOR_DATA,
       exteriorData: { ...INITIAL_EXTERIOR_DATA, ...(saved.exteriorData || {}) },
       notesData: { ...INITIAL_NOTES_DATA, ...(saved.notesData || {}) },

@@ -8,6 +8,20 @@ import { ELEV_ITEMS, DIRECTIONS } from '../../data/elevItems'
 import { fieldGroupProps } from '../../utils/fieldLayout'
 import { fieldSelectClass, withSelectPlaceholderClass } from '../../utils/fieldGrid'
 
+function orderElevFields(fields = []) {
+  const rest = []
+  const nums = []
+  const damaged = []
+
+  for (const field of fields) {
+    if (field.t === 'num') nums.push(field)
+    else if (field.l === 'Damaged') damaged.push(field)
+    else rest.push(field)
+  }
+
+  return [...rest, ...nums, ...damaged]
+}
+
 // ── Field Renderer — mirrors Cursor's RoofSection pattern ─────────
 function FieldRenderer({ field, value, onChange }) {
   const { t, l, o, p } = field
@@ -103,23 +117,44 @@ function FieldRenderer({ field, value, onChange }) {
   }
 
   if (t === 'num') {
-    const cur = value === '' || value == null ? 0 : Number(value)
-    const adj = n => onChange(String(Math.max(0, (Number.isFinite(cur) ? cur : 0) + n)))
+    const currentValue = value === '' || value == null ? 0 : Number(value)
+    const adjustValue = amount => {
+      const base = Number.isFinite(currentValue) ? currentValue : 0
+      onChange(String(Math.max(0, base + amount)))
+    }
+    const inputCh = Math.max(String(value || p || '').length, 3)
+
     return (
       <div {...fieldGroupProps(field)}>
         {lbl}
         <div className="number-stepper">
-          <button type="button" className="number-stepper__btn" onClick={() => adj(-1)}>−</button>
+          <button
+            type="button"
+            className="number-stepper__btn"
+            aria-label={`Decrease ${l}`}
+            onClick={() => adjustValue(-1)}
+          >
+            −
+          </button>
           <input
             className="field-input number-stepper__input"
+            style={{ '--field-ch': inputCh }}
             type="number"
             inputMode="numeric"
             min="0"
+            step="1"
             value={value || ''}
             placeholder={p || '0'}
             onChange={e => onChange(e.target.value)}
           />
-          <button type="button" className="number-stepper__btn" onClick={() => adj(1)}>+</button>
+          <button
+            type="button"
+            className="number-stepper__btn"
+            aria-label={`Increase ${l}`}
+            onClick={() => adjustValue(1)}
+          >
+            +
+          </button>
         </div>
       </div>
     )
@@ -142,6 +177,7 @@ function FieldRenderer({ field, value, onChange }) {
 // ── Elevation Item Row ────────────────────────────────────────────
 function ElevItem({ itemDef, direction, trigPhoto }) {
   const { updateElevField, toggleElevExclude, removeElevPhoto, data } = useInspection()
+  const { compactOptionPairRow } = itemDef
   const cellKey = `${itemDef.id}_${direction}`
   const cell = data.elevData[cellKey]
   const { excluded, photos } = cell
@@ -165,16 +201,33 @@ function ElevItem({ itemDef, direction, trigPhoto }) {
       {!excluded && (
         <div className="ri-item__body">
           <FieldsGrid
-            fields={itemDef.fields}
+            fields={orderElevFields(itemDef.fields)}
+            compactOptionPairRow={compactOptionPairRow}
             renderField={f => (
               <FieldRenderer
                 key={f.l}
                 field={f}
                 value={cell.fields[f.l]}
-                onChange={val => updateElevField(cellKey, f.l, val)}
+                onChange={val => {
+                  updateElevField(cellKey, f.l, val)
+                  if (f.l === 'Damaged') {
+                    if (val === 'No') updateElevField(cellKey, '_damage', 'n/a')
+                    else if (val !== 'Yes') updateElevField(cellKey, '_damage', '')
+                  }
+                }}
               />
             )}
           >
+            {cell.fields['Damaged'] === 'Yes' && (
+              <div className="ri-damage-row">
+                <label className="form-label">Damage Description</label>
+                <DamageDescriptionInput
+                  placeholder="Describe visible damage…"
+                  value={cell.fields['_damage'] || ''}
+                  onChange={val => updateElevField(cellKey, '_damage', val)}
+                />
+              </div>
+            )}
             <PhotoZone
               entityId={cellKey}
               photos={photos}
@@ -182,17 +235,6 @@ function ElevItem({ itemDef, direction, trigPhoto }) {
               onRemove={removeElevPhoto}
             />
           </FieldsGrid>
-
-          {cell.fields['Damaged'] === 'Yes' && (
-            <div className="ri-damage-row">
-              <label className="form-label">Damage Description</label>
-              <DamageDescriptionInput
-                placeholder="Describe visible damage…"
-                value={cell.fields['_damage'] || ''}
-                onChange={val => updateElevField(cellKey, '_damage', val)}
-              />
-            </div>
-          )}
 
         </div>
       )}

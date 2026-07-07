@@ -12,7 +12,7 @@ export default function FieldsGrid({ fields, renderField, children, gridStyle: g
             'field-row',
             group.pairRowSizeType && 'field-row--pair-row-size-type',
             group.pairRow && 'field-row--pair-row',
-            group.pairRow && compactOptionPairRow && 'field-row--pair-row-compact',
+            group.pairRow && (compactOptionPairRow || group.pairRowCompact) && 'field-row--pair-row-compact',
             group.ynPairRow && 'field-row--yn-pair',
             group.qtyRow && 'field-row--qty-row',
           ].filter(Boolean).join(' ')

@@ -70,7 +70,7 @@ const ELEV_MAP = [
   { key: 'soffitMaterial',       itemId: 'ev2',  label: 'Material' },
   { key: 'soffitDamage',         itemId: 'ev2',  label: 'Damaged' },
   { key: 'gutterMaterial',       itemId: 'ev3',  label: 'Material' },
-  { key: 'gutterSize',           itemId: 'ev3',  label: 'Size' },
+  { key: 'gutterSize',           itemId: 'ev3',  label: 'Size (Inches)' },
   { key: 'gutterDamage',         itemId: 'ev3',  label: 'Damaged' },
   { key: 'downspoutQty',         itemId: 'ev4',  label: 'Qty' },
   { key: 'downspoutMaterial',    itemId: 'ev4',  label: 'Material' },
@@ -126,6 +126,11 @@ function normalizeChimneySize(val) {
   return val
 }
 
+function normalizeGutterSize(val) {
+  const match = String(val).match(/(\d+(?:\.\d+)?)/)
+  return match ? match[1] : String(val).trim()
+}
+
 // Convert comma string from AI to array for multiRadio fields
 function toArray(val) {
   if (Array.isArray(val)) return val
@@ -175,8 +180,9 @@ function applyParsed(parsed, ctx) {
   DIRS.forEach(dir => {
     const dirData = elevations[dir] || {}
     ELEV_MAP.forEach(({ key, itemId, label }) => {
-      const val = dirData[key]
+      let val = dirData[key]
       if (val == null) return
+      if (key === 'gutterSize') val = normalizeGutterSize(val)
       updateElevField(`${itemId}_${dir}`, label, val)
     })
   })

@@ -9,7 +9,7 @@ export const EXTERIOR_ITEMS = [
   {
     id: 'ei_fence', lbl: 'Fence', flags: ['P', 'M', 'D'],
     fields: [
-      { t: 'multiRadio', l: 'Material', o: ['Pine', 'Cedar', 'Other Wood', 'Vinyl', 'Aluminum', 'Rod Iron'] },
+      { t: 'multiRadio', l: 'Material', o: ['Aluminum', 'Cedar', 'Other Wood', 'Pine', 'Rod Iron', 'Vinyl'] },
       { t: 'radio', l: 'Style', o: ['Privacy', 'Board on Board', 'Picket'] },
       { t: 'radio', l: 'Posts', o: ['Metal Rod', '4x4', '6x6'] },
       { t: 'num', l: 'Post Spacing (LF)', p: '8' },
