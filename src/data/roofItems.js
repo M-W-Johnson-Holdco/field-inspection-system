@@ -18,38 +18,46 @@ export const ROOF_ITEMS = [
     ],
   },
   {
-    id: 'ri1', lbl: 'Edge Flashings', flags: ['P'],
+    id: 'ri1', lbl: 'Edge Flashings', flags: ['P', 'D'],
     compactOptionPairRow: true,
     fields: [
       { t: 'radio', l: 'Type', o: ['Critter Guard', 'Drip Edge'] },
       { t: 'radio', l: 'Material', o: ['Aluminum', 'Galvanized'] },
       { t: 'yn', l: 'Painted' },
+      { t: 'yn', l: 'Damaged' },
     ],
   },
   {
-    id: 'ri2', lbl: 'Underlayment', flags: ['P'],
+    id: 'ri2', lbl: 'Underlayment', flags: ['P', 'D'],
     fields: [
       { t: 'radio', l: 'Grade', o: ['Felt', 'Synthetic', 'Unknown'] },
       { t: 'num', l: 'Layers' },
     ],
   },
   {
-    id: 'ri3', lbl: 'Ridge Cap', flags: ['P', 'M'],
+    id: 'ri3', lbl: 'Ridge Cap', flags: ['P', 'M', 'D'],
     fields: [
       { t: 'radio', l: 'Grade', o: ['3-Tab', 'H&R', 'Hi Profile'] },
       { t: 'num', l: 'Exposure (inches)' },
     ],
   },
   {
-    id: 'ri4', lbl: 'Starter Shingle', flags: ['P'],
+    id: 'ri4', lbl: 'Starter Shingle', flags: ['P', 'D'],
     fields: [
       { t: 'radio', l: 'Style', o: ['3-Tab', 'Starter Strip'] },
     ],
   },
   {
-    id: 'ri5', lbl: 'Valley', flags: ['P'],
+    id: 'ri5', lbl: 'Valley', flags: ['P', 'D'],
     fields: [
       { t: 'radio', l: 'Style', o: ['Ice & Water', 'Valley Metal', 'W-Valley'] },
+    ],
+  },
+  {
+    id: 'ri24', lbl: 'Solar Panels', flags: ['P'],
+    fields: [
+      { t: 'num', l: 'Qty' },
+      { t: 'yn', l: 'Damaged' },
     ],
   },
   {

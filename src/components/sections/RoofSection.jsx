@@ -257,6 +257,7 @@ function CheckItem({ itemDef, trigPhoto }) {
 
   const hasP = flags.includes('P')
   const hasD = flags.includes('D')
+  const hasInlineDamaged = fields.some(f => f.l === 'Damaged')
   const subItemLabel = (addMoreLabel || 'Item').replace('Add ', '')
   const showItemPhotos = hasP && !subItemPhotos
 
@@ -437,10 +438,37 @@ function CheckItem({ itemDef, trigPhoto }) {
                   key={f.l}
                   field={f}
                   value={item.fields[f.l]}
-                  onChange={val => updateRoofField(id, f.l, val)}
+                  onChange={val => {
+                    updateRoofField(id, f.l, val)
+                    if (f.l === 'Damaged') {
+                      if (val === 'No') updateRoofField(id, '_damage', 'n/a')
+                      else if (val !== 'Yes') updateRoofField(id, '_damage', '')
+                    }
+                  }}
                 />
               )}
             >
+              {hasD && !hasInlineDamaged && (
+                <FieldRenderer
+                  field={{ t: 'yn', l: 'Damaged' }}
+                  value={item.fields['Damaged']}
+                  onChange={val => {
+                    updateRoofField(id, 'Damaged', val)
+                    if (val === 'No') updateRoofField(id, '_damage', 'n/a')
+                    else if (val !== 'Yes') updateRoofField(id, '_damage', '')
+                  }}
+                />
+              )}
+              {item.fields['Damaged'] === 'Yes' && (
+                <div className="ri-damage-row">
+                  <label className="form-label">Damage Description</label>
+                  <DamageDescriptionInput
+                    placeholder="Describe damage..."
+                    value={item.fields['_damage'] || ''}
+                    onChange={val => updateRoofField(id, '_damage', val)}
+                  />
+                </div>
+              )}
               {showItemPhotos && (
                 <PhotoZone
                   entityId={id}
@@ -450,29 +478,6 @@ function CheckItem({ itemDef, trigPhoto }) {
                 />
               )}
             </FieldsGrid>
-          )}
-
-          {hasD && (
-            <FieldRenderer
-              field={{ t: 'yn', l: 'Damaged' }}
-              value={item.fields['Damaged']}
-              onChange={val => {
-                updateRoofField(id, 'Damaged', val)
-                if (val === 'No') updateRoofField(id, '_damage', 'n/a')
-                else if (val !== 'Yes') updateRoofField(id, '_damage', '')
-              }}
-            />
-          )}
-
-          {hasD && item.fields['Damaged'] === 'Yes' && (
-            <div className="ri-damage-row">
-              <label className="form-label">Damage Description</label>
-              <DamageDescriptionInput
-                placeholder="Describe damage..."
-                value={item.fields['_damage'] || ''}
-                onChange={val => updateRoofField(id, '_damage', val)}
-              />
-            </div>
           )}
 
           {renderSubItems()}

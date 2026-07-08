@@ -21,6 +21,14 @@ function optionColumnStyle(maxSelectCh) {
   }
 }
 
+function isEdgeFlashingFieldsPattern(fields) {
+  return fields.length === 4
+    && isOptionSelectField(fields[0]) && fields[0].l === 'Type'
+    && isOptionSelectField(fields[1]) && fields[1].l === 'Material'
+    && fields[2].t === 'yn' && fields[2].l === 'Painted'
+    && fields[3].t === 'yn' && fields[3].l === 'Damaged'
+}
+
 function isFlashingSubFieldsPattern(fields) {
   return fields.length === 3
     && isLinearMeasurementField(fields[0])
@@ -99,6 +107,27 @@ function isShingleStyleFieldsPattern(fields) {
 }
 
 export function groupFieldsForGrid(fields) {
+  if (isEdgeFlashingFieldsPattern(fields)) {
+    return [
+      {
+        type: 'row',
+        pairRow: true,
+        groups: [
+          { type: 'single', field: fields[0] },
+          { type: 'single', field: fields[1] },
+        ],
+      },
+      {
+        type: 'row',
+        ynPairRow: true,
+        groups: [
+          { type: 'single', field: fields[2] },
+          { type: 'single', field: fields[3] },
+        ],
+      },
+    ]
+  }
+
   if (isShingleStyleFieldsPattern(fields)) {
     return [
       { type: 'single', field: fields[0] },

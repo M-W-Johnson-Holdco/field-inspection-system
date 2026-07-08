@@ -13,7 +13,7 @@ const ROOM_PRESETS = [
   'Office / Study', 'Other',
 ]
 
-const STORY_OPTS = ['Basement', '1st Floor', '2nd Floor', '3rd Floor', 'Attic']
+const STORY_OPTS = ['Basement', '1st Floor', '2nd Floor', '3rd Floor', '4th Floor', 'Attic']
 
 // ── Damage Field Pair ─────────────────────────────────────────────
 function DamageField({ label, yesNoValue, notesValue, onYesNo, onNotes }) {

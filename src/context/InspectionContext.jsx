@@ -4,6 +4,7 @@ import { ROOF_ITEMS } from '../data/roofItems'
 import { ELEV_ITEMS, DIRECTIONS } from '../data/elevItems'
 import { EXTERIOR_ITEMS } from '../data/exteriorItems'
 import { formatPitch, parsePitchNumerator } from '../utils/pitch'
+import { parseMeasurement } from '../utils/measurement'
 import { isFieldVisible } from '../utils/fieldGrid'
 
 const InspectionContext = createContext(null)
@@ -24,7 +25,12 @@ const INITIAL_ELEV_DATA = Object.fromEntries(
 const INITIAL_INTERIOR_DATA = { rooms: [] }
 
 const INITIAL_EXTERIOR_DATA = Object.fromEntries(
-  EXTERIOR_ITEMS.map(item => [item.id, { excluded: false, fields: {}, photos: [] }])
+  EXTERIOR_ITEMS.map(item => {
+    const defaultFields = item.id === 'ei_fence'
+      ? { 'Post Spacing (LF)': '8', 'Height (FT)': '6' }
+      : {}
+    return [item.id, { excluded: false, fields: defaultFields, photos: [] }]
+  }),
 )
 
 const INITIAL_NOTES_DATA = {
@@ -36,7 +42,8 @@ const INITIAL_STATE = {
   jobInfo: {
     cust: '', phone: '', email: '', addr: '',
     pm: '', insp: '', ins: '', claim: '',
-    date: new Date().toISOString().slice(0, 10),
+    claimFileDate: new Date().toISOString().slice(0, 10),
+    stormDate: '',
     preferredContact: [],
     residenceType: 'Primary',
     addrParts: { address1: '', address2: '', city: '', state: '', zipcode: '' },
@@ -94,7 +101,7 @@ function calculateCompletion(data) {
   const totals = { filled: 0, total: 0 }
   const ji = data.jobInfo || {}
 
-  ;['cust', 'preferredContact', 'residenceType', 'pm', 'insp', 'ins', 'claim', 'date'].forEach(key => {
+  ;['cust', 'preferredContact', 'residenceType', 'pm', 'insp', 'ins', 'claim', 'claimFileDate', 'stormDate'].forEach(key => {
     countValue(ji[key], totals)
   })
   countValue(ji.phone, totals, isValidPhone)
@@ -111,6 +118,9 @@ function calculateCompletion(data) {
 
     ;(itemDef.fields || []).forEach(field => countValue(item.fields?.[field.l], totals))
     if (itemDef.flags?.includes('D')) countValue(item.fields?._damage, totals)
+    else if (item.fields?.Damaged === 'Yes' && (itemDef.fields || []).some(field => field.l === 'Damaged')) {
+      countValue(item.fields?._damage, totals)
+    }
     ;(item.subItems || []).forEach(sub => {
       ;(itemDef.subFields || []).forEach(field => {
         if (!isFieldVisible(field, sub.fields)) return
@@ -192,6 +202,57 @@ function normalizeElevData(elevData = {}) {
       next[key] = normalizeElevGutterCell({ excluded: false, fields: {}, photos: [] })
     }
   }
+  return next
+}
+
+function normalizeFenceFields(fields = {}) {
+  const next = { ...fields }
+
+  if (next.Height != null && next['Height (FT)'] == null) {
+    const parsed = String(next.Height).match(/(\d+(?:\.\d+)?)/)
+    next['Height (FT)'] = parsed ? parsed[1] : ''
+    delete next.Height
+  }
+
+  if (next['Height (FT)'] != null && next['Height (FT)'] !== '') {
+    const parsed = String(next['Height (FT)']).match(/(\d+(?:\.\d+)?)/)
+    next['Height (FT)'] = parsed ? parsed[1] : next['Height (FT)']
+  } else {
+    next['Height (FT)'] = '6'
+  }
+
+  if (next['Post Spacing (LF)'] != null && next['Post Spacing (LF)'] !== '') {
+    const { feet } = parseMeasurement(next['Post Spacing (LF)'])
+    next['Post Spacing (LF)'] = feet !== '' ? feet : String(next['Post Spacing (LF)']).replace(/[^\d.]/g, '')
+  } else {
+    next['Post Spacing (LF)'] = '8'
+  }
+
+  return next
+}
+
+function normalizeJobInfo(jobInfo = {}) {
+  const next = { ...jobInfo }
+
+  if (next.date != null && next.date !== '') {
+    if (!next.claimFileDate) next.claimFileDate = next.date
+    delete next.date
+  }
+
+  return next
+}
+
+function normalizeExteriorData(exteriorData = {}) {
+  const next = { ...exteriorData }
+  const fence = next.ei_fence
+  if (!fence) return next
+
+  const normalizedFields = normalizeFenceFields(fence.fields || {})
+  const fieldsChanged = JSON.stringify(normalizedFields) !== JSON.stringify(fence.fields || {})
+  if (fieldsChanged) {
+    next.ei_fence = { ...fence, fields: normalizedFields }
+  }
+
   return next
 }
 
@@ -1042,7 +1103,7 @@ export function InspectionProvider({ children }) {
   useEffect(() => {
     idbLoad('current').then(saved => {
       if (saved) {
-        const jobInfo = { ...INITIAL_STATE.jobInfo, ...(saved.jobInfo || {}) }
+        const jobInfo = normalizeJobInfo({ ...INITIAL_STATE.jobInfo, ...(saved.jobInfo || {}) })
         if (!jobInfo.residenceType) jobInfo.residenceType = 'Primary'
         setData({
           ...INITIAL_STATE,
@@ -1051,7 +1112,7 @@ export function InspectionProvider({ children }) {
           roofData: normalizeRoofData({ ...INITIAL_ROOF_DATA, ...(saved.roofData || {}) }),
           elevData: normalizeElevData({ ...INITIAL_ELEV_DATA, ...(saved.elevData || {}) }),
           interiorData: saved.interiorData || INITIAL_INTERIOR_DATA,
-          exteriorData: { ...INITIAL_EXTERIOR_DATA, ...(saved.exteriorData || {}) },
+          exteriorData: normalizeExteriorData({ ...INITIAL_EXTERIOR_DATA, ...(saved.exteriorData || {}) }),
           notesData: { ...INITIAL_NOTES_DATA, ...(saved.notesData || {}) },
         })
         if (Number.isInteger(saved.activeTab)) setActiveTabState(saved.activeTab)
@@ -1550,7 +1611,7 @@ export function InspectionProvider({ children }) {
   }
 
   function loadInspection(saved) {
-    const jobInfo = { ...INITIAL_STATE.jobInfo, ...(saved.jobInfo || {}) }
+    const jobInfo = normalizeJobInfo({ ...INITIAL_STATE.jobInfo, ...(saved.jobInfo || {}) })
     if (!jobInfo.residenceType) jobInfo.residenceType = 'Primary'
     const next = {
       ...INITIAL_STATE,
@@ -1559,7 +1620,7 @@ export function InspectionProvider({ children }) {
       roofData: normalizeRoofData({ ...INITIAL_ROOF_DATA, ...(saved.roofData || {}) }),
       elevData: normalizeElevData({ ...INITIAL_ELEV_DATA, ...(saved.elevData || {}) }),
       interiorData: saved.interiorData || INITIAL_INTERIOR_DATA,
-      exteriorData: { ...INITIAL_EXTERIOR_DATA, ...(saved.exteriorData || {}) },
+      exteriorData: normalizeExteriorData({ ...INITIAL_EXTERIOR_DATA, ...(saved.exteriorData || {}) }),
       notesData: { ...INITIAL_NOTES_DATA, ...(saved.notesData || {}) },
     }
     setData(next)

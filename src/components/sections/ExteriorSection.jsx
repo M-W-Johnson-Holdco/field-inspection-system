@@ -170,6 +170,32 @@ function ExteriorItem({ itemDef, trigPhoto }) {
               />
             )}
           >
+            {hasD && (
+              <div className="ri-damage-row">
+                <div className="field-group field-group--compact">
+                  <label className="form-label">Damaged</label>
+                  <select
+                    className="field-select compact-select compact-select--yn"
+                    value={damageStatus}
+                    onChange={e => handleDamageStatus(e.target.value)}
+                  >
+                    <option value="">Select</option>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                  </select>
+                </div>
+                {damageStatus === 'Yes' && (
+                  <>
+                    <label className="form-label">{damageLabel || 'Damage Notes'}</label>
+                    <DamageDescriptionInput
+                      placeholder={damagePlaceholder || 'Describe damage...'}
+                      value={item.fields['_damage'] || ''}
+                      onChange={val => updateExteriorField(id, '_damage', val)}
+                    />
+                  </>
+                )}
+              </div>
+            )}
             {hasP && (
               <PhotoZone
                 entityId={id}
@@ -179,33 +205,6 @@ function ExteriorItem({ itemDef, trigPhoto }) {
               />
             )}
           </FieldsGrid>
-
-          {hasD && (
-            <div className="ri-damage-row">
-              <div className="field-group field-group--compact">
-                <label className="form-label">Damaged</label>
-                <select
-                  className="field-select compact-select compact-select--yn"
-                  value={damageStatus}
-                  onChange={e => handleDamageStatus(e.target.value)}
-                >
-                  <option value="">Select</option>
-                  <option value="Yes">Yes</option>
-                  <option value="No">No</option>
-                </select>
-              </div>
-              {damageStatus === 'Yes' && (
-                <>
-                  <label className="form-label">{damageLabel || 'Damage Notes'}</label>
-                  <DamageDescriptionInput
-                    placeholder={damagePlaceholder || 'Describe damage...'}
-                    value={item.fields['_damage'] || ''}
-                    onChange={val => updateExteriorField(id, '_damage', val)}
-                  />
-                </>
-              )}
-            </div>
-          )}
 
         </div>
       )}

@@ -98,14 +98,12 @@ const EXTERIOR_MAP = [
   { key: 'fenceStyle',             itemId: 'ei_fence',   label: 'Style' },
   { key: 'fencePosts',             itemId: 'ei_fence',   label: 'Posts' },
   { key: 'fencePostSpacing',       itemId: 'ei_fence',   label: 'Post Spacing (LF)' },
-  { key: 'fenceHeight',            itemId: 'ei_fence',   label: 'Height' },
+  { key: 'fenceHeight',            itemId: 'ei_fence',   label: 'Height (FT)' },
   { key: 'fenceStained',           itemId: 'ei_fence',   label: 'Stained' },
   { key: 'fenceDamage',            itemId: 'ei_fence',   label: '_damage' },
   { key: 'gatesQty',               itemId: 'ei_gates',   label: 'Qty' },
   { key: 'gatesMaterial',          itemId: 'ei_gates',   label: 'Material' },
   { key: 'gatesDamage',            itemId: 'ei_gates',   label: '_damage' },
-  { key: 'poolCoverDamaged',       itemId: 'ei_pool',    label: 'Pool Cover Damaged' },
-  { key: 'poolEquipmentDamaged',   itemId: 'ei_pool',    label: 'Equipment Damaged' },
   { key: 'poolDamageNotes',        itemId: 'ei_pool',    label: '_damage' },
   { key: 'outdoorDamagedItems',    itemId: 'ei_outdoor', label: 'Damaged Items' },
   { key: 'outdoorNotes',           itemId: 'ei_outdoor', label: '_damage' },
@@ -144,8 +142,9 @@ function applyParsed(parsed, ctx) {
 
   // Job info
   const ji = parsed.jobInfo || {}
-  const JOB_FIELDS = ['cust','phone','email','addr','pm','insp','ins','claim','date','residenceType','tenantname','tenantphone','hasSeparateContact','contactName','contactPhone','contactEmail']
+  const JOB_FIELDS = ['cust','phone','email','addr','pm','insp','ins','claim','claimFileDate','stormDate','residenceType','tenantname','tenantphone','hasSeparateContact','contactName','contactPhone','contactEmail']
   JOB_FIELDS.forEach(f => { if (ji[f] != null) updateJobInfo(f, ji[f]) })
+  if (ji.date != null && ji.claimFileDate == null) updateJobInfo('claimFileDate', ji.date)
   if (ji.preferredContact != null) {
     updateJobInfo('preferredContact', toArray(ji.preferredContact))
   }

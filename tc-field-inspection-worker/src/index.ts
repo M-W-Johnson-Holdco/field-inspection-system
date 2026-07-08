@@ -97,13 +97,15 @@ jobInfo.residenceType: "Primary", "Secondary", or "Rental" property type
 jobInfo.hasSeparateContact: "Yes" or "No" (Yes if a separate contact person is mentioned)
 jobInfo.preferredContact: comma-separated from Phone, Email, Text
 jobInfo.contactPreferredContact: comma-separated from Phone, Email, Text (for the separate contact)
+jobInfo.claimFileDate: ISO date YYYY-MM-DD when the insurance claim was filed
+jobInfo.stormDate: ISO date YYYY-MM-DD when the storm or loss event occurred
 
 Return this exact structure (use null for any field not mentioned in the transcript):
 {
   "jobInfo": {
     "cust": null, "phone": null, "email": null, "addr": null,
     "pm": null, "insp": null, "ins": null, "claim": null,
-    "date": null, "preferredContact": null, "residenceType": null,
+    "claimFileDate": null, "stormDate": null, "preferredContact": null, "residenceType": null,
     "tenantname": null, "tenantphone": null,
     "hasSeparateContact": null, "contactName": null, "contactPhone": null,
     "contactEmail": null, "contactPreferredContact": null

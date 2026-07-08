@@ -91,7 +91,7 @@ function dataUrlToBlob(dataUrl) {
 }
 
 export function folderName(jobInfo, inspectorName) {
-  const date = jobInfo?.date || new Date().toISOString().slice(0, 10)
+  const date = jobInfo?.claimFileDate || jobInfo?.stormDate || jobInfo?.date || new Date().toISOString().slice(0, 10)
   const addr = jobInfo?.addr || jobInfo?.addrParts?.address1 || 'Unknown Address'
   const cust = jobInfo?.cust || 'Unknown'
   const insp = inspectorName || jobInfo?.insp || 'Unknown Inspector'
@@ -149,6 +149,7 @@ const ROOF_ITEM_PATH = {
   ri21: ['1e-skylights_and_flashings',   'cornice_gables'],
   ri22: ['1f-low_slope_and_other',       'low_slope'],
   ri23: ['1f-low_slope_and_other',       'other_structures'],
+  ri24: ['1a-general_roof',              'solar_panels'],
 }
 
 // Maps elevation item IDs → folder name
