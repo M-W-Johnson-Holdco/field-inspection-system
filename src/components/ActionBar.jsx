@@ -30,6 +30,12 @@ const TOOLBAR_SCALE_MAX = 2.5
 const TOOLBAR_SCALE_DEFAULT = 1
 const TOOLBAR_VIEWPORT_MARGIN = 20
 
+const DESKTOP_TOOLBAR_MQ = '(min-width: 760px)'
+
+function isDesktopToolbar() {
+  return window.matchMedia(DESKTOP_TOOLBAR_MQ).matches
+}
+
 function getViewportMaxToolbarScale(barEl) {
   if (!barEl) return TOOLBAR_SCALE_MAX
   const available = window.innerWidth - TOOLBAR_VIEWPORT_MARGIN
@@ -45,6 +51,7 @@ function readToolbarScale() {
 }
 
 function clampToolbarScale(value, barEl = null) {
+  if (isDesktopToolbar()) return 1
   let next = Math.min(TOOLBAR_SCALE_MAX, Math.max(TOOLBAR_SCALE_MIN, value))
   if (barEl) {
     next = Math.min(next, getViewportMaxToolbarScale(barEl))
@@ -116,6 +123,13 @@ export default function ActionBar() {
     function syncScaleToViewport() {
       const bar = actionBarRef.current
       if (!bar) return
+      if (isDesktopToolbar()) {
+        if (toolbarScaleRef.current !== 1) {
+          toolbarScaleRef.current = 1
+          setToolbarScale(1)
+        }
+        return
+      }
       const next = clampToolbarScale(toolbarScaleRef.current, bar)
       if (next === toolbarScaleRef.current) return
       toolbarScaleRef.current = next
@@ -137,7 +151,7 @@ export default function ActionBar() {
     if (!bar) return undefined
 
     function handleTouchStart(e) {
-      if (e.touches.length !== 2) return
+      if (isDesktopToolbar() || e.touches.length !== 2) return
       pinchStateRef.current = {
         startDistance: getTouchDistance(e.touches),
         startScale: toolbarScaleRef.current,
@@ -165,7 +179,7 @@ export default function ActionBar() {
     }
 
     function handleWheel(e) {
-      if (!e.ctrlKey) return
+      if (isDesktopToolbar() || !e.ctrlKey) return
       e.preventDefault()
       const next = clampToolbarScale(toolbarScaleRef.current + (e.deltaY > 0 ? -0.04 : 0.04), bar)
       toolbarScaleRef.current = next

@@ -56,6 +56,34 @@ function Shell() {
     }
   }, [])
 
+  useEffect(() => {
+    const header = document.querySelector('.app-header')
+    const shell = document.querySelector('.app-shell')
+    if (!header || !shell) return undefined
+
+    const mq = window.matchMedia('(min-width: 760px)')
+
+    function syncChromeHeight() {
+      if (!mq.matches) {
+        shell.style.removeProperty('--chrome-bar-height')
+        return
+      }
+      shell.style.setProperty('--chrome-bar-height', `${header.offsetHeight}px`)
+    }
+
+    syncChromeHeight()
+    const observer = new ResizeObserver(syncChromeHeight)
+    observer.observe(header)
+    mq.addEventListener('change', syncChromeHeight)
+    window.addEventListener('resize', syncChromeHeight)
+
+    return () => {
+      observer.disconnect()
+      mq.removeEventListener('change', syncChromeHeight)
+      window.removeEventListener('resize', syncChromeHeight)
+    }
+  }, [])
+
   return (
     <div className="app-page">
       <div className="app-shell">
@@ -67,11 +95,13 @@ function Shell() {
             <PanelContent />
           </main>
           <footer className="app-footer">
-            &copy; 2026 TC Roofing &amp; Restorations. All rights reserved.
+            &copy; 2026 Peachtree Roofing &amp; Exteriors. All rights reserved.
           </footer>
         </div>
+        <div className="app-toolbar-region">
+          <ActionBar />
+        </div>
       </div>
-      <ActionBar />
       <ReAuthModal />
     </div>
   )
