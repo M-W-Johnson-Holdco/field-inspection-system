@@ -27,7 +27,7 @@ export const BRAND_BY_ORG = {
 
 // First admins who can open Access Settings before permissions.json exists on Drive.
 // Add your email here, then remove after adding yourself via the UI if you prefer.
-export const BOOTSTRAP_ACCESS_ADMINS = ['j.gil@peachtreerestorations.com', 'jonathan@tcroofingexperts.com', 'k.liss@peachtreerestorations.com']
+export const BOOTSTRAP_ACCESS_ADMINS = ['j.gil@peachtreerestorations.com', 'k.liss@peachtreerestorations.com']
 
 export const DEFAULT_PERMISSIONS = {
   crossOrgViewers: [],
@@ -61,6 +61,11 @@ export function viewableOrgs(email, permissions) {
   if (canViewBothOrgs(email, permissions)) return [ORG_FOLDERS.PT, ORG_FOLDERS.TC]
   const org = orgForEmail(email)
   return org ? [org] : []
+}
+
+export function isBootstrapAccessAdmin(email) {
+  const normalized = normalizeEmail(email)
+  return BOOTSTRAP_ACCESS_ADMINS.some(entry => normalizeEmail(entry) === normalized)
 }
 
 export function isAccessAdmin(email, permissions) {

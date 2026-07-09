@@ -81,7 +81,7 @@ export default function AccessAdminModal({ onClose }) {
 
   return (
     <>
-      <div className="modal-backdrop modal-backdrop--top" onClick={onClose} />
+      <div className="modal-backdrop" onClick={onClose} />
       <div className="modal-sheet access-admin-modal" role="dialog" aria-modal="true" aria-labelledby="access-admin-title">
         <div className="modal-sheet__header">
           <h2 id="access-admin-title" className="modal-sheet__title">Drive Access</h2>
