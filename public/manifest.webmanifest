@@ -10,7 +10,7 @@
   "theme_color": "rgb(45,110,181)",
   "icons": [
     {
-      "src": "/field-inspection-system/tc_logo.png",
+      "src": "/field-inspection-system/pt_favicon.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
