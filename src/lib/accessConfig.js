@@ -3,9 +3,26 @@ export const ORG_FOLDERS = {
   TC: 'TC',
 }
 
+export const CONFIG_FOLDER_NAME = '_config'
+
 export const DOMAIN_TO_ORG = {
   'peachtreerestorations.com': 'PT',
   'tcroofingexperts.com': 'TC',
+}
+
+export const BRAND_BY_ORG = {
+  PT: {
+    title: 'PT Roofing Field Inspection',
+    titleMobile: 'Field Inspection',
+    subtitle: 'Pre-Adjuster Inspection • Georgia Hail & Wind',
+    logoAlt: 'PT Roofing & Restorations',
+  },
+  TC: {
+    title: 'TC Roofing Field Inspection',
+    titleMobile: 'Field Inspection',
+    subtitle: 'Pre-Adjuster Inspection • Texas Hail & Wind',
+    logoAlt: 'TC Roofing & Restorations',
+  },
 }
 
 // First admins who can open Access Settings before permissions.json exists on Drive.
@@ -24,6 +41,11 @@ export function normalizeEmail(email) {
 export function orgForEmail(email) {
   const domain = normalizeEmail(email).split('@')[1]
   return DOMAIN_TO_ORG[domain] || null
+}
+
+export function brandForEmail(email) {
+  const org = orgForEmail(email)
+  return BRAND_BY_ORG[org] ?? BRAND_BY_ORG.TC
 }
 
 export function isAllowedAppEmail(email) {

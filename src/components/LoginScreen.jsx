@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useGoogleLogin } from '@react-oauth/google'
 import { useAuth } from '../context/AuthContext'
 import tcLogo from '../assets/tc_logo.png'
+import ptLogo from '../assets/pt_logo.png'
 
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive'
 
@@ -42,7 +43,10 @@ export default function LoginScreen() {
   return (
     <div style={styles.page}>
       <div style={styles.card}>
-        <img src={tcLogo} alt="TC Roofing & Restorations" style={styles.logo} />
+        <div style={styles.logoRow}>
+          <img src={ptLogo} alt="PT Roofing & Restorations" style={styles.logo} />
+          <img src={tcLogo} alt="TC Roofing & Restorations" style={styles.logo} />
+        </div>
         <p style={styles.subtitle}>Field Inspection System</p>
         <div style={styles.divider} />
         <button style={styles.googleBtn} onClick={handleSignIn} disabled={loading}>
@@ -83,8 +87,18 @@ const styles = {
     alignItems: 'center',
     gap: '12px',
   },
+  logoRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '20px',
+    width: '100%',
+  },
   logo: {
-    width: '200px',
+    flex: '1 1 0',
+    width: '100%',
+    maxWidth: '150px',
+    maxHeight: '72px',
     height: 'auto',
     objectFit: 'contain',
   },

@@ -2,7 +2,8 @@ import { orgForEmail } from './accessConfig'
 
 const DRIVE = 'https://www.googleapis.com/drive/v3'
 const UPLOAD = 'https://www.googleapis.com/upload/drive/v3'
-const SHARED_DRIVE_ID = '0AK1E74Jk62nmUk9PVA' // Old TC Google Drive-hosted shared drive ID: '0AGzZsZcVSAPaUk9PVA'
+// Shared drive: Field Inspection App - Files
+const SHARED_DRIVE_ID = '0AK1E74Jk62nmUk9PVA'
 const FOLDER_MIME = 'application/vnd.google-apps.folder'
 // All API calls need these params to work with Shared Drives
 const SD_PARAMS = 'supportsAllDrives=true&includeItemsFromAllDrives=true'
