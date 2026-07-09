@@ -1267,9 +1267,136 @@ button:disabled {
   line-height: 1.4;
 }
 
+.modal-inspection-row__org {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(45, 110, 181, 0.12);
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+}
+
 .modal-inspection-row__loader {
   flex-shrink: 0;
   color: var(--muted);
+}
+
+.access-admin-modal {
+  max-width: 520px;
+}
+
+.access-admin-modal__body {
+  padding: 0 16px 16px;
+}
+
+.access-admin-modal__intro,
+.access-admin-modal__note {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.access-admin-modal__add-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.access-admin-modal__input {
+  flex: 1;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid rgba(100, 116, 139, 0.28);
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+.access-admin-modal__add-btn {
+  min-width: 72px;
+}
+
+.access-admin-modal__error {
+  margin: 0 0 12px;
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.access-admin-modal__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 240px;
+  overflow: auto;
+  margin-bottom: 12px;
+}
+
+.access-admin-modal__empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.access-admin-modal__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(100, 116, 139, 0.18);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.access-admin-modal__row-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.access-admin-modal__row-icon {
+  color: var(--primary);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.access-admin-modal__email {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.access-admin-modal__meta {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.access-admin-modal__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(220, 38, 38, 0.08);
+  color: var(--danger);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.access-admin-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 0 16px 16px;
 }
 
 .modal-load-more {

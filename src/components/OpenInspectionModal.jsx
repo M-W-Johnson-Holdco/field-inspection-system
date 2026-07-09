@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Search, X, FolderOpen, Loader } from 'lucide-react'
 import { listInspectionFolders, loadInspectionFromDrive, TokenExpiredError } from '../lib/driveService'
 import { useAuth } from '../context/AuthContext'
+import { usePermissions } from '../context/PermissionsContext'
 
 const DATE_FILTERS = [
   { label: 'This Week', days: 7 },
@@ -17,6 +18,7 @@ function parseFolder(folder) {
   return {
     id: folder.id,
     name: folder.name,
+    org: folder.org || '',
     date: parts[0] || '',
     address: parts[1] || '',
     customer: parts[2] || '',
@@ -44,6 +46,7 @@ function sortByNewestInspection(a, b) {
 
 export default function OpenInspectionModal({ token, saveStatus, onLoad, onClose }) {
   const { setTokenExpired } = useAuth()
+  const { viewableOrgs } = usePermissions()
   const [folders, setFolders] = useState([])
   const [listStatus, setListStatus] = useState('loading') // loading | ready | error
   const [search, setSearch] = useState('')
@@ -56,7 +59,7 @@ export default function OpenInspectionModal({ token, saveStatus, onLoad, onClose
   const searchRef = useRef(null)
 
   useEffect(() => {
-    listInspectionFolders(token)
+    listInspectionFolders(token, viewableOrgs)
       .then(files => {
         setFolders(files.map(parseFolder).sort(sortByNewestInspection))
         setListStatus('ready')
@@ -69,7 +72,7 @@ export default function OpenInspectionModal({ token, saveStatus, onLoad, onClose
           setListStatus('error')
         }
       })
-  }, [token])
+  }, [token, viewableOrgs, onClose, setTokenExpired])
 
   useEffect(() => {
     if (listStatus === 'ready') searchRef.current?.focus()
@@ -193,7 +196,12 @@ export default function OpenInspectionModal({ token, saveStatus, onLoad, onClose
               disabled={loadingId === folder.id}
             >
               <FolderOpen size={18} className="modal-inspection-row__icon" />
-              <span className="modal-inspection-row__name">{folder.name}</span>
+              <span className="modal-inspection-row__name">
+                {viewableOrgs.length > 1 && folder.org && (
+                  <span className="modal-inspection-row__org">{folder.org}</span>
+                )}
+                {folder.name}
+              </span>
               {loadingId === folder.id && <Loader size={16} className="spin modal-inspection-row__loader" />}
             </button>
           ))}

@@ -150,7 +150,7 @@ const ALLOWED_ORIGIN = 'https://YOUR-ORG.github.io'
 
 In `vite.config.js`, find:
 ```js
-base: '/tc-field-inspection-system/',
+base: '/field-inspection-system/',
 ```
 Replace with:
 ```js
