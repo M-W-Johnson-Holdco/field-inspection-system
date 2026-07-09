@@ -1,6 +1,9 @@
+import { orgForEmail } from './accessConfig'
+
 const DRIVE = 'https://www.googleapis.com/drive/v3'
 const UPLOAD = 'https://www.googleapis.com/upload/drive/v3'
-const SHARED_DRIVE_ID = '0AGzZsZcVSAPaUk9PVA'
+const SHARED_DRIVE_ID = '0AK1E74Jk62nmUk9PVA' // Old TC Google Drive-hosted shared drive ID: '0AGzZsZcVSAPaUk9PVA'
+const FOLDER_MIME = 'application/vnd.google-apps.folder'
 // All API calls need these params to work with Shared Drives
 const SD_PARAMS = 'supportsAllDrives=true&includeItemsFromAllDrives=true'
 
@@ -49,11 +52,41 @@ async function createFolder(token, name, parentId) {
 }
 
 async function ensureFolder(token, name, parentId) {
-  const FOLDER_MIME = 'application/vnd.google-apps.folder'
   return (
     (await findByName(token, name, FOLDER_MIME, parentId)) ??
     (await createFolder(token, name, parentId))
   )
+}
+
+async function ensureOrgRoot(token, orgKey) {
+  return ensureFolder(token, orgKey, SHARED_DRIVE_ID)
+}
+
+async function readJsonFile(token, fileId) {
+  const res = await fetch(`${DRIVE}/files/${fileId}?alt=media&${SD_PARAMS}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (res.status === 401) throw new TokenExpiredError()
+  if (!res.ok) throw new Error(`Drive ${res.status}`)
+  return res.json()
+}
+
+export async function loadJsonFromDrive(token, configFolderName, fileName) {
+  const configFolderId = await ensureFolder(token, configFolderName, SHARED_DRIVE_ID)
+  const fileId = await findByName(token, fileName, 'application/json', configFolderId)
+  if (!fileId) return null
+  return readJsonFile(token, fileId)
+}
+
+export async function saveJsonToDrive(token, configFolderName, fileName, data) {
+  const configFolderId = await ensureFolder(token, configFolderName, SHARED_DRIVE_ID)
+  const jsonBlob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+  const existingJsonId = await findByName(token, fileName, 'application/json', configFolderId)
+  if (existingJsonId) {
+    await patchFile(token, existingJsonId, 'application/json', jsonBlob)
+  } else {
+    await multipartUpload(token, configFolderId, fileName, 'application/json', jsonBlob)
+  }
 }
 
 async function multipartUpload(token, folderId, name, mimeType, blob) {
@@ -98,14 +131,20 @@ export function folderName(jobInfo, inspectorName) {
   return `${date} - ${addr} - ${cust} - ${insp}`.replace(/[/\\:*?"<>|]/g, '-').slice(0, 120)
 }
 
-export async function listInspectionFolders(token) {
-  const FOLDER_MIME = 'application/vnd.google-apps.folder'
-  const q = `mimeType=${JSON.stringify(FOLDER_MIME)} and ${JSON.stringify(SHARED_DRIVE_ID)} in parents and trashed=false`
-  const r = await gfetch(
-    `${DRIVE}/files?q=${encodeURIComponent(q)}&fields=files(id,name,createdTime)&orderBy=createdTime desc&pageSize=200&${SD_PARAMS}&corpora=drive&driveId=${SHARED_DRIVE_ID}`,
-    token,
-  )
-  return r.files || []
+export async function listInspectionFolders(token, orgKeys) {
+  const folders = []
+  for (const orgKey of orgKeys) {
+    const orgRootId = await ensureOrgRoot(token, orgKey)
+    const q = `mimeType=${JSON.stringify(FOLDER_MIME)} and ${JSON.stringify(orgRootId)} in parents and trashed=false`
+    const r = await gfetch(
+      `${DRIVE}/files?q=${encodeURIComponent(q)}&fields=files(id,name,createdTime)&orderBy=createdTime desc&pageSize=200&${SD_PARAMS}&corpora=drive&driveId=${SHARED_DRIVE_ID}`,
+      token,
+    )
+    for (const file of r.files || []) {
+      folders.push({ ...file, org: orgKey })
+    }
+  }
+  return folders
 }
 
 export async function loadInspectionFromDrive(token, folderId) {
@@ -181,8 +220,11 @@ function slugify(str) {
 }
 
 
-export async function saveInspectionToDrive(token, inspectionData, inspectorName) {
-  const jobFolderId = await ensureFolder(token, folderName(inspectionData.jobInfo, inspectorName), SHARED_DRIVE_ID)
+export async function saveInspectionToDrive(token, inspectionData, inspectorName, userEmail) {
+  const orgKey = orgForEmail(userEmail)
+  if (!orgKey) throw new Error('Your email is not assigned to a company folder.')
+  const orgRootId = await ensureOrgRoot(token, orgKey)
+  const jobFolderId = await ensureFolder(token, folderName(inspectionData.jobInfo, inspectorName), orgRootId)
 
   // Strip photos from JSON payload; collect { path: string[], name: string, url: string }
   const photos = []

@@ -3,9 +3,11 @@ import { useInspection } from '../context/InspectionContext'
 import { useAuth } from '../context/AuthContext'
 import { saveInspectionToDrive, TokenExpiredError } from '../lib/driveService'
 import OpenInspectionModal from './OpenInspectionModal'
+import AccessAdminModal from './AccessAdminModal'
 import XmlImportModal from './XmlImportModal'
+import { usePermissions } from '../context/PermissionsContext'
 import { parseXmlMeasurements } from '../lib/parseXmlMeasurements'
-import { ArrowLeft, ArrowRight, RotateCcw, Save, ExternalLink, CheckCircle, AlertCircle, FolderOpen, FilePlus, CircleHelp, MoreHorizontal, FileInput } from 'lucide-react'
+import { ArrowLeft, ArrowRight, RotateCcw, Save, ExternalLink, CheckCircle, AlertCircle, FolderOpen, FilePlus, CircleHelp, MoreHorizontal, FileInput, Shield } from 'lucide-react'
 
 const TOTAL_TABS = 6
 const TOOLBAR_SCALE_KEY = 'tc_toolbar_scale'
@@ -78,8 +80,10 @@ function getJobInfoSaveError(jobInfo) {
 export default function ActionBar() {
   const { activeTab, setActiveTab, resetAll, startNewInspection, data, driveSaveStatus, setDriveSaveStatus, loadInspection, applyXmlImport } = useInspection()
   const { accessToken, user, setTokenExpired } = useAuth()
+  const { isAccessAdmin } = usePermissions()
   const [driveStatus, setDriveStatus] = useState('idle') // idle | saving | done | error
   const [showOpen, setShowOpen] = useState(false)
+  const [showAccessAdmin, setShowAccessAdmin] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
   const [showMore, setShowMore] = useState(false)
   const [xmlParsed, setXmlParsed] = useState(null)
@@ -198,7 +202,7 @@ export default function ActionBar() {
     setDriveStatus('saving')
     setDriveSaveStatus('saving')
     try {
-      const { folderName, photoCount } = await saveInspectionToDrive(accessToken, data, user?.fullName)
+      const { folderName, photoCount } = await saveInspectionToDrive(accessToken, data, user?.fullName, user?.email)
       setDriveStatus('done')
       setDriveSaveStatus('saved')
       setTimeout(() => setDriveStatus('idle'), 3000)
@@ -327,6 +331,21 @@ export default function ActionBar() {
               <button className="toolbar-more__item" type="button" role="menuitem" aria-label="New inspection" title="New inspection" onClick={handleNew}>
                 <FilePlus className="toolbar-more__icon" aria-hidden="true" />
               </button>
+              {isAccessAdmin && (
+                <button
+                  className="toolbar-more__item"
+                  type="button"
+                  role="menuitem"
+                  aria-label="Drive access settings"
+                  title="Drive access settings"
+                  onClick={() => {
+                    setShowMore(false)
+                    setShowAccessAdmin(true)
+                  }}
+                >
+                  <Shield className="toolbar-more__icon" aria-hidden="true" />
+                </button>
+              )}
               <button
                 className="toolbar-more__item toolbar-more__item--danger"
                 type="button"
@@ -382,6 +401,10 @@ export default function ActionBar() {
           onLoad={handleLoad}
           onClose={() => setShowOpen(false)}
         />
+      )}
+
+      {showAccessAdmin && (
+        <AccessAdminModal onClose={() => setShowAccessAdmin(false)} />
       )}
 
       {showHelp && (

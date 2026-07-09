@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { PermissionsProvider } from './context/PermissionsContext'
 import LoginScreen from './components/LoginScreen'
 import AppShell from './components/AppShell'
 
@@ -74,7 +75,9 @@ export default function App() {
       </div>
       <AuthProvider>
         <HashRouter>
-          <AppRoutes />
+          <PermissionsProvider>
+            <AppRoutes />
+          </PermissionsProvider>
         </HashRouter>
       </AuthProvider>
     </>
