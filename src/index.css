@@ -453,6 +453,8 @@ button:disabled {
   border: none;
   background: #e5e7eb;
   box-shadow: 0 14px 34px rgba(15, 23, 42, 0.06);
+  min-width: 0;
+  overflow: hidden;
 }
 
 .job-info-groups {
@@ -513,6 +515,7 @@ button:disabled {
   padding-top: 12px;
   margin-top: 4px;
   border-top: 1px solid var(--border);
+  min-width: 0;
 }
 
 .card-header {
@@ -570,8 +573,9 @@ button:disabled {
 
 .form-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
+  min-width: 0;
 }
 
 .form-field {
@@ -591,6 +595,8 @@ button:disabled {
 
 .form-input {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   min-height: 44px;
   padding: 11px 12px;
   border: 1px solid #cbd5e1;
@@ -599,6 +605,17 @@ button:disabled {
   background: var(--field-bg);
   color: var(--text);
   font-size: 16px;
+}
+
+.form-input[type='date'] {
+  display: block;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.form-input[type='date']::-webkit-date-and-time-value {
+  min-width: 0;
+  text-align: left;
 }
 
 .form-input--invalid {
@@ -820,26 +837,31 @@ button:disabled {
   bottom: 10px;
   left: 50%;
   z-index: 200;
-  width: max-content;
-  max-width: calc(100vw - 20px);
-  padding: 5px;
+  width: calc(100vw - 20px);
+  max-width: 100%;
+  padding: 8px 12px;
+  overflow: hidden;
   transform: translateX(-50%) scale(var(--toolbar-scale, 1));
   transform-origin: center bottom;
   border: 1px solid rgba(148, 163, 184, 0.28);
-  border-radius: 999px;
+  border-radius: 18px;
   background: rgba(255, 255, 255, 0.94);
   box-shadow: 0 18px 54px rgba(15, 23, 42, 0.18);
   backdrop-filter: blur(18px);
   touch-action: pan-x pan-y;
-  --toolbar-btn-size: 40px;
+  box-sizing: border-box;
   --toolbar-gap: 4px;
+  --toolbar-visible-count: 5;
+  --toolbar-btn-size: calc(
+    (100% - (var(--toolbar-visible-count) - 1) * var(--toolbar-gap)) / var(--toolbar-visible-count)
+  );
 }
 
 .action-bar__scroll {
   display: flex;
+  align-items: center;
   gap: var(--toolbar-gap);
-  width: calc(var(--toolbar-btn-size) * 5 + var(--toolbar-gap) * 4);
-  max-width: 100%;
+  width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
   overscroll-behavior-x: contain;
@@ -853,19 +875,20 @@ button:disabled {
 }
 
 .action-bar__scroll .app-button {
+  box-sizing: border-box;
   flex: 0 0 var(--toolbar-btn-size);
   width: var(--toolbar-btn-size);
   min-width: var(--toolbar-btn-size);
-  height: var(--toolbar-btn-size);
-  min-height: var(--toolbar-btn-size);
+  max-width: var(--toolbar-btn-size);
+  height: auto;
+  min-height: 0;
+  aspect-ratio: 1;
+  border-radius: 12px;
   scroll-snap-align: start;
 }
 
 .app-button {
   display: inline-grid;
-  width: var(--toolbar-btn-size, 40px);
-  height: var(--toolbar-btn-size, 40px);
-  min-height: var(--toolbar-btn-size, 40px);
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
@@ -879,9 +902,17 @@ button:disabled {
   white-space: nowrap;
 }
 
+.action-bar__scroll .app-button__icon {
+  width: 68%;
+  height: 68%;
+  min-width: 26px;
+  min-height: 26px;
+  stroke-width: 2.35;
+}
+
 .app-button__icon {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   stroke-width: 2.4;
 }
 
@@ -3021,7 +3052,7 @@ summary.field-select.field-select--placeholder {
   }
 
   .app-scroll-region {
-    padding-bottom: 104px;
+    padding-bottom: 200px;
   }
 
   .app-main {
@@ -3182,21 +3213,33 @@ summary.field-select.field-select--placeholder {
 
   .action-bar {
     bottom: 18px;
-    --toolbar-btn-size: auto;
-    width: min(calc(100vw - 36px), 720px);
-    border-radius: 22px;
+    width: max-content;
+    max-width: none;
+    border-radius: 20px;
+    padding: 16px 24px;
+    overflow: visible;
   }
 
   .action-bar__scroll {
-    width: 100%;
+    width: max-content;
+    align-items: center;
+    gap: 8px;
+    overflow: visible;
+    scroll-snap-type: none;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
   }
 
   .action-bar__scroll .app-button {
-    flex: 0 0 calc((100% - 16px) / 5);
-    min-width: calc((100% - 16px) / 5);
+    flex: 0 0 auto;
+    flex-shrink: 0;
+    min-width: auto;
     width: auto;
+    max-width: none;
     height: auto;
-    min-height: 46px;
+    aspect-ratio: auto;
+    white-space: nowrap;
+    scroll-snap-align: none;
   }
 
   .app-button {
@@ -3213,8 +3256,23 @@ summary.field-select.field-select--placeholder {
     font-size: 12px;
   }
 
+  .action-bar__scroll .app-button {
+    min-height: 84px;
+    padding: 20px 24px;
+    gap: 12px;
+    font-size: 22px;
+    border-radius: 20px;
+  }
+
   .app-button__label {
     display: inline;
+  }
+
+  .action-bar__scroll .app-button__icon {
+    width: 36px;
+    height: 36px;
+    min-width: 0;
+    min-height: 0;
   }
 
   .ri-card__toggle {

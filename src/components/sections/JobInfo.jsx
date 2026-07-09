@@ -337,8 +337,8 @@ export default function JobInfo() {
                 {field('insp', 'Inspector / Rep', { placeholder: 'Name' })}
                 <InsuranceField value={ji.ins || ''} onChange={val => updateJobInfo('ins', val)} />
                 {field('claim', 'Claim #', { placeholder: 'Pending if not filed' })}
-                {field('claimFileDate', 'Claim File Date', { type: 'date' })}
-                {field('stormDate', 'Storm Date', { type: 'date' })}
+                {field('claimFileDate', 'Claim File Date', { type: 'date', full: true })}
+                {field('stormDate', 'Storm Date', { type: 'date', full: true })}
               </div>
             </JobInfoGroup>
           </div>

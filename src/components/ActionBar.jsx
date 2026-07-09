@@ -5,7 +5,7 @@ import { saveInspectionToDrive, TokenExpiredError } from '../lib/driveService'
 import OpenInspectionModal from './OpenInspectionModal'
 import AccessAdminModal from './AccessAdminModal'
 import XmlImportModal from './XmlImportModal'
-import { usePermissions } from '../context/PermissionsContext'
+import { isBootstrapAccessAdmin } from '../lib/accessConfig'
 import { parseXmlMeasurements } from '../lib/parseXmlMeasurements'
 import {
   ArrowLeft,
@@ -94,7 +94,7 @@ function getJobInfoSaveError(jobInfo) {
 export default function ActionBar() {
   const { activeTab, setActiveTab, resetAll, startNewInspection, data, driveSaveStatus, setDriveSaveStatus, loadInspection, applyXmlImport } = useInspection()
   const { accessToken, user, setTokenExpired } = useAuth()
-  const { isAccessAdmin } = usePermissions()
+  const canManageAccess = isBootstrapAccessAdmin(user?.email)
   const [driveStatus, setDriveStatus] = useState('idle') // idle | saving | done | error
   const [showOpen, setShowOpen] = useState(false)
   const [showAccessAdmin, setShowAccessAdmin] = useState(false)
@@ -349,14 +349,14 @@ export default function ActionBar() {
             <span className="app-button__label">Open</span>
           </button>
           <button
-            className="app-button app-button--help"
+            className="app-button app-button--open"
             type="button"
-            aria-label="Help"
-            title="Help"
-            onClick={() => setShowHelp(true)}
+            aria-label="Import XML measurements"
+            title="Import XML measurements"
+            onClick={handleImportXml}
           >
-            <CircleHelp className="app-button__icon" aria-hidden="true" />
-            <span className="app-button__label">Help</span>
+            <FileInput className="app-button__icon" aria-hidden="true" />
+            <span className="app-button__label">Import</span>
           </button>
           <button
             className="app-button app-button--export"
@@ -379,16 +379,6 @@ export default function ActionBar() {
             <span className="app-button__label">New</span>
           </button>
           <button
-            className="app-button app-button--open"
-            type="button"
-            aria-label="Import XML measurements"
-            title="Import XML measurements"
-            onClick={handleImportXml}
-          >
-            <FileInput className="app-button__icon" aria-hidden="true" />
-            <span className="app-button__label">Import</span>
-          </button>
-          <button
             className="app-button app-button--reset"
             type="button"
             aria-label="Reset"
@@ -398,7 +388,17 @@ export default function ActionBar() {
             <RotateCcw className="app-button__icon" aria-hidden="true" />
             <span className="app-button__label">Reset</span>
           </button>
-          {isAccessAdmin && (
+          <button
+            className="app-button app-button--help"
+            type="button"
+            aria-label="Help"
+            title="Help"
+            onClick={() => setShowHelp(true)}
+          >
+            <CircleHelp className="app-button__icon" aria-hidden="true" />
+            <span className="app-button__label">Help</span>
+          </button>
+          {canManageAccess && (
             <button
               className="app-button app-button--access"
               type="button"
@@ -454,12 +454,12 @@ export default function ActionBar() {
               <p><ArrowLeft className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Back:</strong> Go to the previous inspection section.</span></p>
               <p><ArrowRight className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Next:</strong> Go to the next inspection section.</span></p>
               <p><Save className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Save:</strong> Save the current inspection to Google Drive.</span></p>
-              <p><CircleHelp className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Help:</strong> Show this toolbar guide.</span></p>
               <p><FolderOpen className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Open:</strong> Open a saved inspection from Google Drive.</span></p>
+              <p><FileInput className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Import:</strong> Upload a measurements XML file to autofill address, pitch, and roof measurements.</span></p>
               <p><ExternalLink className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Export:</strong> Reserved for exporting inspection reports.</span></p>
               <p><FilePlus className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>New:</strong> Start a new inspection form.</span></p>
-              <p><FileInput className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Import:</strong> Upload a measurements XML file to autofill address, pitch, and roof measurements.</span></p>
               <p><RotateCcw className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Reset:</strong> Clear all current inspection data.</span></p>
+              <p><CircleHelp className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Help:</strong> Show this toolbar guide.</span></p>
               <p><Shield className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Access:</strong> Manage who can view PT and TC folders (admins only).</span></p>
               <p><MoveHorizontal className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Scroll:</strong> Swipe the toolbar left or right to see more buttons.</span></p>
               <p><CircleHelp className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Resize:</strong> Pinch the toolbar with two fingers to make it bigger or smaller. On desktop, use Ctrl + scroll over the toolbar.</span></p>
