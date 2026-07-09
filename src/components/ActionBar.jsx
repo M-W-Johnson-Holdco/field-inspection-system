@@ -7,13 +7,27 @@ import AccessAdminModal from './AccessAdminModal'
 import XmlImportModal from './XmlImportModal'
 import { usePermissions } from '../context/PermissionsContext'
 import { parseXmlMeasurements } from '../lib/parseXmlMeasurements'
-import { ArrowLeft, ArrowRight, RotateCcw, Save, ExternalLink, CheckCircle, AlertCircle, FolderOpen, FilePlus, CircleHelp, MoreHorizontal, FileInput, Shield } from 'lucide-react'
+import {
+  ArrowLeft,
+  ArrowRight,
+  RotateCcw,
+  Save,
+  ExternalLink,
+  CheckCircle,
+  AlertCircle,
+  FolderOpen,
+  FilePlus,
+  CircleHelp,
+  FileInput,
+  Shield,
+  MoveHorizontal,
+} from 'lucide-react'
 
 const TOTAL_TABS = 6
-const TOOLBAR_SCALE_KEY = 'tc_toolbar_scale'
+const TOOLBAR_SCALE_KEY = 'tc_toolbar_scale_v2'
 const TOOLBAR_SCALE_MIN = 0.75
 const TOOLBAR_SCALE_MAX = 2.5
-const TOOLBAR_SCALE_DEFAULT = 2.2
+const TOOLBAR_SCALE_DEFAULT = 1
 const TOOLBAR_VIEWPORT_MARGIN = 20
 
 function getViewportMaxToolbarScale(barEl) {
@@ -85,7 +99,6 @@ export default function ActionBar() {
   const [showOpen, setShowOpen] = useState(false)
   const [showAccessAdmin, setShowAccessAdmin] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
-  const [showMore, setShowMore] = useState(false)
   const [xmlParsed, setXmlParsed] = useState(null)
   const [toolbarScale, setToolbarScale] = useState(readToolbarScale)
   const xmlInputRef = useRef(null)
@@ -222,7 +235,6 @@ export default function ActionBar() {
   }
 
   function handleImportXml() {
-    setShowMore(false)
     xmlInputRef.current?.click()
   }
 
@@ -248,7 +260,6 @@ export default function ActionBar() {
   }
 
   function handleNew() {
-    setShowMore(false)
     if (!window.confirm('Start a new inspection? This will clear the current form.')) return
     startNewInspection()
     goToSection(0)
@@ -256,7 +267,6 @@ export default function ActionBar() {
   }
 
   function handleOpenInspection() {
-    setShowMore(false)
     if (!accessToken) {
       setTokenExpired(true)
       return
@@ -268,6 +278,10 @@ export default function ActionBar() {
     loadInspection(inspectionData)
     setShowOpen(false)
     window.scrollTo(0, 0)
+  }
+
+  function handleReset() {
+    resetAll()
   }
 
   const SaveIcon =
@@ -287,97 +301,116 @@ export default function ActionBar() {
         ref={actionBarRef}
         className="action-bar"
         style={{ '--toolbar-scale': toolbarScale }}
-        title="Pinch with two fingers to resize toolbar"
-        aria-label="Inspection toolbar. Pinch with two fingers to resize."
+        title="Swipe for more actions. Pinch with two fingers to resize."
+        aria-label="Inspection toolbar. Swipe horizontally for more actions. Pinch with two fingers to resize."
       >
-        <button className={`app-button app-button--secondary ${canGoBack ? 'app-button--active-nav' : ''}`} aria-label="Back" title="Back" onClick={() => goToSection(Math.max(0, activeTab - 1))} disabled={!canGoBack}>
-          <ArrowLeft className="app-button__icon" aria-hidden="true" />
-          <span className="app-button__label">Back</span>
-        </button>
-        <button className="app-button app-button--primary" aria-label="Next" title="Next" onClick={() => goToSection(Math.min(TOTAL_TABS - 1, activeTab + 1))} disabled={!canGoNext}>
-          <ArrowRight className="app-button__icon" aria-hidden="true" />
-          <span className="app-button__label">Next</span>
-        </button>
-        <div className="toolbar-more">
+        <div className="action-bar__scroll" role="toolbar" aria-label="Inspection actions">
           <button
-            className="app-button app-button--more"
-            aria-label="More actions"
-            title="More actions"
-            aria-expanded={showMore}
-            onClick={() => setShowMore(open => !open)}
+            className={`app-button app-button--secondary ${canGoBack ? 'app-button--active-nav' : ''}`}
+            type="button"
+            aria-label="Back"
+            title="Back"
+            onClick={() => goToSection(Math.max(0, activeTab - 1))}
+            disabled={!canGoBack}
           >
-            <MoreHorizontal className="app-button__icon" aria-hidden="true" />
-            <span className="app-button__label">More</span>
+            <ArrowLeft className="app-button__icon" aria-hidden="true" />
+            <span className="app-button__label">Back</span>
           </button>
-          {showMore && (
-            <div className="toolbar-more__menu" role="menu" aria-label="More toolbar actions">
-              <button className="toolbar-more__item" type="button" role="menuitem" aria-label="Open inspection" title="Open inspection" onClick={handleOpenInspection}>
-                <FolderOpen className="toolbar-more__icon" aria-hidden="true" />
-              </button>
-              <button
-                className="toolbar-more__item"
-                type="button"
-                role="menuitem"
-                aria-label="Save to Google Drive"
-                title="Save to Google Drive"
-                onClick={handleSaveToDrive}
-                disabled={driveStatus === 'saving'}
-              >
-                <SaveIcon className="toolbar-more__icon" aria-hidden="true" />
-              </button>
-              <button className="toolbar-more__item" type="button" role="menuitem" aria-label="Import XML measurements" title="Import XML measurements" onClick={handleImportXml}>
-                <FileInput className="toolbar-more__icon" aria-hidden="true" />
-              </button>
-              <button className="toolbar-more__item" type="button" role="menuitem" aria-label="New inspection" title="New inspection" onClick={handleNew}>
-                <FilePlus className="toolbar-more__icon" aria-hidden="true" />
-              </button>
-              {isAccessAdmin && (
-                <button
-                  className="toolbar-more__item"
-                  type="button"
-                  role="menuitem"
-                  aria-label="Drive access settings"
-                  title="Drive access settings"
-                  onClick={() => {
-                    setShowMore(false)
-                    setShowAccessAdmin(true)
-                  }}
-                >
-                  <Shield className="toolbar-more__icon" aria-hidden="true" />
-                </button>
-              )}
-              <button
-                className="toolbar-more__item toolbar-more__item--danger"
-                type="button"
-                role="menuitem"
-                aria-label="Reset"
-                title="Reset"
-                onClick={() => {
-                  setShowMore(false)
-                  resetAll()
-                }}
-              >
-                <RotateCcw className="toolbar-more__icon" aria-hidden="true" />
-              </button>
-            </div>
+          <button
+            className="app-button app-button--primary"
+            type="button"
+            aria-label="Next"
+            title="Next"
+            onClick={() => goToSection(Math.min(TOTAL_TABS - 1, activeTab + 1))}
+            disabled={!canGoNext}
+          >
+            <ArrowRight className="app-button__icon" aria-hidden="true" />
+            <span className="app-button__label">Next</span>
+          </button>
+          <button
+            className="app-button app-button--save"
+            type="button"
+            aria-label="Save to Google Drive"
+            title="Save to Google Drive"
+            onClick={handleSaveToDrive}
+            disabled={driveStatus === 'saving'}
+          >
+            <SaveIcon className="app-button__icon" aria-hidden="true" />
+            <span className="app-button__label">Save</span>
+          </button>
+          <button
+            className="app-button app-button--open"
+            type="button"
+            aria-label="Open inspection"
+            title="Open inspection"
+            onClick={handleOpenInspection}
+          >
+            <FolderOpen className="app-button__icon" aria-hidden="true" />
+            <span className="app-button__label">Open</span>
+          </button>
+          <button
+            className="app-button app-button--help"
+            type="button"
+            aria-label="Help"
+            title="Help"
+            onClick={() => setShowHelp(true)}
+          >
+            <CircleHelp className="app-button__icon" aria-hidden="true" />
+            <span className="app-button__label">Help</span>
+          </button>
+          <button
+            className="app-button app-button--export"
+            type="button"
+            aria-label="Export"
+            title="Export"
+            disabled
+          >
+            <ExternalLink className="app-button__icon" aria-hidden="true" />
+            <span className="app-button__label">Export</span>
+          </button>
+          <button
+            className="app-button app-button--new"
+            type="button"
+            aria-label="New inspection"
+            title="New inspection"
+            onClick={handleNew}
+          >
+            <FilePlus className="app-button__icon" aria-hidden="true" />
+            <span className="app-button__label">New</span>
+          </button>
+          <button
+            className="app-button app-button--open"
+            type="button"
+            aria-label="Import XML measurements"
+            title="Import XML measurements"
+            onClick={handleImportXml}
+          >
+            <FileInput className="app-button__icon" aria-hidden="true" />
+            <span className="app-button__label">Import</span>
+          </button>
+          <button
+            className="app-button app-button--reset"
+            type="button"
+            aria-label="Reset"
+            title="Reset"
+            onClick={handleReset}
+          >
+            <RotateCcw className="app-button__icon" aria-hidden="true" />
+            <span className="app-button__label">Reset</span>
+          </button>
+          {isAccessAdmin && (
+            <button
+              className="app-button app-button--access"
+              type="button"
+              aria-label="Drive access settings"
+              title="Drive access settings"
+              onClick={() => setShowAccessAdmin(true)}
+            >
+              <Shield className="app-button__icon" aria-hidden="true" />
+              <span className="app-button__label">Access</span>
+            </button>
           )}
         </div>
-        <button
-          className="app-button app-button--export"
-          aria-label="Export"
-          title="Export"
-          disabled
-        >
-          <ExternalLink className="app-button__icon" aria-hidden="true" />
-          <span className="app-button__label">Export</span>
-        </button>
-        <button className="app-button app-button--help" aria-label="Help" title="Help" onClick={() => {
-          setShowMore(false)
-          setShowHelp(true)
-        }}>
-          <CircleHelp className="app-button__icon" aria-hidden="true" />
-          <span className="app-button__label">Help</span>
-        </button>
       </div>
 
       {xmlParsed && (
@@ -425,9 +458,11 @@ export default function ActionBar() {
               <p><FolderOpen className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Open:</strong> Open a saved inspection from Google Drive.</span></p>
               <p><ExternalLink className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Export:</strong> Reserved for exporting inspection reports.</span></p>
               <p><FilePlus className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>New:</strong> Start a new inspection form.</span></p>
-              <p><FileInput className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Import XML:</strong> Upload a measurements XML file to autofill address, pitch, and roof measurements.</span></p>
+              <p><FileInput className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Import:</strong> Upload a measurements XML file to autofill address, pitch, and roof measurements.</span></p>
               <p><RotateCcw className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Reset:</strong> Clear all current inspection data.</span></p>
-              <p><MoreHorizontal className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Resize:</strong> Pinch the toolbar with two fingers to make it bigger or smaller. On desktop, use Ctrl + scroll over the toolbar.</span></p>
+              <p><Shield className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Access:</strong> Manage who can view PT and TC folders (admins only).</span></p>
+              <p><MoveHorizontal className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Scroll:</strong> Swipe the toolbar left or right to see more buttons.</span></p>
+              <p><CircleHelp className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Resize:</strong> Pinch the toolbar with two fingers to make it bigger or smaller. On desktop, use Ctrl + scroll over the toolbar.</span></p>
             </div>
           </div>
         </>

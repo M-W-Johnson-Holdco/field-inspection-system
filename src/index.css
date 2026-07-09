@@ -820,14 +820,10 @@ button:disabled {
   bottom: 10px;
   left: 50%;
   z-index: 200;
-  display: flex;
   width: max-content;
-  max-width: none;
-  flex-wrap: nowrap;
-  justify-content: center;
-  gap: 4px;
+  max-width: calc(100vw - 20px);
   padding: 5px;
-  transform: translateX(-50%) scale(var(--toolbar-scale, 2.2));
+  transform: translateX(-50%) scale(var(--toolbar-scale, 1));
   transform-origin: center bottom;
   border: 1px solid rgba(148, 163, 184, 0.28);
   border-radius: 999px;
@@ -835,13 +831,41 @@ button:disabled {
   box-shadow: 0 18px 54px rgba(15, 23, 42, 0.18);
   backdrop-filter: blur(18px);
   touch-action: pan-x pan-y;
+  --toolbar-btn-size: 40px;
+  --toolbar-gap: 4px;
+}
+
+.action-bar__scroll {
+  display: flex;
+  gap: var(--toolbar-gap);
+  width: calc(var(--toolbar-btn-size) * 5 + var(--toolbar-gap) * 4);
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+
+.action-bar__scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.action-bar__scroll .app-button {
+  flex: 0 0 var(--toolbar-btn-size);
+  width: var(--toolbar-btn-size);
+  min-width: var(--toolbar-btn-size);
+  height: var(--toolbar-btn-size);
+  min-height: var(--toolbar-btn-size);
+  scroll-snap-align: start;
 }
 
 .app-button {
   display: inline-grid;
-  width: 38px;
-  height: 38px;
-  min-height: 38px;
+  width: var(--toolbar-btn-size, 40px);
+  height: var(--toolbar-btn-size, 40px);
+  min-height: var(--toolbar-btn-size, 40px);
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
@@ -856,8 +880,8 @@ button:disabled {
 }
 
 .app-button__icon {
-  width: 17px;
-  height: 17px;
+  width: 16px;
+  height: 16px;
   stroke-width: 2.4;
 }
 
@@ -938,90 +962,10 @@ button:disabled {
   color: #6d28d9;
 }
 
-.app-button--more {
+.app-button--access {
   border: 1px solid #cbd5e1;
   background: #f8fafc;
   color: #334155;
-}
-
-.toolbar-more {
-  position: relative;
-  display: inline-grid;
-}
-
-.toolbar-more__menu {
-  position: absolute;
-  left: 50%;
-  bottom: calc(100% + 10px);
-  z-index: 240;
-  display: flex;
-  width: max-content;
-  max-width: calc(100vw - 20px);
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 6px;
-  padding: 7px;
-  border: 1px solid rgba(148, 163, 184, 0.28);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.98);
-  box-shadow: 0 18px 46px rgba(15, 23, 42, 0.22);
-  transform: translateX(-50%);
-  backdrop-filter: blur(16px);
-}
-
-.toolbar-more__menu::after {
-  position: absolute;
-  left: 50%;
-  bottom: -6px;
-  width: 12px;
-  height: 12px;
-  transform: translateX(-50%) rotate(45deg);
-  border-right: 1px solid rgba(148, 163, 184, 0.28);
-  border-bottom: 1px solid rgba(148, 163, 184, 0.28);
-  background: rgba(255, 255, 255, 0.98);
-  content: '';
-}
-
-.toolbar-more__item {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  width: 36px;
-  height: 36px;
-  min-height: 36px;
-  place-items: center;
-  padding: 0;
-  border: 0;
-  border-radius: 12px;
-  background: transparent;
-  color: #334155;
-  cursor: pointer;
-}
-
-.toolbar-more__item:hover:not(:disabled) {
-  background: var(--primary-soft);
-  color: var(--primary);
-}
-
-.toolbar-more__item:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-.toolbar-more__item--danger {
-  color: var(--danger);
-}
-
-.toolbar-more__item--danger:hover:not(:disabled) {
-  background: #fef2f2;
-  color: var(--danger);
-}
-
-.toolbar-more__icon {
-  width: 16px;
-  height: 16px;
-  flex: 0 0 auto;
-  stroke-width: 2.4;
 }
 
 .toolbar-help-modal {
@@ -3238,9 +3182,21 @@ summary.field-select.field-select--placeholder {
 
   .action-bar {
     bottom: 18px;
-    width: max-content;
-    max-width: none;
+    --toolbar-btn-size: auto;
+    width: min(calc(100vw - 36px), 720px);
     border-radius: 22px;
+  }
+
+  .action-bar__scroll {
+    width: 100%;
+  }
+
+  .action-bar__scroll .app-button {
+    flex: 0 0 calc((100% - 16px) / 5);
+    min-width: calc((100% - 16px) / 5);
+    width: auto;
+    height: auto;
+    min-height: 46px;
   }
 
   .app-button {

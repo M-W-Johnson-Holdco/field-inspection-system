@@ -1,10 +1,10 @@
 import {
+  CONFIG_FOLDER_NAME,
   DEFAULT_PERMISSIONS,
   normalizeEmail,
 } from './accessConfig'
 import { loadJsonFromDrive, saveJsonToDrive } from './driveService'
 
-const CONFIG_FOLDER_NAME = '_config'
 const PERMISSIONS_FILE_NAME = 'permissions.json'
 
 function sanitizePermissions(raw) {
