@@ -1,4 +1,4 @@
-import { orgForEmail } from './accessConfig'
+import { normalizeEmail, orgForEmail } from './accessConfig'
 
 const DRIVE = 'https://www.googleapis.com/drive/v3'
 const UPLOAD = 'https://www.googleapis.com/upload/drive/v3'
@@ -74,7 +74,8 @@ async function readJsonFile(token, fileId) {
 
 export async function loadJsonFromDrive(token, configFolderName, fileName) {
   const configFolderId = await ensureFolder(token, configFolderName, SHARED_DRIVE_ID)
-  const fileId = await findByName(token, fileName, 'application/json', configFolderId)
+  // Don't require mimeType — older uploads may not be exactly application/json.
+  const fileId = await findByName(token, fileName, null, configFolderId)
   if (!fileId) return null
   return readJsonFile(token, fileId)
 }
@@ -82,7 +83,7 @@ export async function loadJsonFromDrive(token, configFolderName, fileName) {
 export async function saveJsonToDrive(token, configFolderName, fileName, data) {
   const configFolderId = await ensureFolder(token, configFolderName, SHARED_DRIVE_ID)
   const jsonBlob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-  const existingJsonId = await findByName(token, fileName, 'application/json', configFolderId)
+  const existingJsonId = await findByName(token, fileName, null, configFolderId)
   if (existingJsonId) {
     await patchFile(token, existingJsonId, 'application/json', jsonBlob)
   } else {
@@ -92,9 +93,9 @@ export async function saveJsonToDrive(token, configFolderName, fileName, data) {
 
 async function multipartUpload(token, folderId, name, mimeType, blob) {
   const boundary = 'tcboundary'
-  const meta = JSON.stringify({ name, parents: [folderId] })
+  const meta = JSON.stringify({ name, mimeType, parents: [folderId] })
   const body = new Blob([
-    `--${boundary}\r\nContent-Type: application/json\r\n\r\n${meta}\r\n`,
+    `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n`,
     `--${boundary}\r\nContent-Type: ${mimeType}\r\n\r\n`,
     blob,
     `\r\n--${boundary}--`,
@@ -138,11 +139,15 @@ export async function listInspectionFolders(token, orgKeys) {
     const orgRootId = await ensureOrgRoot(token, orgKey)
     const q = `mimeType=${JSON.stringify(FOLDER_MIME)} and ${JSON.stringify(orgRootId)} in parents and trashed=false`
     const r = await gfetch(
-      `${DRIVE}/files?q=${encodeURIComponent(q)}&fields=files(id,name,createdTime)&orderBy=createdTime desc&pageSize=200&${SD_PARAMS}&corpora=drive&driveId=${SHARED_DRIVE_ID}`,
+      `${DRIVE}/files?q=${encodeURIComponent(q)}&fields=files(id,name,createdTime,appProperties)&orderBy=createdTime desc&pageSize=200&${SD_PARAMS}&corpora=drive&driveId=${SHARED_DRIVE_ID}`,
       token,
     )
     for (const file of r.files || []) {
-      folders.push({ ...file, org: orgKey })
+      folders.push({
+        ...file,
+        org: orgKey,
+        ownerEmail: file.appProperties?.ownerEmail || '',
+      })
     }
   }
   return folders
@@ -224,12 +229,27 @@ function slugify(str) {
 export async function saveInspectionToDrive(token, inspectionData, inspectorName, userEmail) {
   const orgKey = orgForEmail(userEmail)
   if (!orgKey) throw new Error('Your email is not assigned to a company folder.')
+  const ownerEmail = normalizeEmail(userEmail)
   const orgRootId = await ensureOrgRoot(token, orgKey)
   const jobFolderId = await ensureFolder(token, folderName(inspectionData.jobInfo, inspectorName), orgRootId)
+
+  // Stamp owner on the folder for Sales filtering in Open.
+  await gfetch(`${DRIVE}/files/${jobFolderId}?${SD_PARAMS}`, token, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      appProperties: { ownerEmail },
+    }),
+  })
 
   // Strip photos from JSON payload; collect { path: string[], name: string, url: string }
   const photos = []
   const clean = JSON.parse(JSON.stringify(inspectionData))
+  clean.meta = {
+    ...(clean.meta || {}),
+    ownerEmail,
+    savedAt: new Date().toISOString(),
+  }
 
   // ── Roof ──────────────────────────────────────────────────────────
   for (const [itemId, item] of Object.entries(clean.roofData || {})) {

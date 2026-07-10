@@ -3,6 +3,7 @@ import { Search, X, FolderOpen, Loader } from 'lucide-react'
 import { listInspectionFolders, loadInspectionFromDrive, TokenExpiredError } from '../lib/driveService'
 import { useAuth } from '../context/AuthContext'
 import { usePermissions } from '../context/PermissionsContext'
+import { ROLES, isInspectionOwnedByUser } from '../lib/accessConfig'
 
 const DATE_FILTERS = [
   { label: 'This Week', days: 7 },
@@ -19,6 +20,7 @@ function parseFolder(folder) {
     id: folder.id,
     name: folder.name,
     org: folder.org || '',
+    ownerEmail: folder.ownerEmail || folder.appProperties?.ownerEmail || '',
     date: parts[0] || '',
     address: parts[1] || '',
     customer: parts[2] || '',
@@ -45,8 +47,8 @@ function sortByNewestInspection(a, b) {
 }
 
 export default function OpenInspectionModal({ token, saveStatus, onLoad, onClose }) {
-  const { setTokenExpired } = useAuth()
-  const { viewableOrgs } = usePermissions()
+  const { user, setTokenExpired } = useAuth()
+  const { viewableOrgs, role } = usePermissions()
   const [folders, setFolders] = useState([])
   const [listStatus, setListStatus] = useState('loading') // loading | ready | error
   const [search, setSearch] = useState('')
@@ -61,7 +63,11 @@ export default function OpenInspectionModal({ token, saveStatus, onLoad, onClose
   useEffect(() => {
     listInspectionFolders(token, viewableOrgs)
       .then(files => {
-        setFolders(files.map(parseFolder).sort(sortByNewestInspection))
+        let next = files.map(parseFolder).sort(sortByNewestInspection)
+        if (role === ROLES.sales) {
+          next = next.filter(folder => isInspectionOwnedByUser(folder, user))
+        }
+        setFolders(next)
         setListStatus('ready')
       })
       .catch(err => {
@@ -72,7 +78,7 @@ export default function OpenInspectionModal({ token, saveStatus, onLoad, onClose
           setListStatus('error')
         }
       })
-  }, [token, viewableOrgs, onClose, setTokenExpired])
+  }, [token, viewableOrgs, role, user, onClose, setTokenExpired])
 
   useEffect(() => {
     if (listStatus === 'ready') searchRef.current?.focus()

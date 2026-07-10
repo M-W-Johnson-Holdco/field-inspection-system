@@ -1,9 +1,10 @@
 import { createContext, useContext, useState, useCallback } from 'react'
 import { useGoogleLogin } from '@react-oauth/google'
+import { hasAppAccess, isAllowedDomainEmail, normalizeEmail } from '../lib/accessConfig'
+import { loadPermissions } from '../lib/permissionsService'
 
 const AuthContext = createContext(null)
 
-const ALLOWED_DOMAINS = ['tcroofingexperts.com', 'peachtreerestorations.com']
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive'
 
 export function AuthProvider({ children }) {
@@ -19,32 +20,25 @@ export function AuthProvider({ children }) {
   const [accessToken, setAccessToken] = useState(null)
   const [tokenExpired, setTokenExpired] = useState(false)
 
-  async function handleTokenResponse(tokenResponse) {
-    const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-      headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
-    })
-    if (!res.ok) throw new Error('Failed to fetch user info')
-    const userInfo = await res.json()
-    if (!ALLOWED_DOMAINS.some(d => userInfo.email.endsWith('@' + d))) {
+  async function authorizeUser(userInfo, token) {
+    const email = normalizeEmail(userInfo.email)
+    if (!isAllowedDomainEmail(email)) {
       return { error: 'This Google account is not authorized. Contact your administrator.' }
     }
-    const userData = {
-      name: userInfo.given_name,
-      fullName: userInfo.name,
-      email: userInfo.email,
-      picture: userInfo.picture,
-    }
-    localStorage.setItem('tc_user', JSON.stringify(userData))
-    setUser(userData)
-    setAccessToken(tokenResponse.access_token)
-    setTokenExpired(false)
-    return { success: true }
-  }
 
-  function login(userInfo, token) {
-    if (!ALLOWED_DOMAINS.some(d => userInfo.email.endsWith('@' + d))) {
-      return { error: 'This Google account is not authorized. Contact your administrator.' }
+    let permissions
+    try {
+      permissions = await loadPermissions(token)
+    } catch {
+      return { error: 'Could not verify Drive access permissions. Try again.' }
     }
+
+    if (!hasAppAccess(email, permissions)) {
+      return {
+        error: 'Your account has not been granted access to this app. Contact your administrator.',
+      }
+    }
+
     const userData = {
       name: userInfo.given_name,
       fullName: userInfo.name,
@@ -55,7 +49,20 @@ export function AuthProvider({ children }) {
     setUser(userData)
     setAccessToken(token)
     setTokenExpired(false)
-    return { success: true }
+    return { success: true, permissions }
+  }
+
+  async function handleTokenResponse(tokenResponse) {
+    const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
+    })
+    if (!res.ok) throw new Error('Failed to fetch user info')
+    const userInfo = await res.json()
+    return authorizeUser(userInfo, tokenResponse.access_token)
+  }
+
+  async function login(userInfo, token) {
+    return authorizeUser(userInfo, token)
   }
 
   const reLogin = useGoogleLogin({
