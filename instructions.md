@@ -131,13 +131,13 @@ Replace with the new Shared Drive ID from Step 3.
 
 In `src/components/sections/AIParseSection.jsx`, find:
 ```js
-const WORKER_URL = 'https://tc-field-inspection-worker.k-liss.workers.dev'
+const WORKER_URL = 'https://field-inspection-worker.k-liss.workers.dev'
 ```
 Replace with the new Worker URL from Step 5.
 
 ### 4E — Update the CORS allowed origin in the Worker
 
-In `tc-field-inspection-worker/src/index.ts`, find:
+In `field-inspection-worker/src/index.ts`, find:
 ```ts
 const ALLOWED_ORIGIN = 'https://peachtreeroofing.github.io'
 ```
@@ -175,14 +175,14 @@ base: '/YOUR-REPO-NAME/',
 ### 5B — Install Wrangler and log in
 
 ```
-cd tc-field-inspection-worker
+cd field-inspection-worker
 npm install
 npx wrangler login
 ```
 
 ### 5C — Update wrangler.jsonc
 
-In `tc-field-inspection-worker/wrangler.jsonc`, update the worker name:
+In `field-inspection-worker/wrangler.jsonc`, update the worker name:
 ```json
 "name": "peachtree-field-inspection-worker"
 ```

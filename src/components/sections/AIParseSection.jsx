@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useInspection } from '../../context/InspectionContext'
 import { formatPitch, parsePitchNumerator } from '../../utils/pitch'
 
-const WORKER_URL = 'https://tc-field-inspection-worker.k-liss.workers.dev'
+const WORKER_URL = 'https://field-inspection-worker.k-liss.workers.dev'
 
 // Maps AI JSON roof keys → { itemId, fieldLabel }
 const ROOF_MAP = [

@@ -1,6 +1,6 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "tc-field-inspection-worker",
+	"name": "field-inspection-worker",
 	"main": "src/index.ts",
 	"compatibility_date": "2026-06-26",
 	"compatibility_flags": ["nodejs_compat"],
