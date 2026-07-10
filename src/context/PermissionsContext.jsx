@@ -2,7 +2,9 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { useAuth } from './AuthContext'
 import {
   DEFAULT_PERMISSIONS,
+  hasAppAccess,
   isAccessAdmin,
+  roleForEmail,
   viewableOrgs,
 } from '../lib/accessConfig'
 import { loadPermissions, savePermissions } from '../lib/permissionsService'
@@ -10,7 +12,7 @@ import { loadPermissions, savePermissions } from '../lib/permissionsService'
 const PermissionsContext = createContext(null)
 
 export function PermissionsProvider({ children }) {
-  const { accessToken, user } = useAuth()
+  const { accessToken, user, logout } = useAuth()
   const [permissions, setPermissions] = useState(DEFAULT_PERMISSIONS)
   const [status, setStatus] = useState('idle') // idle | loading | ready | error
 
@@ -35,6 +37,15 @@ export function PermissionsProvider({ children }) {
     reloadPermissions()
   }, [reloadPermissions])
 
+  // Kick out signed-in users who are no longer on the allowlist.
+  useEffect(() => {
+    if (!user?.email || !accessToken) return
+    if (status !== 'ready' && status !== 'error') return
+    if (!hasAppAccess(user.email, permissions)) {
+      logout()
+    }
+  }, [user?.email, accessToken, status, permissions, logout])
+
   const updatePermissions = useCallback(async (nextPermissions) => {
     if (!accessToken) throw new Error('Not signed in')
     const saved = await savePermissions(accessToken, nextPermissions)
@@ -42,14 +53,17 @@ export function PermissionsProvider({ children }) {
     return saved
   }, [accessToken])
 
+  const role = roleForEmail(user?.email, permissions)
+
   const value = useMemo(() => ({
     permissions,
     status,
+    role,
     reloadPermissions,
     updatePermissions,
     isAccessAdmin: isAccessAdmin(user?.email, permissions),
     viewableOrgs: viewableOrgs(user?.email, permissions),
-  }), [permissions, status, reloadPermissions, updatePermissions, user?.email])
+  }), [permissions, status, role, reloadPermissions, updatePermissions, user?.email])
 
   return (
     <PermissionsContext.Provider value={value}>

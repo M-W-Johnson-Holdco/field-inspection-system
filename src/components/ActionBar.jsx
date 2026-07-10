@@ -4,9 +4,10 @@ import { useAuth } from '../context/AuthContext'
 import { saveInspectionToDrive, TokenExpiredError } from '../lib/driveService'
 import OpenInspectionModal from './OpenInspectionModal'
 import AccessAdminModal from './AccessAdminModal'
+import ImportChooserModal from './ImportChooserModal'
+import ImageImportModal from './ImageImportModal'
 import XmlImportModal from './XmlImportModal'
-import { isBootstrapAccessAdmin } from '../lib/accessConfig'
-import { parseXmlMeasurements } from '../lib/parseXmlMeasurements'
+import { usePermissions } from '../context/PermissionsContext'
 import {
   ArrowLeft,
   ArrowRight,
@@ -114,14 +115,16 @@ function getJobInfoSaveError(jobInfo) {
 export default function ActionBar() {
   const { activeTab, setActiveTab, resetAll, startNewInspection, data, driveSaveStatus, setDriveSaveStatus, loadInspection, applyXmlImport } = useInspection()
   const { accessToken, user, setTokenExpired } = useAuth()
-  const canManageAccess = isBootstrapAccessAdmin(user?.email)
+  const { isAccessAdmin } = usePermissions()
+  const canManageAccess = isAccessAdmin
   const [driveStatus, setDriveStatus] = useState('idle') // idle | saving | done | error
   const [showOpen, setShowOpen] = useState(false)
   const [showAccessAdmin, setShowAccessAdmin] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
-  const [xmlParsed, setXmlParsed] = useState(null)
+  const [showImportChooser, setShowImportChooser] = useState(false)
+  const [showImportXml, setShowImportXml] = useState(false)
+  const [showImportImages, setShowImportImages] = useState(false)
   const [toolbarScale, setToolbarScale] = useState(readToolbarScale)
-  const xmlInputRef = useRef(null)
   const actionBarRef = useRef(null)
   const toolbarScaleRef = useRef(toolbarScale)
   const pinchStateRef = useRef(null)
@@ -261,29 +264,22 @@ export default function ActionBar() {
     }
   }
 
-  function handleImportXml() {
-    xmlInputRef.current?.click()
+  function handleImport() {
+    setShowImportChooser(true)
   }
 
-  function handleXmlFile(e) {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = ev => {
-      try {
-        const parsed = parseXmlMeasurements(ev.target.result)
-        setXmlParsed(parsed)
-      } catch {
-        window.alert('Could not read the XML file. Make sure it is a valid measurements export.')
-      }
-    }
-    reader.readAsText(file)
+  function handleChooseMeasurements() {
+    setShowImportChooser(false)
+    setShowImportXml(true)
   }
 
-  function handleXmlApply() {
-    applyXmlImport(xmlParsed)
-    setXmlParsed(null)
+  function handleChooseImages() {
+    setShowImportChooser(false)
+    setShowImportImages(true)
+  }
+
+  function handleXmlApply(parsed) {
+    applyXmlImport(parsed)
   }
 
   function handleNew() {
@@ -317,13 +313,6 @@ export default function ActionBar() {
 
   return (
     <>
-      <input
-        ref={xmlInputRef}
-        type="file"
-        accept=".xml,application/xml,text/xml"
-        style={{ display: 'none' }}
-        onChange={handleXmlFile}
-      />
       <div
         ref={actionBarRef}
         className="action-bar"
@@ -378,9 +367,9 @@ export default function ActionBar() {
           <button
             className="app-button app-button--open"
             type="button"
-            aria-label="Import XML measurements"
-            title="Import XML measurements"
-            onClick={handleImportXml}
+            aria-label="Import measurements or images"
+            title="Import measurements or images"
+            onClick={handleImport}
           >
             <FileInput className="app-button__icon" aria-hidden="true" />
             <span className="app-button__label">Import</span>
@@ -440,9 +429,16 @@ export default function ActionBar() {
         </div>
       </div>
 
-      {xmlParsed && (
+      {showImportChooser && (
+        <ImportChooserModal
+          onChooseMeasurements={handleChooseMeasurements}
+          onChooseImages={handleChooseImages}
+          onClose={() => setShowImportChooser(false)}
+        />
+      )}
+
+      {showImportXml && (
         <XmlImportModal
-          parsed={xmlParsed}
           existing={{
             addr: data.jobInfo?.addr,
             pitch: data.roofData?.ri0?.fields?.['Predominant Pitch'],
@@ -450,8 +446,12 @@ export default function ActionBar() {
             valleyIncluded: !data.roofData?.ri5?.excluded,
           }}
           onApply={handleXmlApply}
-          onClose={() => setXmlParsed(null)}
+          onClose={() => setShowImportXml(false)}
         />
+      )}
+
+      {showImportImages && (
+        <ImageImportModal onClose={() => setShowImportImages(false)} />
       )}
 
       {showOpen && accessToken && (
@@ -482,12 +482,12 @@ export default function ActionBar() {
               <p><ArrowRight className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Next:</strong> Go to the next inspection section.</span></p>
               <p><Save className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Save:</strong> Save the current inspection to Google Drive.</span></p>
               <p><FolderOpen className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Open:</strong> Open a saved inspection from Google Drive.</span></p>
-              <p><FileInput className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Import:</strong> Upload a measurements XML file to autofill address, pitch, and roof measurements.</span></p>
+              <p><FileInput className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Import:</strong> Choose measurements (EagleView XML) or bulk-assign photos to form categories.</span></p>
               <p><ExternalLink className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Export:</strong> Reserved for exporting inspection reports.</span></p>
               <p><FilePlus className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>New:</strong> Start a new inspection form.</span></p>
               <p><RotateCcw className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Reset:</strong> Clear all current inspection data.</span></p>
               <p><CircleHelp className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Help:</strong> Show this toolbar guide.</span></p>
-              <p><Shield className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Access:</strong> Manage who can view PT and TC folders (admins only).</span></p>
+              <p><Shield className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Access:</strong> Manage who can sign in and their role — Sales, PM, or Admin (admins only).</span></p>
               <p><MoveHorizontal className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Scroll:</strong> Swipe the toolbar left or right to see more buttons.</span></p>
               <p><CircleHelp className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Resize:</strong> Pinch the toolbar with two fingers to make it bigger or smaller. On desktop, use Ctrl + scroll over the toolbar.</span></p>
             </div>
