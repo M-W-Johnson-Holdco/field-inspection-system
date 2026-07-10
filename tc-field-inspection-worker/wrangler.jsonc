@@ -6,6 +6,9 @@
 	"compatibility_flags": ["nodejs_compat"],
 	"observability": { "enabled": true },
 	"upload_source_maps": true,
+	"rules": [
+		{ "type": "Text", "globs": ["**/*.txt"], "fallthrough": true }
+	],
 	"migrations": [
 		{ "tag": "v1", "new_sqlite_classes": ["MyDurableObject"] },
 		{ "tag": "v2", "deleted_classes": ["MyDurableObject"] }

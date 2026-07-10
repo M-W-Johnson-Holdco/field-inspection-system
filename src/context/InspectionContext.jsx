@@ -15,22 +15,14 @@ const INITIAL_ROOF_DATA = Object.fromEntries(
 
 const INITIAL_ELEV_DATA = Object.fromEntries(
   ELEV_ITEMS.flatMap(item =>
-    DIRECTIONS.map(dir => {
-      const defaultFields = item.id === 'ev3' ? { 'Size (Inches)': '4' } : {}
-      return [`${item.id}_${dir}`, { excluded: false, fields: defaultFields, photos: [] }]
-    }),
+    DIRECTIONS.map(dir => [`${item.id}_${dir}`, { excluded: false, fields: {}, photos: [] }]),
   ),
 )
 
 const INITIAL_INTERIOR_DATA = { rooms: [] }
 
 const INITIAL_EXTERIOR_DATA = Object.fromEntries(
-  EXTERIOR_ITEMS.map(item => {
-    const defaultFields = item.id === 'ei_fence'
-      ? { 'Post Spacing (LF)': '8', 'Height (FT)': '6' }
-      : {}
-    return [item.id, { excluded: false, fields: defaultFields, photos: [] }]
-  }),
+  EXTERIOR_ITEMS.map(item => [item.id, { excluded: false, fields: {}, photos: [] }]),
 )
 
 const INITIAL_NOTES_DATA = {
@@ -42,7 +34,7 @@ const INITIAL_STATE = {
   jobInfo: {
     cust: '', phone: '', email: '', addr: '',
     pm: '', insp: '', ins: '', claim: '',
-    claimFileDate: new Date().toISOString().slice(0, 10),
+    claimFileDate: '',
     stormDate: '',
     preferredContact: [],
     residenceType: 'Primary',
@@ -101,7 +93,7 @@ function calculateCompletion(data) {
   const totals = { filled: 0, total: 0 }
   const ji = data.jobInfo || {}
 
-  ;['cust', 'preferredContact', 'residenceType', 'pm', 'insp', 'ins', 'claim', 'claimFileDate', 'stormDate'].forEach(key => {
+  ;['cust', 'preferredContact', 'pm', 'insp', 'ins', 'claim', 'claimFileDate', 'stormDate'].forEach(key => {
     countValue(ji[key], totals)
   })
   countValue(ji.phone, totals, isValidPhone)
@@ -184,8 +176,6 @@ function normalizeElevGutterCell(cell) {
 
   if (fields['Size (Inches)'] != null && fields['Size (Inches)'] !== '') {
     fields['Size (Inches)'] = normalizeGutterSizeValue(fields['Size (Inches)'])
-  } else if (fields['Size (Inches)'] == null || fields['Size (Inches)'] === '') {
-    fields['Size (Inches)'] = '4'
   }
 
   return { ...cell, fields }
@@ -217,15 +207,11 @@ function normalizeFenceFields(fields = {}) {
   if (next['Height (FT)'] != null && next['Height (FT)'] !== '') {
     const parsed = String(next['Height (FT)']).match(/(\d+(?:\.\d+)?)/)
     next['Height (FT)'] = parsed ? parsed[1] : next['Height (FT)']
-  } else {
-    next['Height (FT)'] = '6'
   }
 
   if (next['Post Spacing (LF)'] != null && next['Post Spacing (LF)'] !== '') {
     const { feet } = parseMeasurement(next['Post Spacing (LF)'])
     next['Post Spacing (LF)'] = feet !== '' ? feet : String(next['Post Spacing (LF)']).replace(/[^\d.]/g, '')
-  } else {
-    next['Post Spacing (LF)'] = '8'
   }
 
   return next

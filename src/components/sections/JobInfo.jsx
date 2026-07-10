@@ -318,6 +318,7 @@ export default function JobInfo() {
                 <div className="form-field form-field--full">
                   <label className="form-label">Property Address <span className="required-star">*</span></label>
                   <button
+                    id="addr"
                     type="button"
                     className={`address-trigger ${ji.addr ? '' : 'address-trigger--empty'}`}
                     onClick={openAddressPopup}
