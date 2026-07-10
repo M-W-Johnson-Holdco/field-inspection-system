@@ -74,6 +74,16 @@ function isValidEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim())
 }
 
+function isValidAddressParts(parts) {
+  return Boolean(
+    parts &&
+    String(parts.address1 || '').trim() &&
+    String(parts.city || '').trim() &&
+    /^[A-Z]{2}$/i.test(String(parts.state || '').trim()) &&
+    /^\d{5}$/.test(String(parts.zipcode || '').trim())
+  )
+}
+
 function getJobInfoSaveError(jobInfo) {
   if (!String(jobInfo?.cust || '').trim()) {
     return { field: 'cust', message: 'Customer name is required before saving.' }
@@ -83,6 +93,9 @@ function getJobInfoSaveError(jobInfo) {
   }
   if (!isValidEmail(jobInfo?.email)) {
     return { field: 'email', message: 'Enter a valid customer email before saving.' }
+  }
+  if (!isValidAddressParts(jobInfo?.addrParts)) {
+    return { field: 'addr', message: 'Property address is required before saving.' }
   }
   if (jobInfo?.hasSeparateContact === 'Yes') {
     if (!String(jobInfo?.contactName || '').trim()) {
