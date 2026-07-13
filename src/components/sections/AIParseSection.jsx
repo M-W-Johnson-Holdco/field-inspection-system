@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useInspection } from '../../context/InspectionContext'
 import { formatPitch, parsePitchNumerator } from '../../utils/pitch'
+import { formatPropertyAddress } from '../../utils/address'
 
 const WORKER_URL = 'https://field-inspection-worker.k-liss.workers.dev'
 
@@ -13,12 +14,19 @@ const ROOF_MAP = [
   { key: 'edgeFlashingType',        itemId: 'ri1',  label: 'Type' },
   { key: 'edgeMaterial',            itemId: 'ri1',  label: 'Material' },
   { key: 'edgePainted',             itemId: 'ri1',  label: 'Painted' },
+  { key: 'edgeDamaged',             itemId: 'ri1',  label: 'Damaged' },
   { key: 'underlaymentGrade',       itemId: 'ri2',  label: 'Grade' },
   { key: 'underlaymentLayers',      itemId: 'ri2',  label: 'Layers' },
+  { key: 'underlaymentDamaged',     itemId: 'ri2',  label: 'Damaged' },
   { key: 'ridgeCapGrade',           itemId: 'ri3',  label: 'Grade' },
   { key: 'ridgeCapExposure',        itemId: 'ri3',  label: 'Exposure (inches)' },
+  { key: 'ridgeCapDamaged',         itemId: 'ri3',  label: 'Damaged' },
   { key: 'starterStyle',            itemId: 'ri4',  label: 'Style' },
+  { key: 'starterDamaged',          itemId: 'ri4',  label: 'Damaged' },
   { key: 'valleyStyle',             itemId: 'ri5',  label: 'Style' },
+  { key: 'valleyDamaged',           itemId: 'ri5',  label: 'Damaged' },
+  { key: 'solarPanelQty',           itemId: 'ri24', label: 'Qty' },
+  { key: 'solarPanelDamaged',       itemId: 'ri24', label: 'Damaged' },
   { key: 'ridgeVentLF',             itemId: 'ri6',  label: 'Length (LF)' },
   { key: 'ridgeVentType',           itemId: 'ri6',  label: 'Type' },
   { key: 'ridgeVentPainted',        itemId: 'ri6',  label: 'Painted' },
@@ -26,40 +34,23 @@ const ROOF_MAP = [
   { key: 'boxVentMaterial',         itemId: 'ri7',  label: 'Material' },
   { key: 'boxVentPainted',          itemId: 'ri7',  label: 'Painted' },
   { key: 'turbineQty',              itemId: 'ri8',  label: 'Qty' },
+  { key: 'turbineMaterial',         itemId: 'ri8',  label: 'Material' },
+  { key: 'turbinePainted',          itemId: 'ri8',  label: 'Painted' },
   { key: 'powerVentQty',            itemId: 'ri9',  label: 'Qty' },
+  { key: 'powerVentPainted',        itemId: 'ri9',  label: 'Painted' },
   { key: 'solarVentQty',            itemId: 'ri10', label: 'Qty' },
-  { key: 'pipeJackType',            itemId: 'ri11', label: 'Type', subOnly: true },
-  { key: 'pipeJackPainted',         itemId: 'ri11', label: 'Painted', subOnly: true },
-  { key: 'pipeJack15qty',           itemId: 'ri11', label: 'Qty 1.5"', subOnly: true },
-  { key: 'pipeJack2qty',            itemId: 'ri11', label: 'Qty 2"', subOnly: true },
-  { key: 'pipeJack3qty',            itemId: 'ri11', label: 'Qty 3"', subOnly: true },
-  { key: 'pipeJack4qty',            itemId: 'ri11', label: 'Qty 4"', subOnly: true },
-  { key: 'exhaustStackDamaged',     itemId: 'ri12', label: 'Damaged', subOnly: true },
-  { key: 'exhaustStackDamageTo',    itemId: 'ri12', label: 'Type', subOnly: true },
-  { key: 'exhaustStackPainted',     itemId: 'ri12', label: 'Painted', subOnly: true },
+  { key: 'solarVentPainted',        itemId: 'ri10', label: 'Painted' },
   { key: 'kickoutsNeeded',          itemId: 'ri13', label: 'Needed' },
   { key: 'kickoutsPainted',         itemId: 'ri13', label: 'Painted' },
   { key: 'rainDiverterQty',         itemId: 'ri15', label: 'Qty' },
   { key: 'rainDiverterLF',          itemId: 'ri15', label: 'Length (LF)' },
   { key: 'rainDiverterPainted',     itemId: 'ri15', label: 'Painted' },
   { key: 'powerMeterMastQty',       itemId: 'ri16', label: 'Qty' },
-  { key: 'chimneyDamaged',          itemId: 'ri17', label: 'Damaged', subOnly: true },
-  { key: 'chimneySize',             itemId: 'ri17', label: 'Size / Width', subOnly: true },
-  { key: 'chimneyQty',              itemId: 'ri17', label: 'Qty', subOnly: true },
-  { key: 'chimneyPainted',          itemId: 'ri17', label: 'Painted', subOnly: true },
-  { key: 'counterFlashingCondition',itemId: 'ri17', label: 'Counter Flashing', subOnly: true },
-  { key: 'stepFlashingDamaged',     itemId: 'ri18', label: 'Damaged', subOnly: true },
-  { key: 'stepFlashingPainted',     itemId: 'ri18', label: 'Painted', subOnly: true },
-  { key: 'counterFlashingDamaged',  itemId: 'ri19', label: 'Damaged', subOnly: true },
-  { key: 'counterFlashingPainted',  itemId: 'ri19', label: 'Painted', subOnly: true },
-  { key: 'lFlashingDamaged',        itemId: 'ri20', label: 'Damaged', subOnly: true },
-  { key: 'lFlashingPainted',        itemId: 'ri20', label: 'Painted', subOnly: true },
-  { key: 'lowSlopeLocation',        itemId: 'ri22', label: 'Location', subOnly: true },
-  { key: 'lowSlopeGrade',           itemId: 'ri22', label: 'Style / Grade', subOnly: true },
-  { key: 'lowSlopePitch',           itemId: 'ri22', label: 'Pitch', subOnly: true },
-  { key: 'lowSlopeDamaged',         itemId: 'ri22', label: 'Damaged', subOnly: true },
-  { key: 'exposedRafters',          itemId: 'ri22', label: 'Exposed Rafters', subOnly: true },
 ]
+// Pipe jacks, exhaust stacks, chimneys, step/counter/L flashing, skylights,
+// cornice gables, and low-slope sections are variable-length repeatables —
+// each is imported directly from its roof.<key>[] array (see applyParsed),
+// not through ROOF_MAP.
 
 // Maps AI JSON elevation keys → { itemId, fieldLabel } per direction
 const ELEV_MAP = [
@@ -115,15 +106,6 @@ const EXTERIOR_MAP = [
   { key: 'overheadClearanceIssue', itemId: 'ei_site',    label: 'Overhead Clearance Issue' },
 ]
 
-// Normalize chimney size to match the select option text
-function normalizeChimneySize(val) {
-  const v = String(val).toLowerCase().trim()
-  if (v === 'small' || v.startsWith('small')) return 'Small (width < 24")'
-  if (v === 'medium' || v.startsWith('medium')) return 'Medium (width 24"–36")'
-  if (v === 'large' || v.startsWith('large')) return 'Large (width > 36")'
-  return val
-}
-
 function normalizeGutterSize(val) {
   const match = String(val).match(/(\d+(?:\.\d+)?)/)
   return match ? match[1] : String(val).trim()
@@ -138,11 +120,16 @@ function toArray(val) {
 
 // Apply parsed JSON to InspectionContext
 function applyParsed(parsed, ctx) {
-  const { updateJobInfo, updateRoofField, updateElevField, updateExteriorField, updateNote, importRoofPipeJacks, importRoofExhaustStacks, importRoofChimneys, importRoofFlashingItems, importRoofLowSlopeItems } = ctx
+  const {
+    updateJobInfo, updateRoofField, updateElevField, updateExteriorField, updateNote,
+    importRoofPipeJacks, importRoofExhaustStacks, importRoofChimneys, importRoofFlashingItems,
+    importRoofLowSlopeItems, importRoofSkylights, importRoofCorniceGables, importRoofOtherStructures,
+    importInteriorRooms,
+  } = ctx
 
   // Job info
   const ji = parsed.jobInfo || {}
-  const JOB_FIELDS = ['cust','phone','email','addr','pm','insp','ins','claim','claimFileDate','stormDate','residenceType','tenantname','tenantphone','hasSeparateContact','contactName','contactPhone','contactEmail']
+  const JOB_FIELDS = ['cust','phone','email','pm','insp','ins','claim','claimFileDate','stormDate','residenceType','tenantname','tenantphone','hasSeparateContact','contactName','contactPhone','contactEmail']
   JOB_FIELDS.forEach(f => { if (ji[f] != null) updateJobInfo(f, ji[f]) })
   if (ji.date != null && ji.claimFileDate == null) updateJobInfo('claimFileDate', ji.date)
   if (ji.preferredContact != null) {
@@ -152,18 +139,32 @@ function applyParsed(parsed, ctx) {
     updateJobInfo('contactPreferredContact', toArray(ji.contactPreferredContact))
   }
 
+  // Property address — the form's source of truth is addrParts, with `addr` derived from it.
+  if (ji.address1 || ji.city || ji.state || ji.zipcode) {
+    const addrParts = {
+      address1: ji.address1 || '',
+      address2: ji.address2 || '',
+      city: ji.city || '',
+      state: String(ji.state || '').toUpperCase().slice(0, 2),
+      zipcode: ji.zipcode || '',
+    }
+    updateJobInfo('addrParts', addrParts)
+    updateJobInfo('addr', formatPropertyAddress(addrParts))
+  } else if (ji.addr != null) {
+    updateJobInfo('addr', ji.addr)
+  }
+
   // Notes
   const notes = parsed.notes || {}
   Object.entries(notes).forEach(([k, v]) => { if (v != null) updateNote(k, v) })
 
   // Roof
   const roof = parsed.roof || {}
-  ROOF_MAP.forEach(({ key, itemId, label, subOnly }) => {
+  ROOF_MAP.forEach(({ key, itemId, label }) => {
     let val = roof[key]
-    if (val == null || subOnly) return
-    if (key === 'chimneySize') val = normalizeChimneySize(val)
+    if (val == null) return
     if (key === 'pitch') val = formatPitch(parsePitchNumerator(val, 0))
-    if (key === 'shingleStyle' || key === 'exhaustStackDamageTo') val = toArray(val)
+    if (key === 'shingleStyle') val = toArray(val)
     updateRoofField(itemId, label, val)
   })
   importRoofPipeJacks(roof)
@@ -171,7 +172,15 @@ function applyParsed(parsed, ctx) {
   importRoofChimneys(roof)
   importRoofFlashingItems(roof)
   importRoofLowSlopeItems(roof)
-  if (roof.chimneyConditionNotes != null) updateNote('defects', roof.chimneyConditionNotes)
+  importRoofSkylights(roof)
+  importRoofCorniceGables(roof)
+  importRoofOtherStructures(roof)
+
+  const chimneyNotes = (Array.isArray(roof.chimneys) ? roof.chimneys : [])
+    .map(c => c?.conditionNotes).filter(Boolean).join(' ')
+  if (chimneyNotes) {
+    updateNote('defects', notes.defects ? `${notes.defects} ${chimneyNotes}` : chimneyNotes)
+  }
 
   // Elevations
   const elevations = parsed.elevations || {}
@@ -185,6 +194,10 @@ function applyParsed(parsed, ctx) {
       updateElevField(`${itemId}_${dir}`, label, val)
     })
   })
+
+  // Interior rooms (variable-length)
+  const interior = parsed.interior || {}
+  importInteriorRooms(Array.isArray(interior.rooms) ? interior.rooms : [])
 
   // Exterior
   const ext = parsed.exterior || {}
