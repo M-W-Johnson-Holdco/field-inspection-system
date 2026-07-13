@@ -8,6 +8,8 @@ import ImportChooserModal from './ImportChooserModal'
 import ImageImportModal from './ImageImportModal'
 import XmlImportModal from './XmlImportModal'
 import { usePermissions } from '../context/PermissionsContext'
+import { buildXactimateExport } from '../lib/xactimateExport'
+import XactimateExportModal from './XactimateExportModal'
 import {
   ArrowLeft,
   ArrowRight,
@@ -124,6 +126,7 @@ export default function ActionBar() {
   const [showImportChooser, setShowImportChooser] = useState(false)
   const [showImportXml, setShowImportXml] = useState(false)
   const [showImportImages, setShowImportImages] = useState(false)
+  const [exportPreview, setExportPreview] = useState(null)
   const [toolbarScale, setToolbarScale] = useState(readToolbarScale)
   const actionBarRef = useRef(null)
   const toolbarScaleRef = useRef(toolbarScale)
@@ -307,6 +310,15 @@ export default function ActionBar() {
     resetAll()
   }
 
+  function handleExport() {
+    try {
+      setExportPreview(buildXactimateExport(data))
+    } catch (err) {
+      console.error('Export failed:', err)
+      window.alert('Export failed. See console for details.')
+    }
+  }
+
   const SaveIcon =
     driveStatus === 'done'  ? CheckCircle :
     driveStatus === 'error' ? AlertCircle : Save
@@ -377,9 +389,9 @@ export default function ActionBar() {
           <button
             className="app-button app-button--export"
             type="button"
-            aria-label="Export"
-            title="Export"
-            disabled
+            aria-label="Export Xactimate line items"
+            title="Export Xactimate line items (CSV + JSON)"
+            onClick={handleExport}
           >
             <ExternalLink className="app-button__icon" aria-hidden="true" />
             <span className="app-button__label">Export</span>
@@ -454,6 +466,10 @@ export default function ActionBar() {
         <ImageImportModal onClose={() => setShowImportImages(false)} />
       )}
 
+      {exportPreview && (
+        <XactimateExportModal exportData={exportPreview} onClose={() => setExportPreview(null)} />
+      )}
+
       {showOpen && accessToken && (
         <OpenInspectionModal
           token={accessToken}
@@ -483,7 +499,7 @@ export default function ActionBar() {
               <p><Save className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Save:</strong> Save the current inspection to Google Drive.</span></p>
               <p><FolderOpen className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Open:</strong> Open a saved inspection from Google Drive.</span></p>
               <p><FileInput className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Import:</strong> Choose measurements (EagleView XML) or bulk-assign photos to form categories.</span></p>
-              <p><ExternalLink className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Export:</strong> Reserved for exporting inspection reports.</span></p>
+              <p><ExternalLink className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Export:</strong> Download a Xactimate-style line-item CSV and JSON of this inspection for faster estimate entry.</span></p>
               <p><FilePlus className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>New:</strong> Start a new inspection form.</span></p>
               <p><RotateCcw className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Reset:</strong> Clear all current inspection data.</span></p>
               <p><CircleHelp className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Help:</strong> Show this toolbar guide.</span></p>
