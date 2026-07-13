@@ -4,6 +4,7 @@ import { useInspection } from '../../context/InspectionContext'
 import { filterInsuranceCompanies } from '../../data/insuranceCompanies'
 import { withSelectPlaceholderClass } from '../../utils/fieldGrid'
 import useExpandedSection from '../../hooks/useExpandedSection'
+import { formatPropertyAddress } from '../../utils/address'
 
 const CONTACT_OPTIONS = ['Phone', 'Email', 'Text']
 const EMPTY_ADDRESS = { address1: '', address2: '', city: '', state: '', zipcode: '' }
@@ -21,12 +22,6 @@ function formatPhone(value) {
 
 function isValidEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim())
-}
-
-function formatPropertyAddress(parts) {
-  const addressLine = [parts.address1, parts.address2].filter(Boolean).join(', ')
-  const cityLine = `${parts.city}, ${parts.state} ${parts.zipcode}`
-  return `${addressLine}, ${cityLine}`
 }
 
 function validateAddressParts(parts) {

@@ -4,7 +4,13 @@ No preamble, no markdown fences, no explanation. Just the JSON object.
 
 FLAGS: Add the JSON key name (e.g. "ridgeCapGrade") to the "flags" array whenever you are guessing, uncertain, or the transcript is ambiguous about that field. Do not flag fields you are confident about.
 
-NORMALIZATION — return ONLY the exact values listed below for these fields. If the transcript is unclear, return null and add the key to flags.
+REPEATABLE ITEMS: Several sections are arrays because the transcript may describe any number of them
+(one pipe jack or five, one room or ten). Create ONE array entry per instance actually described in the
+transcript — do not pad with empty entries, and do not merge distinct instances into one entry. If only
+one instance is described, return an array with exactly one object. If none are described, return an
+empty array.
+
+NORMALIZATION — return ONLY the exact values listed below for these fields. If the transcript is unclear, return null (or omit the array entry's property) and add a descriptive key to flags.
 
 Yes/No fields (yn): return exactly "Yes" or "No"
 
@@ -18,14 +24,18 @@ roof.starterStyle: "Starter Strip" or "3-Tab"
 roof.valleyStyle: "Ice & Water" or "W-Valley" or "Valley Metal"
 roof.boxVentMaterial: "Metal" or "Plastic" or "Wood"
 roof.turbineMaterial: "Metal" or "Plastic"
-roof.pipeJackType: "3-in-1/Neoprene" or "Lead" or "Lifetime/Silicone"
-roof.exhaustStackDamageTo: array, values from ["Flange","Stack","Cap"]
-roof.kickoutsPresent: "Yes" or "No"
 roof.kickoutsNeeded: "Yes" or "No"
-roof.counterFlashingCondition: "Replace" or "Reuse"
-roof.chimneySize: "Small" (width < 24in) or "Medium" (24–36in) or "Large" (> 36in)
-roof.lowSlopeLocation: "Front Porch" or "Back Porch" or "Other"
 roof.exposedRafters: "Yes" or "No"
+
+roof.pipeJacks[].size: "1.5" or "2" or "3" or "4"
+roof.pipeJacks[].type: "3-in-1/Neoprene" or "Lead" or "Lifetime/Silicone"
+roof.exhaustStacks[].type: "Flange" or "Stack" or "Cap"
+roof.chimneys[].size: "Small" (width < 24in) or "Medium" (24-36in) or "Large" (> 36in)
+roof.chimneys[].counterFlashing: "Replace" or "Reuse"
+roof.skylights[].style: "Fixed" or "Tubular" or "Venting"
+roof.skylights[].mount: "Flush Mount" or "Curb Mount"
+roof.lowSlope[].location: "Front Porch" or "Back Porch" or "Other"
+roof.corniceGables[].type: "Shingles" or "Metal"
 
 elevations.[direction].gutterMaterial: "Aluminum" or "Steel" or "Copper" or "Vinyl"
 elevations.[direction].gutterSize: "4\"" or "5\"" or "6\""
@@ -37,6 +47,9 @@ elevations.[direction].shutterMaterial: "Wood" or "Vinyl" or "Aluminum" or "Comp
 elevations.[direction].doorMaterial: "Steel" or "Fiberglass" or "Wood" or "Aluminum"
 elevations.[direction].garageDoorMaterial: "Steel" or "Wood" or "Aluminum" or "Fiberglass"
 elevations.[direction].garageDoorPanelStyle: "Raised Panel" or "Flush Panel" or "Carriage Style"
+
+interior.rooms[].name: one of ["Attic","Bathroom","Bedroom","Dining Room","Garage","Hallway","Kitchen","Laundry Room","Living Room","Master Bathroom","Master Bedroom","Office / Study"] or "Other" (use customName for the specific name when "Other")
+interior.rooms[].story: "Basement" or "1st Floor" or "2nd Floor" or "3rd Floor" or "4th Floor" or "Attic"
 
 exterior.fenceMaterial: array, values from ["Pine","Cedar","Other Wood","Vinyl","Aluminum","Rod Iron"]
 exterior.fenceStyle: "Privacy" or "Board on Board" or "Picket"
@@ -50,11 +63,17 @@ jobInfo.preferredContact: comma-separated from Phone, Email, Text
 jobInfo.contactPreferredContact: comma-separated from Phone, Email, Text (for the separate contact)
 jobInfo.claimFileDate: ISO date YYYY-MM-DD when the insurance claim was filed
 jobInfo.stormDate: ISO date YYYY-MM-DD when the storm or loss event occurred
+jobInfo.address1: street number + street name (e.g. "2214 Maple Ridge Court")
+jobInfo.address2: unit/apt/suite, if any
+jobInfo.city: city name only
+jobInfo.state: 2-letter USPS state abbreviation (e.g. "Texas" -> "TX")
+jobInfo.zipcode: 5-digit ZIP code
 
-Return this exact structure (use null for any field not mentioned in the transcript):
+Return this exact structure (use null for any scalar field not mentioned, and [] for any array not mentioned):
 {
   "jobInfo": {
-    "cust": null, "phone": null, "email": null, "addr": null,
+    "cust": null, "phone": null, "email": null,
+    "address1": null, "address2": null, "city": null, "state": null, "zipcode": null,
     "pm": null, "insp": null, "ins": null, "claim": null,
     "claimFileDate": null, "stormDate": null, "preferredContact": null, "residenceType": null,
     "tenantname": null, "tenantphone": null,
@@ -63,29 +82,30 @@ Return this exact structure (use null for any field not mentioned in the transcr
   },
   "roof": {
     "shingleStyle": null, "stories": null, "layers": null, "pitch": null,
-    "edgeFlashingType": null, "edgeMaterial": null, "edgePainted": null,
-    "underlaymentPresent": null, "underlaymentGrade": null, "underlaymentLayers": null,
-    "ridgeCapGrade": null, "ridgeCapExposure": null,
-    "starterPresent": null, "starterStyle": null,
-    "valleyPresent": null, "valleyStyle": null,
+    "edgeFlashingType": null, "edgeMaterial": null, "edgePainted": null, "edgeDamaged": null,
+    "underlaymentGrade": null, "underlaymentLayers": null, "underlaymentDamaged": null,
+    "ridgeCapGrade": null, "ridgeCapExposure": null, "ridgeCapDamaged": null,
+    "starterStyle": null, "starterDamaged": null,
+    "valleyStyle": null, "valleyDamaged": null,
+    "solarPanelQty": null, "solarPanelDamaged": null,
     "ridgeVentLF": null, "ridgeVentType": null, "ridgeVentPainted": null,
     "boxVentQty": null, "boxVentMaterial": null, "boxVentPainted": null,
     "turbineQty": null, "turbineMaterial": null, "turbinePainted": null,
     "powerVentQty": null, "powerVentPainted": null,
-    "solarVentQty": null,
-    "pipeJackType": null, "pipeJack15qty": null, "pipeJack2qty": null,
-    "pipeJack3qty": null, "pipeJack4qty": null, "pipeJackPainted": null,
-    "exhaustStackDamaged": null, "exhaustStackDamageTo": null, "exhaustStackPainted": null,
-    "kickoutsPresent": null, "kickoutsNeeded": null, "kickoutsPainted": null,
+    "solarVentQty": null, "solarVentPainted": null,
+    "pipeJacks": [{ "size": null, "type": null, "painted": null, "damaged": null }],
+    "exhaustStacks": [{ "type": null, "painted": null, "damaged": null }],
+    "kickoutsNeeded": null, "kickoutsPainted": null,
     "rainDiverterQty": null, "rainDiverterLF": null, "rainDiverterPainted": null,
     "powerMeterMastQty": null,
-    "chimneyDamaged": null, "chimneySize": null, "chimneyQty": null, "cricketPresent": null,
-    "chimneyPainted": null, "counterFlashingCondition": null, "chimneyConditionNotes": null,
-    "stepFlashingPresent": null, "stepFlashingDamaged": null, "stepFlashingPainted": null,
-    "counterFlashingPresent": null, "counterFlashingDamaged": null, "counterFlashingPainted": null,
-    "lFlashingPresent": null, "lFlashingDamaged": null, "lFlashingPainted": null,
-    "lowSlopeLocation": null, "lowSlopeGrade": null, "lowSlopePitch": null,
-    "lowSlopeDamaged": null, "exposedRafters": null
+    "chimneys": [{ "size": null, "counterFlashing": null, "painted": null, "damaged": null, "conditionNotes": null }],
+    "stepFlashing": [{ "lengthLF": null, "painted": null, "damaged": null }],
+    "counterFlashing": [{ "lengthLF": null, "painted": null, "damaged": null }],
+    "lFlashing": [{ "lengthLF": null, "painted": null, "damaged": null }],
+    "skylights": [{ "style": null, "mount": null, "length": null, "width": null, "damaged": null }],
+    "corniceGables": [{ "type": null, "story": null, "qty": null }],
+    "lowSlope": [{ "location": null, "grade": null, "pitch": null, "exposedRafters": null, "damaged": null }],
+    "otherStructures": [{ "type": null, "grade": null, "pitch": null, "damaged": null }]
   },
   "elevations": {
     "Front": {
@@ -141,11 +161,21 @@ Return this exact structure (use null for any field not mentioned in the transcr
       "notes": null
     }
   },
+  "interior": {
+    "rooms": [{
+      "name": null, "customName": null, "story": null,
+      "ceilingDamage": null, "ceilingNotes": null,
+      "wallDamage": null, "wallNotes": null,
+      "floorDamage": null, "floorNotes": null,
+      "moldPresent": null, "moldNotes": null,
+      "notes": null
+    }]
+  },
   "exterior": {
     "fenceMaterial": null, "fenceStyle": null, "fencePosts": null,
     "fencePostSpacing": null, "fenceHeight": null, "fenceStained": null,
     "fenceDamage": null, "gatesQty": null, "gatesMaterial": null, "gatesDamage": null,
-    "poolCoverDamaged": null, "poolEquipmentDamaged": null, "poolDamageNotes": null,
+    "poolDamageNotes": null,
     "outdoorDamagedItems": null, "outdoorNotes": null,
     "deliveryPlacement": null, "landscapingProtect": null,
     "okSaturdayBuild": null, "pestControlFlashing": null,

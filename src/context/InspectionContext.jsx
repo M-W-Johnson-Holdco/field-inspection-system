@@ -910,6 +910,20 @@ function parseRoofPhotoTarget(target) {
 }
 
 function buildPipeJackSubItemsFromParsed(roof = {}) {
+  const list = Array.isArray(roof.pipeJacks) ? roof.pipeJacks : []
+  if (list.length) {
+    return list.map(pj => ({
+      fields: {
+        ...(pj?.size ? { 'Size (inches)': String(pj.size) } : {}),
+        ...(pj?.type ? { Type: pj.type } : {}),
+        ...(pj?.painted ? { Painted: pj.painted } : {}),
+        ...(pj?.damaged ? { Damaged: pj.damaged } : {}),
+      },
+      photos: [],
+    }))
+  }
+
+  // Legacy fallback: shared type/painted with per-size quantity counters.
   const subItems = []
   const sharedType = roof.pipeJackType || ''
   const sharedPainted = roof.pipeJackPainted || ''
@@ -948,6 +962,19 @@ function buildPipeJackSubItemsFromParsed(roof = {}) {
 }
 
 function buildExhaustStackSubItemsFromParsed(roof = {}) {
+  const list = Array.isArray(roof.exhaustStacks) ? roof.exhaustStacks : []
+  if (list.length) {
+    return list.map(es => ({
+      fields: {
+        ...(es?.type ? { Type: es.type } : {}),
+        ...(es?.painted ? { Painted: es.painted } : {}),
+        ...(es?.damaged ? { Damaged: es.damaged } : {}),
+      },
+      photos: [],
+    }))
+  }
+
+  // Legacy fallback: shared painted/damaged applied per damaged-type.
   const subItems = []
   const sharedPainted = roof.exhaustStackPainted || ''
   const sharedDamaged = roof.exhaustStackDamaged || ''
@@ -981,6 +1008,20 @@ function buildExhaustStackSubItemsFromParsed(roof = {}) {
 }
 
 function buildChimneySubItemsFromParsed(roof = {}) {
+  const list = Array.isArray(roof.chimneys) ? roof.chimneys : []
+  if (list.length) {
+    return list.map(ch => ({
+      fields: {
+        ...(ch?.size ? { 'Size / Width': normalizeChimneySizeValue(ch.size) } : {}),
+        ...(ch?.counterFlashing ? { 'Counter Flashing': ch.counterFlashing } : {}),
+        ...(ch?.painted ? { Painted: ch.painted } : {}),
+        ...(ch?.damaged ? { Damaged: ch.damaged } : {}),
+      },
+      photos: [],
+    }))
+  }
+
+  // Legacy fallback: single shared chimney profile repeated `chimneyQty` times.
   const size = normalizeChimneySizeValue(roof.chimneySize || '')
   const counterFlashing = roof.counterFlashingCondition || ''
   const painted = roof.chimneyPainted || ''
@@ -1006,9 +1047,9 @@ function buildChimneySubItemsFromParsed(roof = {}) {
 }
 
 const FLASHING_IMPORT_CONFIG = [
-  { itemId: 'ri18', painted: 'stepFlashingPainted', damaged: 'stepFlashingDamaged', present: 'stepFlashingPresent' },
-  { itemId: 'ri19', painted: 'counterFlashingPainted', damaged: 'counterFlashingDamaged', present: 'counterFlashingPresent' },
-  { itemId: 'ri20', painted: 'lFlashingPainted', damaged: 'lFlashingDamaged', present: 'lFlashingPresent' },
+  { itemId: 'ri18', listKey: 'stepFlashing', painted: 'stepFlashingPainted', damaged: 'stepFlashingDamaged', present: 'stepFlashingPresent' },
+  { itemId: 'ri19', listKey: 'counterFlashing', painted: 'counterFlashingPainted', damaged: 'counterFlashingDamaged', present: 'counterFlashingPresent' },
+  { itemId: 'ri20', listKey: 'lFlashing', painted: 'lFlashingPainted', damaged: 'lFlashingDamaged', present: 'lFlashingPresent' },
 ]
 
 function isPresentValue(value) {
@@ -1020,19 +1061,30 @@ function isPresentValue(value) {
 }
 
 function buildFlashingSubItemsFromParsed(roof = {}, config) {
+  const list = Array.isArray(roof[config.listKey]) ? roof[config.listKey] : []
+  if (list.length) {
+    return list.map(fl => ({
+      fields: {
+        ...(fl?.lengthLF ? { 'Length (LF)': String(fl.lengthLF) } : {}),
+        ...(fl?.painted ? { Painted: fl.painted } : {}),
+        ...(fl?.damaged ? { Damaged: fl.damaged } : {}),
+      },
+      photos: [],
+    }))
+  }
+
+  // Legacy fallback: single shared flashing run.
   const painted = roof[config.painted] || ''
   const damaged = roof[config.damaged] || ''
   const present = isPresentValue(config.present ? roof[config.present] : null)
-  const lengthLf = config.lengthLf ? (roof[config.lengthLf] || '') : ''
 
   if (present === false) return []
 
-  const hasData = painted || damaged || lengthLf || present === true
+  const hasData = painted || damaged || present === true
   if (!hasData) return []
 
   return [{
     fields: {
-      ...(lengthLf ? { 'Length (LF)': String(lengthLf) } : {}),
       ...(painted ? { Painted: painted } : {}),
       ...(damaged ? { Damaged: damaged } : {}),
     },
@@ -1041,6 +1093,21 @@ function buildFlashingSubItemsFromParsed(roof = {}, config) {
 }
 
 function buildLowSlopeSubItemsFromParsed(roof = {}) {
+  const list = Array.isArray(roof.lowSlope) ? roof.lowSlope : []
+  if (list.length) {
+    return list.map(ls => ({
+      fields: {
+        ...(ls?.location ? { Location: ls.location } : {}),
+        ...(ls?.grade ? { 'Style / Grade': ls.grade } : {}),
+        ...(ls?.exposedRafters ? { 'Exposed Rafters': ls.exposedRafters } : {}),
+        ...(ls?.pitch ? { Pitch: normalizeLowSlopePitch(ls.pitch) } : {}),
+        ...(ls?.damaged ? { Damaged: ls.damaged } : {}),
+      },
+      photos: [],
+    }))
+  }
+
+  // Legacy fallback: single shared low-slope section.
   const location = roof.lowSlopeLocation || ''
   const grade = roof.lowSlopeGrade || ''
   const pitch = roof.lowSlopePitch ? normalizeLowSlopePitch(roof.lowSlopePitch) : ''
@@ -1060,6 +1127,45 @@ function buildLowSlopeSubItemsFromParsed(roof = {}) {
     },
     photos: [],
   }]
+}
+
+function buildSkylightSubItemsFromParsed(roof = {}) {
+  const list = Array.isArray(roof.skylights) ? roof.skylights : []
+  return list.map(sk => ({
+    fields: {
+      ...(sk?.style ? { Style: sk.style } : {}),
+      ...(sk?.mount ? { Mount: sk.mount } : {}),
+      ...(sk?.length ? { 'Length (in)': String(sk.length) } : {}),
+      ...(sk?.width ? { 'Width (in)': String(sk.width) } : {}),
+      ...(sk?.damaged ? { Damaged: sk.damaged } : {}),
+    },
+    photos: [],
+  }))
+}
+
+function buildCorniceGableSubItemsFromParsed(roof = {}) {
+  const list = Array.isArray(roof.corniceGables) ? roof.corniceGables : []
+  return list.map(cg => ({
+    fields: {
+      ...(cg?.type ? { Type: cg.type } : {}),
+      ...(cg?.story ? { Story: String(cg.story) } : {}),
+      ...(cg?.qty ? { Qty: String(cg.qty) } : {}),
+    },
+    photos: [],
+  }))
+}
+
+function buildOtherStructureSubItemsFromParsed(roof = {}) {
+  const list = Array.isArray(roof.otherStructures) ? roof.otherStructures : []
+  return list.map(os => ({
+    fields: {
+      ...(os?.type ? { Type: os.type } : {}),
+      ...(os?.grade ? { 'Style / Grade': os.grade } : {}),
+      ...(os?.pitch ? { Pitch: normalizeLowSlopePitch(os.pitch) } : {}),
+      ...(os?.damaged ? { Damaged: os.damaged } : {}),
+    },
+    photos: [],
+  }))
 }
 
 export function InspectionProvider({ children }) {
@@ -1395,6 +1501,99 @@ export function InspectionProvider({ children }) {
     })
   }
 
+  function importRoofSkylights(roof = {}) {
+    const subItems = buildSkylightSubItemsFromParsed(roof)
+    if (!subItems.length) return
+
+    setData(prev => {
+      const item = prev.roofData.ri14
+      const next = {
+        ...prev,
+        roofData: {
+          ...prev.roofData,
+          ri14: {
+            ...item,
+            excluded: false,
+            fields: {},
+            subItems,
+          },
+        },
+      }
+      scheduleSave(next)
+      return next
+    })
+  }
+
+  function importRoofCorniceGables(roof = {}) {
+    const subItems = buildCorniceGableSubItemsFromParsed(roof)
+    if (!subItems.length) return
+
+    setData(prev => {
+      const item = prev.roofData.ri21
+      const next = {
+        ...prev,
+        roofData: {
+          ...prev.roofData,
+          ri21: {
+            ...item,
+            excluded: false,
+            fields: {},
+            subItems,
+          },
+        },
+      }
+      scheduleSave(next)
+      return next
+    })
+  }
+
+  function importRoofOtherStructures(roof = {}) {
+    const subItems = buildOtherStructureSubItemsFromParsed(roof)
+    if (!subItems.length) return
+
+    setData(prev => {
+      const item = prev.roofData.ri23
+      const next = {
+        ...prev,
+        roofData: {
+          ...prev.roofData,
+          ri23: {
+            ...item,
+            excluded: false,
+            fields: {},
+            subItems,
+          },
+        },
+      }
+      scheduleSave(next)
+      return next
+    })
+  }
+
+  function importInteriorRooms(rooms = []) {
+    if (!Array.isArray(rooms) || !rooms.length) return
+
+    setData(prev => {
+      const newRooms = rooms.map((r, i) => ({
+        id: `room_${Date.now()}_${i}`,
+        name: r?.name === 'Other' && r?.customName ? `Other - ${r.customName}` : (r?.name || ''),
+        customName: r?.customName || '',
+        photos: [],
+        fields: {
+          story: r?.story || '',
+          ceilingDamage: r?.ceilingDamage || '', ceilingNotes: r?.ceilingNotes || '',
+          wallDamage: r?.wallDamage || '', wallNotes: r?.wallNotes || '',
+          floorDamage: r?.floorDamage || '', floorNotes: r?.floorNotes || '',
+          moldPresent: r?.moldPresent || '', moldNotes: r?.moldNotes || '',
+          notes: r?.notes || '',
+        },
+      }))
+      const next = { ...prev, interiorData: { rooms: [...prev.interiorData.rooms, ...newRooms] } }
+      scheduleSave(next)
+      return next
+    })
+  }
+
   // ── Elevations ────────────────────────────────────────────────────
 
   function toggleElevExclude(cellKey) {
@@ -1650,10 +1849,11 @@ export function InspectionProvider({ children }) {
       saveStatus, driveSaveStatus, setDriveSaveStatus, completion, updateJobInfo, manualSave, resetAll, startNewInspection, loadInspection, applyXmlImport,
       toggleRoofExclude, updateRoofField,
       addRoofSubItem, removeRoofSubItem, updateRoofSubField, importRoofPipeJacks, importRoofExhaustStacks, importRoofChimneys, importRoofFlashingItems, importRoofLowSlopeItems,
+      importRoofSkylights, importRoofCorniceGables, importRoofOtherStructures,
       addRoofPhoto, removeRoofPhoto,
       toggleElevExclude, updateElevField,
       addElevPhoto, removeElevPhoto,
-      addInteriorRoom, removeInteriorRoom, updateInteriorRoom,
+      addInteriorRoom, removeInteriorRoom, updateInteriorRoom, importInteriorRooms,
       addInteriorPhoto, removeInteriorPhoto,
       toggleExteriorExclude, updateExteriorField,
       addExteriorPhoto, removeExteriorPhoto,
