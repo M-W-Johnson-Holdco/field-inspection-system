@@ -58,7 +58,7 @@ export default {
 			},
 			body: JSON.stringify({
 				model: 'claude-sonnet-4-6',
-				max_tokens: 4096,
+				max_tokens: 8192,
 				system: systemPrompt,
 				messages: [{ role: 'user', content: `TRANSCRIPT:\n\n${transcript}` }],
 			}),
@@ -69,7 +69,7 @@ export default {
 			return cors(JSON.stringify({ error: `Anthropic error: ${anthropicResp.status}`, detail: err }), origin, 502)
 		}
 
-		const anthropicData = await anthropicResp.json() as { content: { text: string }[] }
+		const anthropicData = await anthropicResp.json() as { content: { text: string }[], stop_reason?: string }
 		let raw = anthropicData.content?.[0]?.text || ''
 
 		// Strip markdown fences if present
@@ -83,7 +83,13 @@ export default {
 		try {
 			JSON.parse(raw)
 		} catch {
-			return cors(JSON.stringify({ error: 'AI returned malformed JSON', raw }), origin, 502)
+			const truncated = anthropicData.stop_reason === 'max_tokens'
+			return cors(JSON.stringify({
+				error: truncated
+					? 'AI response was cut off before finishing (too much detail for one pass) — try a shorter transcript or split it into sections.'
+					: 'AI returned malformed JSON',
+				raw,
+			}), origin, 502)
 		}
 
 		return cors(raw, origin)
