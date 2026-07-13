@@ -225,6 +225,28 @@ function slugify(str) {
   return String(str || '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')
 }
 
+/** Drive file name from leaf folder + 1-based index, e.g. shingle_style → shingle-style1.jpg */
+function photoFileName(leafFolder, index) {
+  const prefix = String(leafFolder || 'photo').replace(/_/g, '-')
+  return `${prefix}${index + 1}.jpg`
+}
+
+async function listChildren(token, parentId) {
+  const q = `${JSON.stringify(parentId)} in parents and trashed=false`
+  const r = await gfetch(
+    `${DRIVE}/files?q=${encodeURIComponent(q)}&fields=files(id,name,mimeType)&pageSize=200&${SD_PARAMS}&corpora=drive&driveId=${SHARED_DRIVE_ID}`,
+    token,
+  )
+  return r.files || []
+}
+
+async function trashFile(token, fileId) {
+  await gfetch(`${DRIVE}/files/${fileId}?${SD_PARAMS}`, token, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ trashed: true }),
+  })
+}
 
 export async function saveInspectionToDrive(token, inspectionData, inspectorName, userEmail) {
   const orgKey = orgForEmail(userEmail)
@@ -259,7 +281,7 @@ export async function saveInspectionToDrive(token, inspectionData, inspectorName
 
     // Item-level photos (no sub-items)
     ;(item.photos || []).forEach((url, i) => {
-      photos.push({ path: ['photos', '1-roof', section, itemFolder], name: `${i + 1}.jpg`, url })
+      photos.push({ path: ['photos', '1-roof', section, itemFolder], name: photoFileName(itemFolder, i), url })
     })
     item.photos = []
 
@@ -267,7 +289,7 @@ export async function saveInspectionToDrive(token, inspectionData, inspectorName
     ;(item.subItems || []).forEach((sub, subIndex) => {
       ;(sub.photos || []).forEach((url, i) => {
         const subFolder = `${subIndex + 1}-${slugify(itemFolder.replace(/s$/, ''))}`
-        photos.push({ path: ['photos', '1-roof', section, itemFolder, subFolder], name: `${i + 1}.jpg`, url })
+        photos.push({ path: ['photos', '1-roof', section, itemFolder, subFolder], name: photoFileName(subFolder, i), url })
       })
       sub.photos = []
     })
@@ -282,7 +304,7 @@ export async function saveInspectionToDrive(token, inspectionData, inspectorName
     const dirSlug = slugify(dir)
     const itemFolder = ELEV_ITEM_FOLDER[itemId] || slugify(itemId)
     ;(cell.photos || []).forEach((url, i) => {
-      photos.push({ path: ['photos', '2-elevations', dirSlug, itemFolder], name: `${i + 1}.jpg`, url })
+      photos.push({ path: ['photos', '2-elevations', dirSlug, itemFolder], name: photoFileName(itemFolder, i), url })
     })
     cell.photos = []
   }
@@ -293,7 +315,7 @@ export async function saveInspectionToDrive(token, inspectionData, inspectorName
     if (!pathParts) continue
     const [section, itemFolder] = pathParts
     ;(item.photos || []).forEach((url, i) => {
-      photos.push({ path: ['photos', '3-exterior', section, itemFolder], name: `${i + 1}.jpg`, url })
+      photos.push({ path: ['photos', '3-exterior', section, itemFolder], name: photoFileName(itemFolder, i), url })
     })
     if (item.photos) item.photos = []
   }
@@ -303,7 +325,7 @@ export async function saveInspectionToDrive(token, inspectionData, inspectorName
     const displayName = room.customName || room.name || room.id
     const roomSlug = slugify(displayName)
     ;(room.photos || []).forEach((url, i) => {
-      photos.push({ path: ['photos', '4-interior', roomSlug], name: `${i + 1}.jpg`, url })
+      photos.push({ path: ['photos', '4-interior', roomSlug], name: photoFileName(roomSlug, i), url })
     })
     room.photos = []
   })
@@ -334,7 +356,8 @@ export async function saveInspectionToDrive(token, inspectionData, inspectorName
     return parentId
   }
 
-  // ── Upload photos ──────────────────────────────────────────────────
+  // ── Upload photos (folder-based names; trash stale files in each leaf) ──
+  const expectedByFolder = new Map() // folderId → Set of keep names
   for (const photo of photos) {
     const folderId = await cachedEnsurePath(photo.path)
     const blob = dataUrlToBlob(photo.url)
@@ -343,6 +366,17 @@ export async function saveInspectionToDrive(token, inspectionData, inspectorName
       await patchFile(token, existingId, blob.type, blob)
     } else {
       await multipartUpload(token, folderId, photo.name, blob.type, blob)
+    }
+    if (!expectedByFolder.has(folderId)) expectedByFolder.set(folderId, new Set())
+    expectedByFolder.get(folderId).add(photo.name)
+  }
+
+  for (const [folderId, keepNames] of expectedByFolder) {
+    const children = await listChildren(token, folderId)
+    for (const file of children) {
+      if (file.mimeType === FOLDER_MIME) continue
+      if (keepNames.has(file.name)) continue
+      await trashFile(token, file.id)
     }
   }
 
