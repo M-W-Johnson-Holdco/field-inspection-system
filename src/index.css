@@ -1927,6 +1927,29 @@ button:disabled {
   box-shadow: 0 0 0 2px rgba(45, 110, 181, 0.25);
 }
 
+.image-import-modal__thumb-select {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.45);
+  color: #fff;
+  cursor: pointer;
+}
+
+.image-import-modal__thumb-select--on {
+  background: var(--primary);
+  border-color: #fff;
+}
+
 .image-import-modal__thumb-fallback {
   display: none;
   position: absolute;
@@ -2093,7 +2116,8 @@ button:disabled {
   background: #e2e8f0;
 }
 
-.image-import-modal__thumbs--assigned .image-import-modal__thumb > img {
+.image-import-modal__thumbs--assigned .image-import-modal__thumb > img,
+.image-import-modal__thumbs--assigned .image-import-modal__thumb-btn img {
   position: absolute;
   inset: 0;
   display: block;
@@ -2688,8 +2712,23 @@ button:disabled {
   min-width: 0;
 }
 
+/* Keep side-by-side inputs level when labels wrap to 2 lines */
+.ri-fields-grid > .field-group,
+.ri-fields-grid .field-row .field-group,
+.ri-fields-grid .field-row--pair-row .field-group {
+  height: 100%;
+}
+
+.ri-fields-grid > .field-group > .form-label + *,
+.ri-fields-grid .field-row .field-group > .form-label + *,
+.ri-fields-grid .field-row--pair-row .field-group > .form-label + * {
+  margin-top: auto;
+}
+
 .ri-fields-grid .field-group--compact .form-label {
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: break-word;
+  max-width: 100%;
 }
 
 .field-input:not(.number-stepper__input) {

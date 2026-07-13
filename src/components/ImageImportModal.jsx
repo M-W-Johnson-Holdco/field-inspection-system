@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronRight, Folder, ImagePlus, Undo2, Upload, X } from 'lucide-react'
+import { Check, ChevronRight, Folder, ImagePlus, Undo2, Upload, X } from 'lucide-react'
 import { useInspection } from '../context/InspectionContext'
 import { buildPhotoTargetTree, findNodeByPath, getLeafPhotos } from '../lib/photoTargets'
+import PhotoLightbox from './PhotoLightbox'
 
 let stagingId = 0
 function nextStagingId() {
@@ -47,6 +48,8 @@ export default function ImageImportModal({ onClose }) {
   const [poolDragOver, setPoolDragOver] = useState(false)
   const [dropTargetId, setDropTargetId] = useState(null)
   const [assigning, setAssigning] = useState(false)
+  const [lightboxPhotos, setLightboxPhotos] = useState(null)
+  const [lightboxIndex, setLightboxIndex] = useState(null)
 
   useEffect(() => {
     poolRef.current = pool
@@ -109,6 +112,27 @@ export default function ImageImportModal({ onClose }) {
       else next.add(id)
       return next
     })
+  }
+
+  function openLightbox(photos, index) {
+    if (!photos?.length || index == null || index < 0) return
+    setLightboxPhotos(photos)
+    setLightboxIndex(index)
+  }
+
+  function closeLightbox() {
+    setLightboxPhotos(null)
+    setLightboxIndex(null)
+  }
+
+  function goLightboxPrev() {
+    setLightboxIndex(current => (current > 0 ? current - 1 : current))
+  }
+
+  function goLightboxNext() {
+    setLightboxIndex(current => (
+      lightboxPhotos && current < lightboxPhotos.length - 1 ? current + 1 : current
+    ))
   }
 
   function removeFromPool(ids) {
@@ -298,8 +322,8 @@ export default function ImageImportModal({ onClose }) {
 
         <div className="image-import-modal__body">
           <p className="image-import-modal__intro">
-            Upload photos into the staging pool, then drag or tap to assign them to a category.
-            Tap a category to review assigned photos.
+            Upload photos into the staging pool, then drag or select and tap a category to assign them.
+            Tap a photo to enlarge it. Tap a category with nothing selected to review assigned photos.
           </p>
 
           <div className="image-import-modal__status">
@@ -343,7 +367,7 @@ export default function ImageImportModal({ onClose }) {
                 </button>
               ) : (
                 <div className="image-import-modal__thumbs">
-                  {pool.map(item => {
+                  {pool.map((item, index) => {
                     const selected = selectedIds.has(item.id)
                     return (
                       <div
@@ -355,9 +379,9 @@ export default function ImageImportModal({ onClose }) {
                           className="image-import-modal__thumb-btn"
                           draggable
                           onDragStart={e => onThumbDragStart(e, item.id)}
-                          onClick={() => toggleSelect(item.id)}
-                          aria-pressed={selected}
+                          onClick={() => openLightbox(pool.map(entry => entry.previewUrl), index)}
                           title={item.name}
+                          aria-label={`View ${item.name || 'photo'} ${index + 1} of ${pool.length}`}
                         >
                           <img
                             src={item.previewUrl}
@@ -368,6 +392,19 @@ export default function ImageImportModal({ onClose }) {
                             }}
                           />
                           <span className="image-import-modal__thumb-fallback">{item.name}</span>
+                        </button>
+                        <button
+                          type="button"
+                          className={`image-import-modal__thumb-select${selected ? ' image-import-modal__thumb-select--on' : ''}`}
+                          onClick={e => {
+                            e.stopPropagation()
+                            toggleSelect(item.id)
+                          }}
+                          aria-pressed={selected}
+                          aria-label={selected ? 'Deselect photo' : 'Select photo'}
+                          title={selected ? 'Deselect' : 'Select'}
+                        >
+                          <Check size={14} aria-hidden="true" />
                         </button>
                       </div>
                     )
@@ -415,11 +452,21 @@ export default function ImageImportModal({ onClose }) {
                       <div className="image-import-modal__thumbs image-import-modal__thumbs--assigned">
                         {leafPhotos.map((src, index) => (
                           <div key={`${viewingLeaf.id}-${index}`} className="image-import-modal__thumb">
-                            <img src={src} alt="" />
+                            <button
+                              type="button"
+                              className="image-import-modal__thumb-btn"
+                              onClick={() => openLightbox(leafPhotos, index)}
+                              aria-label={`View assigned photo ${index + 1} of ${leafPhotos.length}`}
+                            >
+                              <img src={src} alt="" />
+                            </button>
                             <button
                               type="button"
                               className="image-import-modal__thumb-return"
-                              onClick={() => returnPhotoToPool(viewingLeaf, index)}
+                              onClick={e => {
+                                e.stopPropagation()
+                                returnPhotoToPool(viewingLeaf, index)
+                              }}
                               aria-label="Return photo to staging pool"
                               title="Return to staging pool"
                             >
@@ -495,6 +542,16 @@ export default function ImageImportModal({ onClose }) {
           </div>
         </div>
       </div>
+
+      {lightboxIndex != null && lightboxPhotos && (
+        <PhotoLightbox
+          photos={lightboxPhotos}
+          index={lightboxIndex}
+          onClose={closeLightbox}
+          onPrev={goLightboxPrev}
+          onNext={goLightboxNext}
+        />
+      )}
     </>
   )
 }
