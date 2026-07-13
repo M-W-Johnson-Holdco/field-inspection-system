@@ -918,6 +918,7 @@ function buildPipeJackSubItemsFromParsed(roof = {}) {
         ...(pj?.type ? { Type: pj.type } : {}),
         ...(pj?.painted ? { Painted: pj.painted } : {}),
         ...(pj?.damaged ? { Damaged: pj.damaged } : {}),
+        ...(pj?.damaged === 'Yes' && pj?.damageDescription ? { _damage: pj.damageDescription } : {}),
       },
       photos: [],
     }))
@@ -969,6 +970,7 @@ function buildExhaustStackSubItemsFromParsed(roof = {}) {
         ...(es?.type ? { Type: es.type } : {}),
         ...(es?.painted ? { Painted: es.painted } : {}),
         ...(es?.damaged ? { Damaged: es.damaged } : {}),
+        ...(es?.damaged === 'Yes' && es?.damageDescription ? { _damage: es.damageDescription } : {}),
       },
       photos: [],
     }))
@@ -1016,6 +1018,7 @@ function buildChimneySubItemsFromParsed(roof = {}) {
         ...(ch?.counterFlashing ? { 'Counter Flashing': ch.counterFlashing } : {}),
         ...(ch?.painted ? { Painted: ch.painted } : {}),
         ...(ch?.damaged ? { Damaged: ch.damaged } : {}),
+        ...(ch?.damaged === 'Yes' && ch?.damageDescription ? { _damage: ch.damageDescription } : {}),
       },
       photos: [],
     }))
@@ -1068,6 +1071,7 @@ function buildFlashingSubItemsFromParsed(roof = {}, config) {
         ...(fl?.lengthLF ? { 'Length (LF)': String(fl.lengthLF) } : {}),
         ...(fl?.painted ? { Painted: fl.painted } : {}),
         ...(fl?.damaged ? { Damaged: fl.damaged } : {}),
+        ...(fl?.damaged === 'Yes' && fl?.damageDescription ? { _damage: fl.damageDescription } : {}),
       },
       photos: [],
     }))
@@ -1102,6 +1106,7 @@ function buildLowSlopeSubItemsFromParsed(roof = {}) {
         ...(ls?.exposedRafters ? { 'Exposed Rafters': ls.exposedRafters } : {}),
         ...(ls?.pitch ? { Pitch: normalizeLowSlopePitch(ls.pitch) } : {}),
         ...(ls?.damaged ? { Damaged: ls.damaged } : {}),
+        ...(ls?.damaged === 'Yes' && ls?.damageDescription ? { _damage: ls.damageDescription } : {}),
       },
       photos: [],
     }))
@@ -1138,6 +1143,7 @@ function buildSkylightSubItemsFromParsed(roof = {}) {
       ...(sk?.length ? { 'Length (in)': String(sk.length) } : {}),
       ...(sk?.width ? { 'Width (in)': String(sk.width) } : {}),
       ...(sk?.damaged ? { Damaged: sk.damaged } : {}),
+      ...(sk?.damaged === 'Yes' && sk?.damageDescription ? { _damage: sk.damageDescription } : {}),
     },
     photos: [],
   }))
@@ -1163,6 +1169,7 @@ function buildOtherStructureSubItemsFromParsed(roof = {}) {
       ...(os?.grade ? { 'Style / Grade': os.grade } : {}),
       ...(os?.pitch ? { Pitch: normalizeLowSlopePitch(os.pitch) } : {}),
       ...(os?.damaged ? { Damaged: os.damaged } : {}),
+      ...(os?.damaged === 'Yes' && os?.damageDescription ? { _damage: os.damageDescription } : {}),
     },
     photos: [],
   }))
