@@ -16,7 +16,7 @@ import { usePermissions } from '../context/PermissionsContext'
 import { TokenExpiredError } from '../lib/driveService'
 import { useAuth } from '../context/AuthContext'
 
-const ROLE_OPTIONS = [ROLES.sales, ROLES.pm, ROLES.admin]
+const ROLE_OPTIONS = [ROLES.sales, ROLES.supervisor, ROLES.admin]
 
 export default function AccessAdminModal({ onClose }) {
   const { user, accessToken, setTokenExpired } = useAuth()
@@ -151,7 +151,7 @@ export default function AccessAdminModal({ onClose }) {
           <p className="access-admin-modal__intro">
             Only people on this list can sign in. Choose a role for each user:
             <strong> Sales</strong> (own inspections),
-            <strong> PM</strong> (their company),
+            <strong> Supervisor</strong> (their company),
             <strong> Admin</strong> (PT + TC and Access settings).
           </p>
 
