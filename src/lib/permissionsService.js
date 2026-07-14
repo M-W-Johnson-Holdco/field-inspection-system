@@ -20,8 +20,8 @@ function migrateLegacyPermissions(raw) {
     const nextRole = normalizeRole(role)
     if (!normalized || !nextRole || !isAllowedDomainEmail(normalized)) return
     const existing = byEmail.get(normalized)
-    // Prefer higher privilege when merging duplicates: admin > pm > sales
-    const rank = { [ROLES.sales]: 1, [ROLES.pm]: 2, [ROLES.admin]: 3 }
+    // Prefer higher privilege when merging duplicates: admin > supervisor > sales
+    const rank = { [ROLES.sales]: 1, [ROLES.supervisor]: 2, [ROLES.admin]: 3 }
     if (!existing || rank[nextRole] > rank[existing.role]) {
       byEmail.set(normalized, { email: normalized, role: nextRole })
     }

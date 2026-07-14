@@ -27,19 +27,19 @@ export const BRAND_BY_ORG = {
 
 export const ROLES = {
   sales: 'sales',
-  pm: 'pm',
+  supervisor: 'supervisor',
   admin: 'admin',
 }
 
 export const ROLE_LABELS = {
   sales: 'Sales',
-  pm: 'PM',
+  supervisor: 'Supervisor',
   admin: 'Admin',
 }
 
 export const ROLE_DESCRIPTIONS = {
   sales: 'Own inspections only',
-  pm: 'All inspections for their company',
+  supervisor: 'All inspections for their company',
   admin: 'Both companies + Access settings',
 }
 
@@ -105,7 +105,9 @@ export function isBootstrapAccessAdmin(email) {
 
 export function normalizeRole(role) {
   const value = String(role || '').trim().toLowerCase()
-  if (value === ROLES.sales || value === ROLES.pm || value === ROLES.admin) return value
+  // Legacy Drive value "pm" maps to supervisor.
+  if (value === 'pm') return ROLES.supervisor
+  if (value === ROLES.sales || value === ROLES.supervisor || value === ROLES.admin) return value
   return null
 }
 
@@ -144,14 +146,14 @@ export function viewableOrgs(email, permissions) {
 
 export function canViewAllCompanyInspections(email, permissions) {
   const role = roleForEmail(email, permissions)
-  return role === ROLES.pm || role === ROLES.admin
+  return role === ROLES.supervisor || role === ROLES.admin
 }
 
 export function accessLabel(email, permissions) {
   const role = roleForEmail(email, permissions)
   if (!role) return 'No access'
   if (role === ROLES.admin) return 'Admin · PT + TC'
-  if (role === ROLES.pm) return `PM · ${orgForEmail(email) || '—'}`
+  if (role === ROLES.supervisor) return `Supervisor · ${orgForEmail(email) || '—'}`
   return `Sales · ${orgForEmail(email) || '—'} · own only`
 }
 
