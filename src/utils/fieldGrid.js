@@ -257,6 +257,22 @@ export function groupFieldsForGrid(fields) {
     const field = fields[i]
     const next = fields[i + 1]
 
+    if (
+      field.t === 'yn' && field.l === 'Painted'
+      && next?.t === 'yn' && next.l === 'Damaged'
+    ) {
+      groups.push({
+        type: 'row',
+        ynPairRow: true,
+        groups: [
+          { type: 'single', field },
+          { type: 'single', field: next },
+        ],
+      })
+      i += 2
+      continue
+    }
+
     if (next && shouldStackUnderPrevious(field, next, fields, i)) {
       groups.push({ type: 'stack', fields: [field, next] })
       i += 2
@@ -337,6 +353,15 @@ function compactSelectClass(field) {
 export function fieldSelectClass(field) {
   if (field.t === 'yn' || field.t === 'radio') return compactSelectClass(field)
   return 'field-select'
+}
+
+/** Yes/No options; Damaged and Painted fields also include N/A. */
+export function ynOptionsForField(field) {
+  const label = String(field?.l || '')
+  if (label === 'Damaged' || label === 'Painted' || /damage/i.test(label)) {
+    return ['Yes', 'No', 'N/A']
+  }
+  return ['Yes', 'No']
 }
 
 export function isSelectPlaceholder(value) {

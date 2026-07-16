@@ -61,41 +61,46 @@ export const ROOF_ITEMS = [
     ],
   },
   {
-    id: 'ri6', lbl: 'Ridge Vent', flags: ['P', 'M'],
+    id: 'ri6', lbl: 'Ridge Vent', flags: ['P', 'M', 'D'],
     fields: [
       { t: 'num', l: 'Length (LF)', lfFeetOnly: true },
       { t: 'radio', l: 'Type', o: ['Metal', 'Shingle Over'] },
       { t: 'yn', l: 'Painted' },
+      { t: 'yn', l: 'Damaged' },
     ],
   },
   {
-    id: 'ri7', lbl: 'Box Vents', flags: ['P', 'M'],
+    id: 'ri7', lbl: 'Box Vents', flags: ['P', 'M', 'D'],
     fields: [
+      { t: 'num', l: 'Qty' },
       { t: 'radio', l: 'Material', o: ['Metal', 'Plastic', 'Wood'] },
       { t: 'yn', l: 'Painted' },
-      { t: 'num', l: 'Qty' },
+      { t: 'yn', l: 'Damaged' },
     ],
   },
   {
-    id: 'ri8', lbl: 'Turbines', flags: ['P', 'M'],
+    id: 'ri8', lbl: 'Turbines', flags: ['P', 'M', 'D'],
     fields: [
+      { t: 'num', l: 'Qty' },
       { t: 'radio', l: 'Material', o: ['Metal', 'Plastic'] },
       { t: 'yn', l: 'Painted' },
-      { t: 'num', l: 'Qty' },
+      { t: 'yn', l: 'Damaged' },
     ],
   },
   {
-    id: 'ri9', lbl: 'Power Vents', flags: ['P', 'M'],
+    id: 'ri9', lbl: 'Power Vents', flags: ['P', 'M', 'D'],
     fields: [
-      { t: 'yn', l: 'Painted' },
       { t: 'num', l: 'Qty' },
+      { t: 'yn', l: 'Painted' },
+      { t: 'yn', l: 'Damaged' },
     ],
   },
   {
-    id: 'ri10', lbl: 'Solar Vents', flags: ['P', 'M'],
+    id: 'ri10', lbl: 'Solar Vents', flags: ['P', 'M', 'D'],
     fields: [
-      { t: 'yn', l: 'Painted' },
       { t: 'num', l: 'Qty' },
+      { t: 'yn', l: 'Painted' },
+      { t: 'yn', l: 'Damaged' },
     ],
   },
   {

@@ -52,7 +52,7 @@ export default function OpenInspectionModal({ token, saveStatus, onLoad, onClose
   const [folders, setFolders] = useState([])
   const [listStatus, setListStatus] = useState('loading') // loading | ready | error
   const [search, setSearch] = useState('')
-  const [dateFilter, setDateFilter] = useState('This Week')
+  const [dateFilter, setDateFilter] = useState('All')
   const [inspectorFilter, setInspectorFilter] = useState('All')
   const [loadingId, setLoadingId] = useState(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
