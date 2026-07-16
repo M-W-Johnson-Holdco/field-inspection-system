@@ -188,7 +188,7 @@ function ExteriorItem({ itemDef, trigPhoto }) {
                 </div>
                 {damageStatus === 'Yes' && (
                   <>
-                    <label className="form-label">{damageLabel || 'Damage Notes'}</label>
+                    <label className="form-label">{damageLabel || 'Damage Description'}</label>
                     <DamageDescriptionInput
                       placeholder={damagePlaceholder || 'Describe damage...'}
                       value={item.fields['_damage'] || ''}

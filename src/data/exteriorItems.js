@@ -16,7 +16,7 @@ export const EXTERIOR_ITEMS = [
       { t: 'num', l: 'Height (FT)', p: '6' },
       { t: 'yn', l: 'Stained' },
     ],
-    damageLabel: 'Damage Notes',
+    damageLabel: 'Damage Description',
     damagePlaceholder: 'Describe damaged sections...',
   },
   {
@@ -25,13 +25,13 @@ export const EXTERIOR_ITEMS = [
       { t: 'num', l: 'Qty', p: '0' },
       { t: 'radio', l: 'Material', o: ['Aluminum', 'Cedar', 'Pine', 'Steel', 'Vinyl', 'Wood'] },
     ],
-    damageLabel: 'Damage Notes',
+    damageLabel: 'Damage Description',
     damagePlaceholder: 'Describe damage...',
   },
   {
     id: 'ei_pool', lbl: 'Pool / Cover / Equipment', flags: ['P', 'D'],
     fields: [],
-    damageLabel: 'Damage Notes',
+    damageLabel: 'Damage Description',
     damagePlaceholder: 'Pump, heater, specific damage...',
   },
   {
@@ -43,7 +43,7 @@ export const EXTERIOR_ITEMS = [
         o: ['Grill / Cover', 'Outdoor Furniture', 'Playset', 'Trampoline', 'Table Umbrella', 'Retractable Awning', 'Landscape Lighting', 'Potted Plants', 'Other'],
       },
     ],
-    damageLabel: 'Damage Notes',
+    damageLabel: 'Damage Description',
     damagePlaceholder: 'Grill qty 1 - sticker photo taken. Trampoline netting torn...',
   },
   {
