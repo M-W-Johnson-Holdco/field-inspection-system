@@ -371,10 +371,10 @@ export function ynOptionsForField(field) {
   return ['Yes', 'No']
 }
 
-/** Option-list fields; Material always includes N/A. */
+/** Option-list fields (radio/select) always include N/A, so an AI-parsed "N/A" (item explicitly absent) has a matching option to select instead of rendering blank. */
 export function optionsForField(field) {
   const opts = Array.isArray(field?.o) ? [...field.o] : []
-  if (String(field?.l || '') === 'Material' && !opts.includes('N/A')) {
+  if (!opts.includes('N/A')) {
     opts.push('N/A')
   }
   return opts

@@ -12,14 +12,18 @@ return an empty array [] for it if it's a repeatable item — do NOT invent a pl
 it to a different item — every value must come from what was said about that specific item. When in doubt,
 prefer null over a guess and add the key to flags.
 
-EXPLICIT ABSENCE: This is different from "never mentioned" above — it applies only when the transcript
-explicitly says the item is not present ("no turbines", "no shutters", "no rain diverter", "no L flashing",
-"no solar panels"). In that case, set that item's qty field(s) to 0 (not null), and set every other field
-belonging to that same item that has a defined option list (material, style, painted, damaged, etc.) to
-"N/A" — free-text/description fields for that item stay null, and repeatable items still return []. Do not
-apply this to a merely-unmentioned item, and do not let an explicit absence statement about one item (e.g.
-"no solar panels") affect a different, unmentioned item (e.g. solar vents) — each item's absence must be
-stated about that specific item.
+EXPLICIT ABSENCE: This is different from "never mentioned" above — it applies whenever the transcript
+explicitly states the item is not present or not installed, in any phrasing ("no turbines", "no shutters",
+"no rain diverter", "no L flashing", "no solar panels", "not currently installed", "not present", "none
+installed", "doesn't have any"). In that case, set that item's qty field(s) to 0 (not null), and set every
+other field belonging to that same item that has a defined option list (material, style, painted, damaged,
+etc.) to "N/A" — free-text/description fields for that item stay null, and repeatable items still return
+[]. This includes fields for an item the transcript describes as needed-but-not-yet-installed (e.g.
+kickouts): even though the inspector may explain in their own words why a field doesn't apply ("nothing
+painted to note since none are installed"), treat that as an explicit "N/A" for kickoutsPainted — don't
+require the transcript to literally say the word "N/A". Do not apply this to a merely-unmentioned item, and
+do not let an explicit absence statement about one item (e.g. "no solar panels") affect a different,
+unmentioned item (e.g. solar vents) — each item's absence must be stated about that specific item.
 
 REPEATABLE ITEMS: Several sections are arrays because the transcript may describe any number of them
 (one pipe jack or five, one room or ten). Create ONE array entry per instance actually described in the
@@ -39,6 +43,12 @@ the transcript addresses whether that item is damaged, even if no further detail
 `gatesDamage`, `poolDamageNotes`, and `outdoorNotes` are the separate free-text description fields — only
 fill those when the transcript actually describes the damage, and only alongside the matching "...Damaged"
 status being "Yes".
+
+ELEVATION "OTHER NOTES": `elevations.[direction].notes` is an exception to the free-text-stays-null rule.
+If the transcript explicitly states there are no other notes for that elevation ("no other notes on the
+front", "nothing else/further to note on the right side"), set `notes` to the literal string "N/A" instead
+of null. If the transcript actually gives additional notes for that elevation, put that description in
+`notes` instead. Only leave `notes` null if that elevation's "other notes" isn't addressed at all.
 
 NORMALIZATION — return ONLY the exact values listed below for these fields. If the transcript is unclear, return null (or omit the array entry's property) and add a descriptive key to flags.
 
