@@ -36,16 +36,26 @@ const ROOF_MAP = [
   { key: 'ridgeVentLF',             itemId: 'ri6',  label: 'Length (LF)' },
   { key: 'ridgeVentType',           itemId: 'ri6',  label: 'Type' },
   { key: 'ridgeVentPainted',        itemId: 'ri6',  label: 'Painted' },
+  { key: 'ridgeVentDamaged',        itemId: 'ri6',  label: 'Damaged' },
+  { key: 'ridgeVentDamageDescription', itemId: 'ri6', label: '_damage' },
   { key: 'boxVentQty',              itemId: 'ri7',  label: 'Qty' },
   { key: 'boxVentMaterial',         itemId: 'ri7',  label: 'Material' },
   { key: 'boxVentPainted',          itemId: 'ri7',  label: 'Painted' },
+  { key: 'boxVentDamaged',          itemId: 'ri7',  label: 'Damaged' },
+  { key: 'boxVentDamageDescription', itemId: 'ri7', label: '_damage' },
   { key: 'turbineQty',              itemId: 'ri8',  label: 'Qty' },
   { key: 'turbineMaterial',         itemId: 'ri8',  label: 'Material' },
   { key: 'turbinePainted',          itemId: 'ri8',  label: 'Painted' },
+  { key: 'turbineDamaged',          itemId: 'ri8',  label: 'Damaged' },
+  { key: 'turbineDamageDescription', itemId: 'ri8', label: '_damage' },
   { key: 'powerVentQty',            itemId: 'ri9',  label: 'Qty' },
   { key: 'powerVentPainted',        itemId: 'ri9',  label: 'Painted' },
+  { key: 'powerVentDamaged',        itemId: 'ri9',  label: 'Damaged' },
+  { key: 'powerVentDamageDescription', itemId: 'ri9', label: '_damage' },
   { key: 'solarVentQty',            itemId: 'ri10', label: 'Qty' },
   { key: 'solarVentPainted',        itemId: 'ri10', label: 'Painted' },
+  { key: 'solarVentDamaged',        itemId: 'ri10', label: 'Damaged' },
+  { key: 'solarVentDamageDescription', itemId: 'ri10', label: '_damage' },
   { key: 'kickoutsNeeded',          itemId: 'ri13', label: 'Needed' },
   { key: 'kickoutsPainted',         itemId: 'ri13', label: 'Painted' },
   { key: 'rainDiverterQty',         itemId: 'ri15', label: 'Qty' },
@@ -107,12 +117,16 @@ const EXTERIOR_MAP = [
   { key: 'fencePostSpacing',       itemId: 'ei_fence',   label: 'Post Spacing (LF)' },
   { key: 'fenceHeight',            itemId: 'ei_fence',   label: 'Height (FT)' },
   { key: 'fenceStained',           itemId: 'ei_fence',   label: 'Stained' },
+  { key: 'fenceDamaged',           itemId: 'ei_fence',   label: '_damagePresent' },
   { key: 'fenceDamage',            itemId: 'ei_fence',   label: '_damage' },
   { key: 'gatesQty',               itemId: 'ei_gates',   label: 'Qty' },
   { key: 'gatesMaterial',          itemId: 'ei_gates',   label: 'Material' },
+  { key: 'gatesDamaged',           itemId: 'ei_gates',   label: '_damagePresent' },
   { key: 'gatesDamage',            itemId: 'ei_gates',   label: '_damage' },
+  { key: 'poolDamaged',            itemId: 'ei_pool',    label: '_damagePresent' },
   { key: 'poolDamageNotes',        itemId: 'ei_pool',    label: '_damage' },
   { key: 'outdoorDamagedItems',    itemId: 'ei_outdoor', label: 'Damaged Items' },
+  { key: 'outdoorDamaged',         itemId: 'ei_outdoor', label: '_damagePresent' },
   { key: 'outdoorNotes',           itemId: 'ei_outdoor', label: '_damage' },
   { key: 'deliveryPlacement',      itemId: 'ei_site',    label: 'Delivery / Trailer Placement' },
   { key: 'landscapingProtect',     itemId: 'ei_site',    label: 'Landscaping to Protect' },
@@ -183,6 +197,28 @@ function applyParsed(parsed, ctx) {
     if (key === 'shingleStyle') val = toArray(val)
     updateRoofField(itemId, label, val)
   })
+
+  // Items with an auto-rendered "Damaged" toggle (flags includes 'D') require the
+  // _damage notes field to be either a real description or "n/a" to count as filled —
+  // the manual UI sets "n/a" automatically when Damaged is toggled to No/N/A, so mirror
+  // that here for AI-driven updates, or these fields would cap completion forever.
+  const DAMAGE_FLAG_ITEMS = [
+    { itemId: 'ri1',  key: 'edgeDamaged' },
+    { itemId: 'ri2',  key: 'underlaymentDamaged' },
+    { itemId: 'ri3',  key: 'ridgeCapDamaged' },
+    { itemId: 'ri4',  key: 'starterDamaged' },
+    { itemId: 'ri5',  key: 'valleyDamaged' },
+    { itemId: 'ri6',  key: 'ridgeVentDamaged' },
+    { itemId: 'ri7',  key: 'boxVentDamaged' },
+    { itemId: 'ri8',  key: 'turbineDamaged' },
+    { itemId: 'ri9',  key: 'powerVentDamaged' },
+    { itemId: 'ri10', key: 'solarVentDamaged' },
+  ]
+  DAMAGE_FLAG_ITEMS.forEach(({ itemId, key }) => {
+    const val = roof[key]
+    if (val === 'No' || val === 'N/A') updateRoofField(itemId, '_damage', 'n/a')
+  })
+
   importRoofPipeJacks(roof)
   importRoofExhaustStacks(roof)
   importRoofChimneys(roof)
@@ -222,6 +258,19 @@ function applyParsed(parsed, ctx) {
     if (val == null) return
     if (key === 'outdoorDamagedItems') val = toArray(val)
     updateExteriorField(itemId, label, val)
+  })
+
+  // Mirror the manual UI's damage-toggle side effect: when the damage status is
+  // No/N/A, the notes field should read "n/a" rather than sit blank.
+  const EXT_DAMAGE_STATUS_ITEMS = [
+    { itemId: 'ei_fence',   key: 'fenceDamaged' },
+    { itemId: 'ei_gates',   key: 'gatesDamaged' },
+    { itemId: 'ei_pool',    key: 'poolDamaged' },
+    { itemId: 'ei_outdoor', key: 'outdoorDamaged' },
+  ]
+  EXT_DAMAGE_STATUS_ITEMS.forEach(({ itemId, key }) => {
+    const val = ext[key]
+    if (val === 'No' || val === 'N/A') updateExteriorField(itemId, '_damage', 'n/a')
   })
 }
 
