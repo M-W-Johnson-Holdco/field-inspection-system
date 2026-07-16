@@ -1,3 +1,4 @@
+import { jsPDF } from 'jspdf'
 import { ROOF_ITEMS } from '../data/roofItems'
 import { ELEV_ITEMS, DIRECTIONS } from '../data/elevItems'
 import { EXTERIOR_ITEMS } from '../data/exteriorItems'
@@ -65,6 +66,124 @@ export function xactimateExportToCSV({ job, lineItems }) {
 
 export function xactimateExportToJSON(exportData) {
   return JSON.stringify(exportData, null, 2)
+}
+
+function pdfCell(doc, text, x, y, maxWidth) {
+  const lines = doc.splitTextToSize(String(text ?? ''), maxWidth)
+  doc.text(lines, x, y)
+  return lines.length
+}
+
+export function downloadXactimatePdf(exportData, filename) {
+  const { job, lineItems, notes } = exportData
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'letter' })
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const pageHeight = doc.internal.pageSize.getHeight()
+  const margin = 36
+  const usableWidth = pageWidth - margin * 2
+  let y = margin
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(14)
+  doc.text('Inspection Export', margin, y)
+  y += 18
+
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(10)
+  const jobLines = [
+    job.customer || 'Unnamed customer',
+    job.address || 'No address',
+    `${job.insuranceCo || 'No insurance'} — Claim ${job.claimNumber || 'N/A'}`,
+    [job.inspector && `Inspector: ${job.inspector}`, job.projectManager && `PM: ${job.projectManager}`]
+      .filter(Boolean)
+      .join('  ·  '),
+  ].filter(Boolean)
+
+  jobLines.forEach(line => {
+    doc.text(line, margin, y)
+    y += 14
+  })
+  y += 8
+
+  const cols = [
+    { key: 'trade', label: 'Trade', width: 55 },
+    { key: 'description', label: 'Description', width: 180 },
+    { key: 'qty', label: 'Qty', width: 32 },
+    { key: 'unit', label: 'Unit', width: 32 },
+    { key: 'damaged', label: 'Damaged', width: 48 },
+    { key: 'note', label: 'Note', width: usableWidth - 55 - 180 - 32 - 32 - 48 },
+  ]
+
+  function drawHeader() {
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(9)
+    let x = margin
+    cols.forEach(col => {
+      doc.text(col.label, x, y)
+      x += col.width
+    })
+    y += 6
+    doc.setDrawColor(180)
+    doc.line(margin, y, pageWidth - margin, y)
+    y += 12
+    doc.setFont('helvetica', 'normal')
+  }
+
+  drawHeader()
+
+  lineItems.forEach(li => {
+    const values = [
+      li.trade || '',
+      li.description || '',
+      li.qty == null ? '—' : String(li.qty),
+      li.unit || '',
+      li.damaged === true ? 'Yes' : li.damaged === false ? 'No' : '—',
+      li.note || '',
+    ]
+    const lineCounts = values.map((value, i) =>
+      doc.splitTextToSize(value, Math.max(20, cols[i].width - 6)).length
+    )
+    const rowHeight = Math.max(...lineCounts) * 11 + 6
+
+    if (y + rowHeight > pageHeight - margin) {
+      doc.addPage()
+      y = margin
+      drawHeader()
+    }
+
+    let x = margin
+    values.forEach((value, i) => {
+      pdfCell(doc, value, x, y, Math.max(20, cols[i].width - 6))
+      x += cols[i].width
+    })
+    y += rowHeight
+  })
+
+  const noteEntries = Object.entries(notes || {}).filter(([, value]) => value != null && String(value).trim())
+  if (noteEntries.length) {
+    if (y + 40 > pageHeight - margin) {
+      doc.addPage()
+      y = margin
+    }
+    y += 10
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(11)
+    doc.text('Notes', margin, y)
+    y += 14
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(9)
+    noteEntries.forEach(([key, value]) => {
+      const block = doc.splitTextToSize(`${key}: ${value}`, usableWidth)
+      if (y + block.length * 11 > pageHeight - margin) {
+        doc.addPage()
+        y = margin
+      }
+      doc.text(block, margin, y)
+      y += block.length * 11 + 4
+    })
+  }
+
+  doc.save(filename || 'inspection_export.pdf')
 }
 
 export function downloadTextFile(filename, contents, mimeType = 'text/plain') {
