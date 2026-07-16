@@ -8,7 +8,7 @@ import DimensionLwInput from '../DimensionLwInput'
 import MeasurementInput, { isLinearMeasurementField } from '../MeasurementInput'
 import { ROOF_ITEMS, SUBSECTIONS } from '../../data/roofItems'
 import { fieldGroupProps } from '../../utils/fieldLayout'
-import { fieldSelectClass, materialOptionColumnStyle, withSelectPlaceholderClass, visibleFieldsForValues, ynOptionsForField } from '../../utils/fieldGrid'
+import { fieldSelectClass, materialOptionColumnStyle, withSelectPlaceholderClass, visibleFieldsForValues, ynOptionsForField, optionsForField } from '../../utils/fieldGrid'
 import { formatPitch, parsePitchNumerator } from '../../utils/pitch'
 import useExpandedSection from '../../hooks/useExpandedSection'
 
@@ -86,7 +86,7 @@ function FieldRenderer({ field, value, onChange, subFields, onSubFieldChange }) 
   }
 
   if (t === 'yn' || t === 'radio') {
-    const opts = t === 'yn' ? ynOptionsForField(field) : o
+    const opts = t === 'yn' ? ynOptionsForField(field) : optionsForField(field)
     return (
       <div {...fieldGroupProps(field)}>
         {lbl}
@@ -106,6 +106,7 @@ function FieldRenderer({ field, value, onChange, subFields, onSubFieldChange }) 
 
   if (t === 'multiRadio' || t === 'multi') {
     const arr = Array.isArray(value) ? value : []
+    const opts = optionsForField(field)
     return (
       <div {...fieldGroupProps(field)}>
         {lbl}
@@ -115,7 +116,7 @@ function FieldRenderer({ field, value, onChange, subFields, onSubFieldChange }) 
             <ChevronDown className="multi-select__icon" aria-hidden="true" />
           </summary>
           <div className="multi-select__menu">
-            {o.map(opt => (
+            {opts.map(opt => (
               <label key={opt} className="multi-select__option">
                 <input
                   type="checkbox"
@@ -152,7 +153,7 @@ function FieldRenderer({ field, value, onChange, subFields, onSubFieldChange }) 
           value={value || o[0]}
           onChange={e => onChange(e.target.value)}
         >
-          {o.map(opt => (
+          {optionsForField(field).map(opt => (
             <option key={opt} value={opt}>{opt}</option>
           ))}
         </select>
@@ -210,7 +211,7 @@ function FieldRenderer({ field, value, onChange, subFields, onSubFieldChange }) 
             inputMode="numeric"
             min="0"
             step="1"
-            value={value || ''}
+            value={value === '' || value == null ? '' : value}
             placeholder={p || '0'}
             onChange={e => onChange(e.target.value)}
           />

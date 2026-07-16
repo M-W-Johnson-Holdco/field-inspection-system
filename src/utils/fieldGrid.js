@@ -355,13 +355,29 @@ export function fieldSelectClass(field) {
   return 'field-select'
 }
 
-/** Yes/No options; Damaged and Painted fields also include N/A. */
+/** Yes/No options; Damaged, Painted, and site-access yn fields also include N/A. */
 export function ynOptionsForField(field) {
   const label = String(field?.l || '')
-  if (label === 'Damaged' || label === 'Painted' || /damage/i.test(label)) {
+  if (
+    label === 'Damaged'
+    || label === 'Painted'
+    || label === 'OK Saturday Build'
+    || label === 'Pest Control Flashing'
+    || label === 'Overhead Clearance Issue'
+    || /damage/i.test(label)
+  ) {
     return ['Yes', 'No', 'N/A']
   }
   return ['Yes', 'No']
+}
+
+/** Option-list fields; Material always includes N/A. */
+export function optionsForField(field) {
+  const opts = Array.isArray(field?.o) ? [...field.o] : []
+  if (String(field?.l || '') === 'Material' && !opts.includes('N/A')) {
+    opts.push('N/A')
+  }
+  return opts
 }
 
 export function isSelectPlaceholder(value) {

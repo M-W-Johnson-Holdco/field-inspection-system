@@ -42,18 +42,18 @@ status being "Yes".
 
 NORMALIZATION — return ONLY the exact values listed below for these fields. If the transcript is unclear, return null (or omit the array entry's property) and add a descriptive key to flags.
 
-Yes/No fields (yn): return exactly "Yes" or "No"
+Yes/No fields (yn): return exactly "Yes", "No", or "N/A"
 
 roof.shingleStyle: array, values from ["3-Tab","Architectural","Designer","Disco","Impact Resistant"]
 roof.edgeFlashingType: "Drip Edge" or "Critter Guard"
-roof.edgeMaterial: "Galvanized" or "Aluminum"
+roof.edgeMaterial: "Galvanized" or "Aluminum" or "N/A"
 roof.underlaymentGrade: "Synthetic" or "Felt" or "Unknown"
 roof.ridgeCapGrade: "3-Tab" or "H&R" or "Hi Profile"
 roof.ridgeVentType: "Metal" or "Shingle Over"
 roof.starterStyle: "Starter Strip" or "3-Tab"
 roof.valleyStyle: "Ice & Water" or "W-Valley" or "Valley Metal"
-roof.boxVentMaterial: "Metal" or "Plastic" or "Wood"
-roof.turbineMaterial: "Metal" or "Plastic"
+roof.boxVentMaterial: "Metal" or "Plastic" or "Wood" or "N/A"
+roof.turbineMaterial: "Metal" or "Plastic" or "N/A"
 roof.kickoutsNeeded: "Yes" or "No"
 roof.exposedRafters: "Yes" or "No"
 
@@ -67,21 +67,21 @@ roof.skylights[].mount: "Flush Mount" or "Curb Mount"
 roof.lowSlope[].location: "Front Porch" or "Back Porch" or "Other"
 roof.corniceGables[].type: "Shingles" or "Metal"
 
-elevations.[direction].gutterMaterial: "Aluminum" or "Steel" or "Copper" or "Vinyl"
+elevations.[direction].gutterMaterial: "Aluminum" or "Steel" or "Copper" or "Vinyl" or "N/A"
 elevations.[direction].gutterSize: "4\"" or "5\"" or "6\""
-elevations.[direction].downspoutMaterial: "Aluminum" or "Steel" or "Copper" or "Vinyl"
-elevations.[direction].sidingMaterial: "Vinyl" or "Aluminum" or "Wood" or "Fiber Cement" or "Stucco" or "Brick" or "Stone" or "EIFS"
-elevations.[direction].fasciaMaterial: "Wood" or "Aluminum" or "Vinyl" or "Fiber Cement"
-elevations.[direction].soffitMaterial: "Wood" or "Aluminum" or "Vinyl" or "Fiber Cement"
-elevations.[direction].shutterMaterial: "Wood" or "Vinyl" or "Aluminum" or "Composite"
-elevations.[direction].doorMaterial: "Steel" or "Fiberglass" or "Wood" or "Aluminum"
-elevations.[direction].garageDoorMaterial: "Steel" or "Wood" or "Aluminum" or "Fiberglass"
+elevations.[direction].downspoutMaterial: "Aluminum" or "Steel" or "Copper" or "Vinyl" or "N/A"
+elevations.[direction].sidingMaterial: "Vinyl" or "Aluminum" or "Wood" or "Fiber Cement" or "Stucco" or "Brick" or "Stone" or "EIFS" or "N/A"
+elevations.[direction].fasciaMaterial: "Wood" or "Aluminum" or "Vinyl" or "Fiber Cement" or "N/A"
+elevations.[direction].soffitMaterial: "Wood" or "Aluminum" or "Vinyl" or "Fiber Cement" or "N/A"
+elevations.[direction].shutterMaterial: "Wood" or "Vinyl" or "Aluminum" or "Composite" or "N/A"
+elevations.[direction].doorMaterial: "Steel" or "Fiberglass" or "Wood" or "Aluminum" or "N/A"
+elevations.[direction].garageDoorMaterial: "Steel" or "Wood" or "Aluminum" or "Fiberglass" or "N/A"
 elevations.[direction].garageDoorPanelStyle: "Raised Panel" or "Flush Panel" or "Carriage Style"
 
 interior.rooms[].name: one of ["Attic","Bathroom","Bedroom","Dining Room","Garage","Hallway","Kitchen","Laundry Room","Living Room","Master Bathroom","Master Bedroom","Office / Study"] or "Other" (use customName for the specific name when "Other")
 interior.rooms[].story: "Basement" or "1st Floor" or "2nd Floor" or "3rd Floor" or "4th Floor" or "Attic" — these are independent fields (e.g. "Attic, first floor" means name="Attic", story="1st Floor"; do not let the word "Attic" appearing in the room name make you default the story to "Attic" too — use exactly the floor the transcript states)
 
-exterior.fenceMaterial: array, values from ["Pine","Cedar","Other Wood","Vinyl","Aluminum","Rod Iron"]
+exterior.fenceMaterial: array, values from ["Pine","Cedar","Other Wood","Vinyl","Aluminum","Rod Iron","N/A"]
 exterior.fenceStyle: "Privacy" or "Board on Board" or "Picket"
 exterior.fencePosts: "Metal Rod" or "4x4" or "6x6"
 exterior.outdoorDamagedItems: array, values from ["Grill / Cover","Outdoor Furniture","Playset","Trampoline","Table Umbrella","Retractable Awning","Landscape Lighting","Potted Plants","Other"]
