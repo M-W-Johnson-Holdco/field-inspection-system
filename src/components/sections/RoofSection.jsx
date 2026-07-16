@@ -8,7 +8,7 @@ import DimensionLwInput from '../DimensionLwInput'
 import MeasurementInput, { isLinearMeasurementField } from '../MeasurementInput'
 import { ROOF_ITEMS, SUBSECTIONS } from '../../data/roofItems'
 import { fieldGroupProps } from '../../utils/fieldLayout'
-import { fieldSelectClass, materialOptionColumnStyle, withSelectPlaceholderClass, visibleFieldsForValues } from '../../utils/fieldGrid'
+import { fieldSelectClass, materialOptionColumnStyle, withSelectPlaceholderClass, visibleFieldsForValues, ynOptionsForField } from '../../utils/fieldGrid'
 import { formatPitch, parsePitchNumerator } from '../../utils/pitch'
 import useExpandedSection from '../../hooks/useExpandedSection'
 
@@ -86,7 +86,7 @@ function FieldRenderer({ field, value, onChange, subFields, onSubFieldChange }) 
   }
 
   if (t === 'yn' || t === 'radio') {
-    const opts = t === 'yn' ? ['Yes', 'No'] : o
+    const opts = t === 'yn' ? ynOptionsForField(field) : o
     return (
       <div {...fieldGroupProps(field)}>
         {lbl}
@@ -441,7 +441,7 @@ function CheckItem({ itemDef, trigPhoto }) {
                   onChange={val => {
                     updateRoofField(id, f.l, val)
                     if (f.l === 'Damaged') {
-                      if (val === 'No') updateRoofField(id, '_damage', 'n/a')
+                      if (val === 'No' || val === 'N/A') updateRoofField(id, '_damage', 'n/a')
                       else if (val !== 'Yes') updateRoofField(id, '_damage', '')
                     }
                   }}
@@ -454,7 +454,7 @@ function CheckItem({ itemDef, trigPhoto }) {
                   value={item.fields['Damaged']}
                   onChange={val => {
                     updateRoofField(id, 'Damaged', val)
-                    if (val === 'No') updateRoofField(id, '_damage', 'n/a')
+                    if (val === 'No' || val === 'N/A') updateRoofField(id, '_damage', 'n/a')
                     else if (val !== 'Yes') updateRoofField(id, '_damage', '')
                   }}
                 />

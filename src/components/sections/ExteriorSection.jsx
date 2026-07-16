@@ -7,7 +7,7 @@ import DamageDescriptionInput from '../DamageDescriptionInput'
 import MeasurementInput, { isLinearMeasurementField } from '../MeasurementInput'
 import { EXTERIOR_ITEMS, EXTERIOR_SUBSECTIONS } from '../../data/exteriorItems'
 import { fieldGroupProps } from '../../utils/fieldLayout'
-import { fieldSelectClass, withSelectPlaceholderClass } from '../../utils/fieldGrid'
+import { fieldSelectClass, withSelectPlaceholderClass, ynOptionsForField } from '../../utils/fieldGrid'
 import useExpandedSection from '../../hooks/useExpandedSection'
 
 // ── Field Renderer ─────────────────────────────────────────────────
@@ -16,7 +16,7 @@ function FieldRenderer({ field, value, onChange }) {
   const lbl = <label className="form-label">{l}</label>
 
   if (t === 'yn' || t === 'radio') {
-    const opts = t === 'yn' ? ['Yes', 'No'] : o
+    const opts = t === 'yn' ? ynOptionsForField(field) : o
     return (
       <div {...fieldGroupProps(field)}>
         {lbl}
@@ -139,7 +139,7 @@ function ExteriorItem({ itemDef, trigPhoto }) {
 
   function handleDamageStatus(nextStatus) {
     updateExteriorField(id, '_damagePresent', nextStatus)
-    if (nextStatus === 'No') updateExteriorField(id, '_damage', 'n/a')
+    if (nextStatus === 'No' || nextStatus === 'N/A') updateExteriorField(id, '_damage', 'n/a')
     else if (nextStatus !== 'Yes') updateExteriorField(id, '_damage', '')
   }
 
@@ -182,6 +182,7 @@ function ExteriorItem({ itemDef, trigPhoto }) {
                     <option value="">Select</option>
                     <option value="Yes">Yes</option>
                     <option value="No">No</option>
+                    <option value="N/A">N/A</option>
                   </select>
                 </div>
                 {damageStatus === 'Yes' && (

@@ -1317,8 +1317,8 @@ export function InspectionProvider({ children }) {
       const subItems = item.subItems.map((sub, i) => {
         if (i !== index) return sub
         const fields = { ...sub.fields, [label]: value }
-        if (label === 'Damaged' && value === 'No') fields._damage = 'n/a'
-        if (label === 'Damaged' && value !== 'Yes' && value !== 'No') delete fields._damage
+        if (label === 'Damaged' && (value === 'No' || value === 'N/A')) fields._damage = 'n/a'
+        if (label === 'Damaged' && value !== 'Yes' && value !== 'No' && value !== 'N/A') delete fields._damage
         if (label === 'Location') {
           delete fields['(Other)']
           if (value === 'Other') fields['Location'] = 'Other'

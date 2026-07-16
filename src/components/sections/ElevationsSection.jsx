@@ -6,7 +6,7 @@ import FieldsGrid from '../FieldsGrid'
 import DamageDescriptionInput from '../DamageDescriptionInput'
 import { ELEV_ITEMS, DIRECTIONS } from '../../data/elevItems'
 import { fieldGroupProps } from '../../utils/fieldLayout'
-import { fieldSelectClass, withSelectPlaceholderClass } from '../../utils/fieldGrid'
+import { fieldSelectClass, withSelectPlaceholderClass, ynOptionsForField } from '../../utils/fieldGrid'
 
 function orderElevFields(fields = []) {
   const rest = []
@@ -28,7 +28,7 @@ function FieldRenderer({ field, value, onChange }) {
   const lbl = <label className="form-label">{l}</label>
 
   if (t === 'yn' || t === 'radio') {
-    const opts = t === 'yn' ? ['Yes', 'No'] : o
+    const opts = t === 'yn' ? ynOptionsForField(field) : o
     return (
       <div {...fieldGroupProps(field)}>
         {lbl}
@@ -211,7 +211,7 @@ function ElevItem({ itemDef, direction, trigPhoto }) {
                 onChange={val => {
                   updateElevField(cellKey, f.l, val)
                   if (f.l === 'Damaged') {
-                    if (val === 'No') updateElevField(cellKey, '_damage', 'n/a')
+                    if (val === 'No' || val === 'N/A') updateElevField(cellKey, '_damage', 'n/a')
                     else if (val !== 'Yes') updateElevField(cellKey, '_damage', '')
                   }
                 }}

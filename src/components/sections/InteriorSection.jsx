@@ -21,7 +21,7 @@ function DamageField({ label, yesNoValue, notesValue, onYesNo, onNotes }) {
 
   function handleYesNo(val) {
     onYesNo(val)
-    if (val === 'No') onNotes('n/a')
+    if (val === 'No' || val === 'N/A') onNotes('n/a')
     else if (val !== 'Yes') onNotes('')
   }
 
@@ -37,6 +37,7 @@ function DamageField({ label, yesNoValue, notesValue, onYesNo, onNotes }) {
           <option value="">Select</option>
           <option value="Yes">Yes</option>
           <option value="No">No</option>
+          <option value="N/A">N/A</option>
         </select>
       </div>
       {yesNoValue === 'Yes' && (
