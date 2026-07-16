@@ -1181,6 +1181,8 @@ export function InspectionProvider({ children }) {
   const [expandedSections, setExpandedSectionsState] = useState({})
   const [saveStatus, setSaveStatus] = useState('saved')
   const [driveSaveStatus, setDriveSaveStatus] = useState('unsaved')
+  // Lifted out of AIParseSection so the transcript, status, and flags survive switching tabs away and back.
+  const [aiParseState, setAiParseState] = useState({ transcript: '', status: 'idle', statusMsg: '', flags: [] })
   const saveTimer = useRef(null)
   const dataRef = useRef(data)
   const activeTabRef = useRef(activeTab)
@@ -1824,6 +1826,7 @@ export function InspectionProvider({ children }) {
     persistSnapshot(next, { activeTab: 0 })
     setSaveStatus('saved')
     setDriveSaveStatus('saved')
+    setAiParseState({ transcript: '', status: 'idle', statusMsg: '', flags: [] })
   }
 
   function resetAll() {
@@ -1835,6 +1838,7 @@ export function InspectionProvider({ children }) {
     persistSnapshot(INITIAL_STATE, { activeTab: 0, expandedSections: {} })
     setSaveStatus('saved')
     setDriveSaveStatus('unsaved')
+    setAiParseState({ transcript: '', status: 'idle', statusMsg: '', flags: [] })
   }
 
   function startNewInspection() {
@@ -1845,6 +1849,7 @@ export function InspectionProvider({ children }) {
     persistSnapshot(INITIAL_STATE, { activeTab: 0, expandedSections: {} })
     setSaveStatus('saved')
     setDriveSaveStatus('unsaved')
+    setAiParseState({ transcript: '', status: 'idle', statusMsg: '', flags: [] })
   }
 
   const completion = calculateCompletion(data)
@@ -1854,6 +1859,7 @@ export function InspectionProvider({ children }) {
       data, activeTab, setActiveTab,
       expandedSections, setSectionExpanded,
       saveStatus, driveSaveStatus, setDriveSaveStatus, completion, updateJobInfo, manualSave, resetAll, startNewInspection, loadInspection, applyXmlImport,
+      aiParseState, setAiParseState,
       toggleRoofExclude, updateRoofField,
       addRoofSubItem, removeRoofSubItem, updateRoofSubField, importRoofPipeJacks, importRoofExhaustStacks, importRoofChimneys, importRoofFlashingItems, importRoofLowSlopeItems,
       importRoofSkylights, importRoofCorniceGables, importRoofOtherStructures,
