@@ -6,7 +6,7 @@ import FieldsGrid from '../FieldsGrid'
 import DamageDescriptionInput from '../DamageDescriptionInput'
 import { ELEV_ITEMS, DIRECTIONS } from '../../data/elevItems'
 import { fieldGroupProps } from '../../utils/fieldLayout'
-import { fieldSelectClass, withSelectPlaceholderClass, ynOptionsForField } from '../../utils/fieldGrid'
+import { fieldSelectClass, withSelectPlaceholderClass, ynOptionsForField, optionsForField } from '../../utils/fieldGrid'
 
 function orderElevFields(fields = []) {
   const rest = []
@@ -28,7 +28,7 @@ function FieldRenderer({ field, value, onChange }) {
   const lbl = <label className="form-label">{l}</label>
 
   if (t === 'yn' || t === 'radio') {
-    const opts = t === 'yn' ? ynOptionsForField(field) : o
+    const opts = t === 'yn' ? ynOptionsForField(field) : optionsForField(field)
     return (
       <div {...fieldGroupProps(field)}>
         {lbl}
@@ -48,6 +48,7 @@ function FieldRenderer({ field, value, onChange }) {
 
   if (t === 'multiRadio' || t === 'multi') {
     const arr = Array.isArray(value) ? value : []
+    const opts = optionsForField(field)
     return (
       <div {...fieldGroupProps(field)}>
         {lbl}
@@ -57,7 +58,7 @@ function FieldRenderer({ field, value, onChange }) {
             <ChevronDown className="multi-select__icon" aria-hidden="true" />
           </summary>
           <div className="multi-select__menu">
-            {o.map(opt => (
+            {opts.map(opt => (
               <label key={opt} className="multi-select__option">
                 <input
                   type="checkbox"
@@ -94,7 +95,7 @@ function FieldRenderer({ field, value, onChange }) {
           value={value || o[0]}
           onChange={e => onChange(e.target.value)}
         >
-          {o.map(opt => (
+          {optionsForField(field).map(opt => (
             <option key={opt} value={opt}>{opt}</option>
           ))}
         </select>
@@ -143,7 +144,7 @@ function FieldRenderer({ field, value, onChange }) {
             inputMode="numeric"
             min="0"
             step="1"
-            value={value || ''}
+            value={value === '' || value == null ? '' : value}
             placeholder={p || '0'}
             onChange={e => onChange(e.target.value)}
           />
