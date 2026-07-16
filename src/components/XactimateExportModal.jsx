@@ -1,25 +1,34 @@
-import { X, Download } from 'lucide-react'
+import { X, Download, FileText } from 'lucide-react'
 import {
   xactimateExportToCSV,
-  xactimateExportToJSON,
   downloadTextFile,
+  downloadXactimatePdf,
 } from '../lib/xactimateExport'
 
 function slugify(value) {
   return String(value || 'inspection').trim().replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '') || 'inspection'
 }
 
-export default function XactimateExportModal({ exportData, onClose }) {
+export default function XactimateExportModal({ exportData, inspectionData, onClose }) {
   const { job, lineItems } = exportData
+  const base = slugify(job.customer || inspectionData?.jobInfo?.cust)
 
   function handleDownloadCSV() {
-    const base = slugify(job.customer)
     downloadTextFile(`${base}_xactimate_export.csv`, xactimateExportToCSV(exportData), 'text/csv')
   }
 
   function handleDownloadJSON() {
-    const base = slugify(job.customer)
-    downloadTextFile(`${base}_xactimate_export.json`, xactimateExportToJSON(exportData), 'application/json')
+    // Same payload shape as the IndexedDB "current" snapshot.
+    const snapshot = inspectionData || {}
+    downloadTextFile(
+      `${base}_inspection.json`,
+      JSON.stringify(snapshot, null, 2),
+      'application/json',
+    )
+  }
+
+  function handleDownloadPDF() {
+    downloadXactimatePdf(exportData, `${base}_xactimate_export.pdf`)
   }
 
   return (
@@ -82,8 +91,16 @@ export default function XactimateExportModal({ exportData, onClose }) {
             <button
               className="app-button app-button--secondary"
               type="button"
-              onClick={handleDownloadJSON}
+              onClick={handleDownloadPDF}
               disabled={lineItems.length === 0}
+            >
+              <FileText className="app-button__icon" aria-hidden="true" />
+              <span className="app-button__label">Download PDF</span>
+            </button>
+            <button
+              className="app-button app-button--secondary"
+              type="button"
+              onClick={handleDownloadJSON}
             >
               <Download className="app-button__icon" aria-hidden="true" />
               <span className="app-button__label">Download JSON</span>

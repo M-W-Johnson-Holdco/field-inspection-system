@@ -115,7 +115,7 @@ function getJobInfoSaveError(jobInfo) {
 }
 
 export default function ActionBar() {
-  const { activeTab, setActiveTab, resetAll, startNewInspection, data, driveSaveStatus, setDriveSaveStatus, loadInspection, applyXmlImport } = useInspection()
+  const { activeTab, setActiveTab, resetAll, startNewInspection, data, driveSaveStatus, setDriveSaveStatus, loadInspection, applyXmlImport, expandedSections } = useInspection()
   const { accessToken, user, setTokenExpired } = useAuth()
   const { isAccessAdmin } = usePermissions()
   const canManageAccess = isAccessAdmin
@@ -279,6 +279,14 @@ export default function ActionBar() {
   function handleChooseImages() {
     setShowImportChooser(false)
     setShowImportImages(true)
+  }
+
+  function handleChooseJson(inspectionData) {
+    if (!window.confirm('Import this JSON? It will replace the current inspection.')) return
+    setShowImportChooser(false)
+    loadInspection(inspectionData)
+    goToSection(0)
+    window.scrollTo(0, 0)
   }
 
   function handleXmlApply(parsed) {
@@ -445,6 +453,7 @@ export default function ActionBar() {
         <ImportChooserModal
           onChooseMeasurements={handleChooseMeasurements}
           onChooseImages={handleChooseImages}
+          onChooseJson={handleChooseJson}
           onClose={() => setShowImportChooser(false)}
         />
       )}
@@ -467,7 +476,15 @@ export default function ActionBar() {
       )}
 
       {exportPreview && (
-        <XactimateExportModal exportData={exportPreview} onClose={() => setExportPreview(null)} />
+        <XactimateExportModal
+          exportData={exportPreview}
+          inspectionData={{
+            ...data,
+            activeTab,
+            expandedSections,
+          }}
+          onClose={() => setExportPreview(null)}
+        />
       )}
 
       {showOpen && accessToken && (
@@ -499,7 +516,7 @@ export default function ActionBar() {
               <p><Save className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Save:</strong> Save the current inspection to Google Drive.</span></p>
               <p><FolderOpen className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Open:</strong> Open a saved inspection from Google Drive.</span></p>
               <p><FileInput className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Import:</strong> Choose measurements (EagleView XML) or bulk-assign photos to form categories.</span></p>
-              <p><ExternalLink className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Export:</strong> Download a Xactimate-style line-item CSV and JSON of this inspection for faster estimate entry.</span></p>
+              <p><ExternalLink className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Export:</strong> Preview line items and download a PDF/CSV for estimating, or download the full inspection JSON (same data stored locally).</span></p>
               <p><FilePlus className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>New:</strong> Start a new inspection form.</span></p>
               <p><RotateCcw className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Reset:</strong> Clear all current inspection data.</span></p>
               <p><CircleHelp className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Help:</strong> Show this toolbar guide.</span></p>
