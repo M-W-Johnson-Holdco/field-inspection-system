@@ -6,12 +6,20 @@ FLAGS: Add the JSON key name (e.g. "ridgeCapGrade") to the "flags" array wheneve
 
 NEVER GUESS / NEVER FABRICATE: This is the most important rule. Only return a value for a field if the
 transcript actually states it (directly or by clear, unambiguous implication). If an accessory or item is
-explicitly said to be absent ("no turbines", "no shutters", "no rain diverter", "no L flashing") or is
 simply never mentioned anywhere in the transcript, you MUST leave every one of its fields as null and
 return an empty array [] for it if it's a repeatable item — do NOT invent a plausible material, a
-"Yes"/"No", or a quantity of 0 for it. Never borrow a number, material, or note said about one item and
-apply it to a different item — every value must come from what was said about that specific item. When in
-doubt, prefer null over a guess and add the key to flags.
+"Yes"/"No", or a quantity for it. Never borrow a number, material, or note said about one item and apply
+it to a different item — every value must come from what was said about that specific item. When in doubt,
+prefer null over a guess and add the key to flags.
+
+EXPLICIT ABSENCE: This is different from "never mentioned" above — it applies only when the transcript
+explicitly says the item is not present ("no turbines", "no shutters", "no rain diverter", "no L flashing",
+"no solar panels"). In that case, set that item's qty field(s) to 0 (not null), and set every other field
+belonging to that same item that has a defined option list (material, style, painted, damaged, etc.) to
+"N/A" — free-text/description fields for that item stay null, and repeatable items still return []. Do not
+apply this to a merely-unmentioned item, and do not let an explicit absence statement about one item (e.g.
+"no solar panels") affect a different, unmentioned item (e.g. solar vents) — each item's absence must be
+stated about that specific item.
 
 REPEATABLE ITEMS: Several sections are arrays because the transcript may describe any number of them
 (one pipe jack or five, one room or ten). Create ONE array entry per instance actually described in the
@@ -24,6 +32,13 @@ DAMAGE DESCRIPTIONS: Whenever a "damaged"/"...Damage" field is "Yes", also fill 
 `elevations.Front.sidingDamageDescription`, `interior.rooms[].ceilingNotes`) with the specific damage
 described in the transcript for that exact item (what's damaged and how) — do not leave it null when the
 transcript describes the damage, and do not copy one item's damage description onto another item.
+
+EXTERIOR DAMAGE STATUS vs. NOTES: `exterior.fenceDamaged`, `exterior.gatesDamaged`, `exterior.poolDamaged`,
+and `exterior.outdoorDamaged` are the "Yes"/"No" damage status for that item — always set these whenever
+the transcript addresses whether that item is damaged, even if no further detail is given. `fenceDamage`,
+`gatesDamage`, `poolDamageNotes`, and `outdoorNotes` are the separate free-text description fields — only
+fill those when the transcript actually describes the damage, and only alongside the matching "...Damaged"
+status being "Yes".
 
 NORMALIZATION — return ONLY the exact values listed below for these fields. If the transcript is unclear, return null (or omit the array entry's property) and add a descriptive key to flags.
 
@@ -107,10 +122,15 @@ Return this exact structure (use null for any scalar field not mentioned, and []
     "valleyDamageDescription": null, "solarPanelQty": null, "solarPanelDamaged": null,
     "solarPanelDamageDescription": null,
     "ridgeVentLF": null, "ridgeVentType": null, "ridgeVentPainted": null,
+    "ridgeVentDamaged": null, "ridgeVentDamageDescription": null,
     "boxVentQty": null, "boxVentMaterial": null, "boxVentPainted": null,
+    "boxVentDamaged": null, "boxVentDamageDescription": null,
     "turbineQty": null, "turbineMaterial": null, "turbinePainted": null,
+    "turbineDamaged": null, "turbineDamageDescription": null,
     "powerVentQty": null, "powerVentPainted": null,
+    "powerVentDamaged": null, "powerVentDamageDescription": null,
     "solarVentQty": null, "solarVentPainted": null,
+    "solarVentDamaged": null, "solarVentDamageDescription": null,
     "pipeJacks": [{ "size": null, "type": null, "painted": null, "damaged": null, "damageDescription": null }],
     "exhaustStacks": [{ "type": null, "painted": null, "damaged": null, "damageDescription": null }],
     "kickoutsNeeded": null, "kickoutsPainted": null,
@@ -192,9 +212,10 @@ Return this exact structure (use null for any scalar field not mentioned, and []
   "exterior": {
     "fenceMaterial": null, "fenceStyle": null, "fencePosts": null,
     "fencePostSpacing": null, "fenceHeight": null, "fenceStained": null,
-    "fenceDamage": null, "gatesQty": null, "gatesMaterial": null, "gatesDamage": null,
-    "poolDamageNotes": null,
-    "outdoorDamagedItems": null, "outdoorNotes": null,
+    "fenceDamaged": null, "fenceDamage": null,
+    "gatesQty": null, "gatesMaterial": null, "gatesDamaged": null, "gatesDamage": null,
+    "poolDamaged": null, "poolDamageNotes": null,
+    "outdoorDamagedItems": null, "outdoorDamaged": null, "outdoorNotes": null,
     "deliveryPlacement": null, "landscapingProtect": null,
     "okSaturdayBuild": null, "pestControlFlashing": null,
     "gateCode": null, "overheadClearanceIssue": null
