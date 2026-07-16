@@ -48,8 +48,8 @@ export const ELEV_ITEMS = [
   {
     id: 'ev6', lbl: 'Shutters',
     fields: [
-      { t: 'select', l: 'Material', o: ['Select', 'Aluminum', 'Composite', 'Vinyl', 'Wood'] },
       { t: 'num', l: 'Qty' },
+      { t: 'select', l: 'Material', o: ['Select', 'Aluminum', 'Composite', 'Vinyl', 'Wood'] },
       { t: 'yn', l: 'Damaged' },
     ],
   },

@@ -9,17 +9,19 @@ import { fieldGroupProps } from '../../utils/fieldLayout'
 import { fieldSelectClass, withSelectPlaceholderClass, ynOptionsForField, optionsForField } from '../../utils/fieldGrid'
 
 function orderElevFields(fields = []) {
+  const qty = []
   const rest = []
-  const nums = []
+  const otherNums = []
   const damaged = []
 
   for (const field of fields) {
-    if (field.t === 'num') nums.push(field)
-    else if (field.l === 'Damaged') damaged.push(field)
+    if (field.l === 'Damaged') damaged.push(field)
+    else if (field.t === 'num' && field.l === 'Qty') qty.push(field)
+    else if (field.t === 'num') otherNums.push(field)
     else rest.push(field)
   }
 
-  return [...rest, ...nums, ...damaged]
+  return [...qty, ...rest, ...otherNums, ...damaged]
 }
 
 // ── Field Renderer — mirrors Cursor's RoofSection pattern ─────────
