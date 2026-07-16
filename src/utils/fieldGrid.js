@@ -258,7 +258,7 @@ export function groupFieldsForGrid(fields) {
     const next = fields[i + 1]
 
     if (
-      field.t === 'yn' && field.l === 'Painted'
+      field.t === 'yn'
       && next?.t === 'yn' && next.l === 'Damaged'
     ) {
       groups.push({
