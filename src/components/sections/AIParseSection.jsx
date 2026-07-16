@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useInspection } from '../../context/InspectionContext'
 import { formatPitch, parsePitchNumerator } from '../../utils/pitch'
 import { formatPropertyAddress } from '../../utils/address'
@@ -277,10 +276,13 @@ function applyParsed(parsed, ctx) {
 // ── Component ─────────────────────────────────────────────────────
 export default function AIParseSection() {
   const ctx = useInspection()
-  const [transcript, setTranscript] = useState('')
-  const [status, setStatus] = useState('idle') // idle | parsing | done | error
-  const [statusMsg, setStatusMsg] = useState('')
-  const [flags, setFlags] = useState([])
+  const { aiParseState, setAiParseState } = ctx
+  const { transcript, status, statusMsg, flags } = aiParseState
+
+  function setTranscript(next) {
+    setAiParseState(prev => ({ ...prev, transcript: next }))
+  }
+
   async function handlePaste() {
     try {
       const text = await navigator.clipboard.readText()
@@ -295,9 +297,7 @@ export default function AIParseSection() {
       alert('Paste a transcript first.')
       return
     }
-    setStatus('parsing')
-    setStatusMsg('Sending transcript to AI — this takes 10–20 seconds…')
-    setFlags([])
+    setAiParseState(prev => ({ ...prev, status: 'parsing', statusMsg: 'Sending transcript to AI — this takes 10–20 seconds…', flags: [] }))
 
     try {
       const res = await fetch(WORKER_URL, {
@@ -315,16 +315,18 @@ export default function AIParseSection() {
       applyParsed(json, ctx)
 
       const flagList = json.flags || []
-      setFlags(flagList)
       const fieldCount = Object.values(json.jobInfo || {}).filter(Boolean).length
         + Object.values(json.notes || {}).filter(Boolean).length
         + Object.values(json.roof || {}).filter(Boolean).length
-      setStatus('done')
-      setStatusMsg(`Done — ${fieldCount} fields populated.${flagList.length ? ` ${flagList.length} fields flagged for review.` : ' All fields confident.'}`)
+      setAiParseState(prev => ({
+        ...prev,
+        status: 'done',
+        flags: flagList,
+        statusMsg: `Done — ${fieldCount} fields populated.${flagList.length ? ` ${flagList.length} fields flagged for review.` : ' All fields confident.'}`,
+      }))
     } catch (err) {
       console.error('AI parse error:', err)
-      setStatus('error')
-      setStatusMsg(`Parse failed: ${err.message}. Check your connection and try again.`)
+      setAiParseState(prev => ({ ...prev, status: 'error', statusMsg: `Parse failed: ${err.message}. Check your connection and try again.` }))
     }
   }
 
@@ -340,7 +342,7 @@ export default function AIParseSection() {
         <div className="ai-card__label-row">
           <label className="ai-card__label">Transcript Text</label>
           {transcript
-            ? <button className="ai-transcript-btn ai-card__corner-btn" onClick={() => { setTranscript(''); setStatus('idle'); setFlags([]) }}>Clear</button>
+            ? <button className="ai-transcript-btn ai-card__corner-btn" onClick={() => setAiParseState({ transcript: '', status: 'idle', statusMsg: '', flags: [] })}>Clear</button>
             : <button className="ai-transcript-btn ai-card__corner-btn" onClick={handlePaste}>Paste</button>
           }
         </div>
