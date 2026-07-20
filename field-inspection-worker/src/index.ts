@@ -1,4 +1,5 @@
 import systemPrompt from './prompts/parse-system-prompt.txt'
+import measureFenceSystemPrompt from './prompts/measure-fence-system-prompt.txt'
 
 interface Env {
 	ANTHROPIC_API_KEY: string
@@ -35,6 +36,11 @@ export default {
 
 		if (request.method !== 'POST') {
 			return cors(JSON.stringify({ error: 'Method not allowed' }), origin, 405)
+		}
+
+		const { pathname } = new URL(request.url)
+		if (pathname === '/measure-fence') {
+			return handleMeasureFence(request, env, origin)
 		}
 
 		let transcript: string
@@ -94,4 +100,68 @@ export default {
 
 		return cors(raw, origin)
 	},
+}
+
+function parseDataUrl(dataUrl: string): { mediaType: string; data: string } | null {
+	const match = /^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/.exec(dataUrl || '')
+	if (!match) return null
+	return { mediaType: match[1], data: match[2] }
+}
+
+async function handleMeasureFence(request: Request, env: Env, origin: string): Promise<Response> {
+	let referencePhoto: string
+	try {
+		const body = (await request.json()) as { referencePhoto?: string }
+		referencePhoto = body.referencePhoto || ''
+	} catch {
+		return cors(JSON.stringify({ error: 'Invalid JSON body' }), origin, 400)
+	}
+
+	const reference = parseDataUrl(referencePhoto)
+	if (!reference) {
+		return cors(JSON.stringify({ error: 'referencePhoto must be an image data URL' }), origin, 400)
+	}
+
+	const anthropicResp = await fetch('https://api.anthropic.com/v1/messages', {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			'x-api-key': env.ANTHROPIC_API_KEY,
+			'anthropic-version': '2023-06-01',
+		},
+		body: JSON.stringify({
+			model: 'claude-sonnet-4-6',
+			max_tokens: 1024,
+			system: measureFenceSystemPrompt,
+			messages: [
+				{
+					role: 'user',
+					content: [
+						{ type: 'text', text: 'REFERENCE PHOTO (1ft blue tape placed vertically on a fence plank, with 2+ posts visible):' },
+						{ type: 'image', source: { type: 'base64', media_type: reference.mediaType, data: reference.data } },
+					],
+				},
+			],
+		}),
+	})
+
+	if (!anthropicResp.ok) {
+		const err = await anthropicResp.text()
+		return cors(JSON.stringify({ error: `Anthropic error: ${anthropicResp.status}`, detail: err }), origin, 502)
+	}
+
+	const anthropicData = (await anthropicResp.json()) as { content: { text: string }[] }
+	let raw = anthropicData.content?.[0]?.text || ''
+	raw = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim()
+	const jsonStart = raw.indexOf('{')
+	const jsonEnd = raw.lastIndexOf('}')
+	if (jsonStart > -1 && jsonEnd > jsonStart) raw = raw.substring(jsonStart, jsonEnd + 1)
+
+	try {
+		JSON.parse(raw)
+	} catch {
+		return cors(JSON.stringify({ error: 'AI returned malformed JSON', raw }), origin, 502)
+	}
+
+	return cors(raw, origin)
 }
