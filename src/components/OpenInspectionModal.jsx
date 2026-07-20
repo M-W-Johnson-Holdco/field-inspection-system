@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Search, X, FolderOpen, Loader } from 'lucide-react'
+import { Search, X, FolderOpen, FilePlus2, Loader } from 'lucide-react'
 import { listInspectionFolders, loadInspectionFromDrive, TokenExpiredError } from '../lib/driveService'
 import { useAuth } from '../context/AuthContext'
 import { usePermissions } from '../context/PermissionsContext'
@@ -46,7 +46,11 @@ function sortByNewestInspection(a, b) {
   return dateTime(b.date) - dateTime(a.date) || dateTime(b.createdTime) - dateTime(a.createdTime)
 }
 
-export default function OpenInspectionModal({ token, saveStatus, onLoad, onClose }) {
+function CurrentBadge() {
+  return <span className="modal-inspection-row__badge">Current</span>
+}
+
+export default function OpenInspectionModal({ token, saveStatus, currentFolderId = null, onLoad, onClose }) {
   const { user, setTokenExpired } = useAuth()
   const { viewableOrgs, role } = usePermissions()
   const [folders, setFolders] = useState([])
@@ -59,6 +63,8 @@ export default function OpenInspectionModal({ token, saveStatus, onLoad, onClose
   const [pendingFolder, setPendingFolder] = useState(null)
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const searchRef = useRef(null)
+
+  const isNewInspection = !currentFolderId
 
   useEffect(() => {
     listInspectionFolders(token, viewableOrgs)
@@ -93,6 +99,7 @@ export default function OpenInspectionModal({ token, saveStatus, onLoad, onClose
   const days = DATE_FILTERS.find(f => f.label === dateFilter)?.days ?? null
 
   const filtered = folders.filter(f => {
+    if (currentFolderId && f.id === currentFolderId) return false
     if (!withinDays(f.date, days)) return false
     if (inspectorFilter !== 'All' && f.inspector !== inspectorFilter) return false
     if (search.trim()) {
@@ -102,10 +109,19 @@ export default function OpenInspectionModal({ token, saveStatus, onLoad, onClose
     return true
   })
 
+  const currentFolder = currentFolderId
+    ? folders.find(f => f.id === currentFolderId) || null
+    : null
+
   const visibleFolders = filtered.slice(0, visibleCount)
   const remainingCount = Math.max(0, filtered.length - visibleFolders.length)
+  const showEmptyState = listStatus === 'ready'
+    && filtered.length === 0
+    && !isNewInspection
+    && !currentFolder
 
   function requestOpen(folder) {
+    if (folder.id === currentFolderId) return
     if (saveStatus === 'unsaved') {
       setPendingFolder(folder)
       setConfirmOpen(true)
@@ -119,7 +135,7 @@ export default function OpenInspectionModal({ token, saveStatus, onLoad, onClose
     setLoadingId(folder.id)
     try {
       const data = await loadInspectionFromDrive(token, folder.id)
-      onLoad(data)
+      onLoad(data, folder.id)
     } catch (err) {
       console.error('Failed to load inspection:', err)
       if (err instanceof TokenExpiredError) {
@@ -131,6 +147,29 @@ export default function OpenInspectionModal({ token, saveStatus, onLoad, onClose
     } finally {
       setLoadingId(null)
     }
+  }
+
+  function renderFolderRow(folder, { isCurrent = false } = {}) {
+    return (
+      <button
+        key={folder.id}
+        type="button"
+        className={`modal-inspection-row ${isCurrent ? 'modal-inspection-row--current' : ''}`}
+        onClick={() => requestOpen(folder)}
+        disabled={loadingId === folder.id}
+        aria-current={isCurrent ? 'true' : undefined}
+      >
+        <FolderOpen size={18} className="modal-inspection-row__icon" />
+        <span className="modal-inspection-row__name">
+          {viewableOrgs.length > 1 && folder.org && (
+            <span className="modal-inspection-row__org">{folder.org}</span>
+          )}
+          {folder.name}
+        </span>
+        {isCurrent && <CurrentBadge />}
+        {loadingId === folder.id && <Loader size={16} className="spin modal-inspection-row__loader" />}
+      </button>
+    )
   }
 
   return (
@@ -191,26 +230,31 @@ export default function OpenInspectionModal({ token, saveStatus, onLoad, onClose
               Failed to load inspections. Check your connection and try again.
             </div>
           )}
-          {listStatus === 'ready' && filtered.length === 0 && (
-            <div className="modal-sheet__state">No inspections found.</div>
+          {listStatus === 'ready' && isNewInspection && (
+            <div
+              className="modal-inspection-row modal-inspection-row--current modal-inspection-row--static"
+              aria-current="true"
+            >
+              <FilePlus2 size={18} className="modal-inspection-row__icon" />
+              <span className="modal-inspection-row__name">New Inspection File</span>
+              <CurrentBadge />
+            </div>
           )}
-          {listStatus === 'ready' && visibleFolders.map(folder => (
-            <button
-              key={folder.id}
-              className="modal-inspection-row"
-              onClick={() => requestOpen(folder)}
-              disabled={loadingId === folder.id}
+          {listStatus === 'ready' && currentFolder && renderFolderRow(currentFolder, { isCurrent: true })}
+          {listStatus === 'ready' && currentFolderId && !currentFolder && (
+            <div
+              className="modal-inspection-row modal-inspection-row--current modal-inspection-row--static"
+              aria-current="true"
             >
               <FolderOpen size={18} className="modal-inspection-row__icon" />
-              <span className="modal-inspection-row__name">
-                {viewableOrgs.length > 1 && folder.org && (
-                  <span className="modal-inspection-row__org">{folder.org}</span>
-                )}
-                {folder.name}
-              </span>
-              {loadingId === folder.id && <Loader size={16} className="spin modal-inspection-row__loader" />}
-            </button>
-          ))}
+              <span className="modal-inspection-row__name">Current inspection (not in this list)</span>
+              <CurrentBadge />
+            </div>
+          )}
+          {showEmptyState && (
+            <div className="modal-sheet__state">No inspections found.</div>
+          )}
+          {listStatus === 'ready' && visibleFolders.map(folder => renderFolderRow(folder))}
           {listStatus === 'ready' && remainingCount > 0 && (
             <button
               type="button"

@@ -115,7 +115,7 @@ function getJobInfoSaveError(jobInfo) {
 }
 
 export default function ActionBar() {
-  const { activeTab, setActiveTab, resetAll, startNewInspection, data, driveSaveStatus, setDriveSaveStatus, loadInspection, applyXmlImport, expandedSections } = useInspection()
+  const { activeTab, setActiveTab, resetAll, startNewInspection, data, driveSaveStatus, setDriveSaveStatus, driveFolderId, setDriveFolderId, loadInspection, applyXmlImport, expandedSections } = useInspection()
   const { accessToken, user, setTokenExpired } = useAuth()
   const { isAccessAdmin } = usePermissions()
   const canManageAccess = isAccessAdmin
@@ -248,7 +248,8 @@ export default function ActionBar() {
     setDriveStatus('saving')
     setDriveSaveStatus('saving')
     try {
-      const { folderName, photoCount } = await saveInspectionToDrive(accessToken, data, user?.fullName, user?.email)
+      const { folderId, folderName, photoCount } = await saveInspectionToDrive(accessToken, data, user?.fullName, user?.email)
+      setDriveFolderId(folderId)
       setDriveStatus('done')
       setDriveSaveStatus('saved')
       setTimeout(() => setDriveStatus('idle'), 3000)
@@ -284,7 +285,7 @@ export default function ActionBar() {
   function handleChooseJson(inspectionData) {
     if (!window.confirm('Import this JSON? It will replace the current inspection.')) return
     setShowImportChooser(false)
-    loadInspection(inspectionData)
+    loadInspection(inspectionData, { driveFolderId: null })
     goToSection(0)
     window.scrollTo(0, 0)
   }
@@ -308,8 +309,8 @@ export default function ActionBar() {
     setShowOpen(true)
   }
 
-  function handleLoad(inspectionData) {
-    loadInspection(inspectionData)
+  function handleLoad(inspectionData, folderId) {
+    loadInspection(inspectionData, { driveFolderId: folderId || null })
     setShowOpen(false)
     window.scrollTo(0, 0)
   }
@@ -491,6 +492,7 @@ export default function ActionBar() {
         <OpenInspectionModal
           token={accessToken}
           saveStatus={driveSaveStatus}
+          currentFolderId={driveFolderId}
           onLoad={handleLoad}
           onClose={() => setShowOpen(false)}
         />

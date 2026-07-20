@@ -1352,8 +1352,22 @@ button:disabled {
   font-size: 13px;
 }
 
-.modal-inspection-row:hover {
+.modal-inspection-row:hover:not(:disabled):not(.modal-inspection-row--current) {
   background: var(--primary-soft);
+}
+
+.modal-inspection-row:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.modal-inspection-row--current {
+  background: rgba(45, 110, 181, 0.08);
+  cursor: default;
+}
+
+.modal-inspection-row--static {
+  cursor: default;
 }
 
 .modal-inspection-row__icon {
@@ -1377,6 +1391,18 @@ button:disabled {
   font-weight: 700;
   letter-spacing: 0.02em;
   vertical-align: middle;
+}
+
+.modal-inspection-row__badge {
+  flex-shrink: 0;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
 }
 
 .modal-inspection-row__loader {

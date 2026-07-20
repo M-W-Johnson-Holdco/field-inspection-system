@@ -380,5 +380,9 @@ export async function saveInspectionToDrive(token, inspectionData, inspectorName
     }
   }
 
-  return { folderName: folderName(inspectionData.jobInfo), photoCount: photos.length }
+  return {
+    folderId: jobFolderId,
+    folderName: folderName(inspectionData.jobInfo),
+    photoCount: photos.length,
+  }
 }
