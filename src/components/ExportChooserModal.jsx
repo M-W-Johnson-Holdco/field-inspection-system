@@ -1,9 +1,11 @@
 import { ExternalLink, Images, X } from 'lucide-react'
+import ModalSheetBack from './ModalSheetBack'
 
 export default function ExportChooserModal({
   onChoosePreview,
   onChooseSavePhotos,
   savingPhotos = false,
+  onBack,
   onClose,
 }) {
   return (
@@ -16,7 +18,10 @@ export default function ExportChooserModal({
         aria-labelledby="export-chooser-title"
       >
         <div className="modal-sheet__header">
-          <h2 id="export-chooser-title" className="modal-sheet__title">Export</h2>
+          <div className="modal-sheet__header-main">
+            {onBack && <ModalSheetBack onClick={onBack} disabled={savingPhotos} />}
+            <h2 id="export-chooser-title" className="modal-sheet__title">Export</h2>
+          </div>
           <button
             className="modal-sheet__close"
             type="button"

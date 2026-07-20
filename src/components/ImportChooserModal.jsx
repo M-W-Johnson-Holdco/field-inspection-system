@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { Braces, FileInput, Images, X } from 'lucide-react'
+import ModalSheetBack from './ModalSheetBack'
 
 function isInspectionSnapshot(data) {
   if (!data || typeof data !== 'object' || Array.isArray(data)) return false
@@ -19,6 +20,7 @@ export default function ImportChooserModal({
   onChooseMeasurements,
   onChooseImages,
   onChooseJson,
+  onBack,
   onClose,
 }) {
   const fileRef = useRef(null)
@@ -47,7 +49,10 @@ export default function ImportChooserModal({
       <div className="modal-backdrop" onClick={onClose} />
       <div className="modal-sheet import-chooser-modal" role="dialog" aria-modal="true" aria-labelledby="import-chooser-title">
         <div className="modal-sheet__header">
-          <h2 id="import-chooser-title" className="modal-sheet__title">Import</h2>
+          <div className="modal-sheet__header-main">
+            {onBack && <ModalSheetBack onClick={onBack} />}
+            <h2 id="import-chooser-title" className="modal-sheet__title">Import</h2>
+          </div>
           <button className="modal-sheet__close" type="button" onClick={onClose} aria-label="Close">
             <X size={20} />
           </button>

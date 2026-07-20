@@ -5,6 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:start": "bash scripts/dev-server.sh start",
+    "dev:stop": "bash scripts/dev-server.sh stop",
+    "dev:status": "bash scripts/dev-server.sh status",
+    "dev:restart": "bash scripts/dev-server.sh restart",
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",

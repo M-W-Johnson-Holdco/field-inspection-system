@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { CheckCircle, FileInput, Loader, Upload, X } from 'lucide-react'
 import { parseXmlMeasurements } from '../lib/parseXmlMeasurements'
+import ModalSheetBack from './ModalSheetBack'
 
 function buildPreviewRows(parsed, existing) {
   const { address, pitch, lineLengths, valleyPresent } = parsed
@@ -31,7 +32,7 @@ function buildPreviewRows(parsed, existing) {
   return rows
 }
 
-export default function XmlImportModal({ existing, onApply, onClose }) {
+export default function XmlImportModal({ existing, onApply, onBack, onClose }) {
   const fileInputRef = useRef(null)
   const [parsed, setParsed] = useState(null)
   const [fileName, setFileName] = useState('')
@@ -100,7 +101,10 @@ export default function XmlImportModal({ existing, onApply, onClose }) {
       <div className="modal-backdrop" onClick={onClose} />
       <div className="modal-sheet import-modal" role="dialog" aria-modal="true" aria-labelledby="xml-import-title">
         <div className="modal-sheet__header">
-          <h2 id="xml-import-title" className="modal-sheet__title">Import Measurements</h2>
+          <div className="modal-sheet__header-main">
+            {onBack && <ModalSheetBack onClick={onBack} />}
+            <h2 id="xml-import-title" className="modal-sheet__title">Import Measurements</h2>
+          </div>
           <button className="modal-sheet__close" type="button" onClick={onClose} aria-label="Close">
             <X size={20} />
           </button>

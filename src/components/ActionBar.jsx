@@ -6,6 +6,7 @@ import OpenInspectionModal from './OpenInspectionModal'
 import AccessAdminModal from './AccessAdminModal'
 import ImportChooserModal from './ImportChooserModal'
 import ExportChooserModal from './ExportChooserModal'
+import FileMenuModal from './FileMenuModal'
 import ImageImportModal from './ImageImportModal'
 import XmlImportModal from './XmlImportModal'
 import { usePermissions } from '../context/PermissionsContext'
@@ -26,6 +27,7 @@ import {
   FileInput,
   Shield,
   MoveHorizontal,
+  Folder,
 } from 'lucide-react'
 
 const TOTAL_TABS = 6
@@ -129,6 +131,8 @@ export default function ActionBar() {
   const [showImportXml, setShowImportXml] = useState(false)
   const [showImportImages, setShowImportImages] = useState(false)
   const [showExportChooser, setShowExportChooser] = useState(false)
+  const [showFileMenu, setShowFileMenu] = useState(false)
+  const [returnToFileMenu, setReturnToFileMenu] = useState(false)
   const [savingPhotos, setSavingPhotos] = useState(false)
   const [exportPreview, setExportPreview] = useState(null)
   const [toolbarScale, setToolbarScale] = useState(readToolbarScale)
@@ -276,6 +280,24 @@ export default function ActionBar() {
     setShowImportChooser(true)
   }
 
+  function closeImportFlow() {
+    setShowImportChooser(false)
+    setShowImportXml(false)
+    setShowImportImages(false)
+    setReturnToFileMenu(false)
+  }
+
+  function backToFileMenu() {
+    setShowOpen(false)
+    setShowImportChooser(false)
+    setShowImportXml(false)
+    setShowImportImages(false)
+    setShowExportChooser(false)
+    setExportPreview(null)
+    setReturnToFileMenu(false)
+    setShowFileMenu(true)
+  }
+
   function handleChooseMeasurements() {
     setShowImportChooser(false)
     setShowImportXml(true)
@@ -288,7 +310,7 @@ export default function ActionBar() {
 
   function handleChooseJson(inspectionData) {
     if (!window.confirm('Import this JSON? It will replace the current inspection.')) return
-    setShowImportChooser(false)
+    closeImportFlow()
     loadInspection(inspectionData, { driveFolderId: null })
     goToSection(0)
     window.scrollTo(0, 0)
@@ -316,6 +338,7 @@ export default function ActionBar() {
   function handleLoad(inspectionData, folderId) {
     loadInspection(inspectionData, { driveFolderId: folderId || null })
     setShowOpen(false)
+    setReturnToFileMenu(false)
     window.scrollTo(0, 0)
   }
 
@@ -325,6 +348,12 @@ export default function ActionBar() {
 
   function handleExport() {
     setShowExportChooser(true)
+  }
+
+  function closeExportFlow() {
+    setShowExportChooser(false)
+    setExportPreview(null)
+    setReturnToFileMenu(false)
   }
 
   function handleChooseExportPreview() {
@@ -347,6 +376,7 @@ export default function ActionBar() {
       }
       if (result === 'aborted') return
       setShowExportChooser(false)
+      setReturnToFileMenu(false)
     } catch (err) {
       console.error('Save photos failed:', err)
       window.alert('Could not save photos. Please try again.')
@@ -392,7 +422,17 @@ export default function ActionBar() {
             <span className="app-button__label">Next</span>
           </button>
           <button
-            className="app-button app-button--save"
+            className="app-button app-button--open action-bar__btn--mobile-only"
+            type="button"
+            aria-label="File menu"
+            title="File menu"
+            onClick={() => setShowFileMenu(true)}
+          >
+            <Folder className="app-button__icon" aria-hidden="true" />
+            <span className="app-button__label">File</span>
+          </button>
+          <button
+            className="app-button app-button--save action-bar__btn--desktop-only"
             type="button"
             aria-label="Save to Google Drive"
             title="Save to Google Drive"
@@ -403,7 +443,7 @@ export default function ActionBar() {
             <span className="app-button__label">Save</span>
           </button>
           <button
-            className="app-button app-button--open"
+            className="app-button app-button--open action-bar__btn--desktop-only"
             type="button"
             aria-label="Open inspection"
             title="Open inspection"
@@ -413,7 +453,7 @@ export default function ActionBar() {
             <span className="app-button__label">Open</span>
           </button>
           <button
-            className="app-button app-button--open"
+            className="app-button app-button--open action-bar__btn--desktop-only"
             type="button"
             aria-label="Import measurements or images"
             title="Import measurements or images"
@@ -423,7 +463,7 @@ export default function ActionBar() {
             <span className="app-button__label">Import</span>
           </button>
           <button
-            className="app-button app-button--export"
+            className="app-button app-button--export action-bar__btn--desktop-only"
             type="button"
             aria-label="Export preview or save photos"
             title="Export preview or save photos"
@@ -433,7 +473,7 @@ export default function ActionBar() {
             <span className="app-button__label">Export</span>
           </button>
           <button
-            className="app-button app-button--new"
+            className="app-button app-button--new action-bar__btn--desktop-only"
             type="button"
             aria-label="New inspection"
             title="New inspection"
@@ -443,7 +483,7 @@ export default function ActionBar() {
             <span className="app-button__label">New</span>
           </button>
           <button
-            className="app-button app-button--reset"
+            className="app-button app-button--reset action-bar__btn--desktop-only"
             type="button"
             aria-label="Reset"
             title="Reset"
@@ -482,7 +522,45 @@ export default function ActionBar() {
           onChooseMeasurements={handleChooseMeasurements}
           onChooseImages={handleChooseImages}
           onChooseJson={handleChooseJson}
-          onClose={() => setShowImportChooser(false)}
+          onBack={returnToFileMenu ? backToFileMenu : undefined}
+          onClose={closeImportFlow}
+        />
+      )}
+
+      {showFileMenu && (
+        <FileMenuModal
+          driveStatus={driveStatus}
+          onSave={() => {
+            setShowFileMenu(false)
+            handleSaveToDrive()
+          }}
+          onOpen={() => {
+            setShowFileMenu(false)
+            setReturnToFileMenu(true)
+            handleOpenInspection()
+          }}
+          onImport={() => {
+            setShowFileMenu(false)
+            setReturnToFileMenu(true)
+            handleImport()
+          }}
+          onExport={() => {
+            setShowFileMenu(false)
+            setReturnToFileMenu(true)
+            handleExport()
+          }}
+          onNew={() => {
+            setShowFileMenu(false)
+            handleNew()
+          }}
+          onReset={() => {
+            setShowFileMenu(false)
+            handleReset()
+          }}
+          onClose={() => {
+            setShowFileMenu(false)
+            setReturnToFileMenu(false)
+          }}
         />
       )}
 
@@ -495,12 +573,22 @@ export default function ActionBar() {
             valleyIncluded: !data.roofData?.ri5?.excluded,
           }}
           onApply={handleXmlApply}
-          onClose={() => setShowImportXml(false)}
+          onBack={() => {
+            setShowImportXml(false)
+            setShowImportChooser(true)
+          }}
+          onClose={closeImportFlow}
         />
       )}
 
       {showImportImages && (
-        <ImageImportModal onClose={() => setShowImportImages(false)} />
+        <ImageImportModal
+          onBack={() => {
+            setShowImportImages(false)
+            setShowImportChooser(true)
+          }}
+          onClose={closeImportFlow}
+        />
       )}
 
       {showExportChooser && (
@@ -508,8 +596,9 @@ export default function ActionBar() {
           onChoosePreview={handleChooseExportPreview}
           onChooseSavePhotos={handleChooseSavePhotos}
           savingPhotos={savingPhotos}
+          onBack={returnToFileMenu ? backToFileMenu : undefined}
           onClose={() => {
-            if (!savingPhotos) setShowExportChooser(false)
+            if (!savingPhotos) closeExportFlow()
           }}
         />
       )}
@@ -522,7 +611,11 @@ export default function ActionBar() {
             activeTab,
             expandedSections,
           }}
-          onClose={() => setExportPreview(null)}
+          onBack={() => {
+            setExportPreview(null)
+            setShowExportChooser(true)
+          }}
+          onClose={closeExportFlow}
         />
       )}
 
@@ -532,7 +625,11 @@ export default function ActionBar() {
           saveStatus={driveSaveStatus}
           currentFolderId={driveFolderId}
           onLoad={handleLoad}
-          onClose={() => setShowOpen(false)}
+          onBack={returnToFileMenu ? backToFileMenu : undefined}
+          onClose={() => {
+            setShowOpen(false)
+            setReturnToFileMenu(false)
+          }}
         />
       )}
 
@@ -553,6 +650,7 @@ export default function ActionBar() {
             <div className="toolbar-help-modal__list">
               <p><ArrowLeft className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Back:</strong> Go to the previous inspection section.</span></p>
               <p><ArrowRight className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Next:</strong> Go to the next inspection section.</span></p>
+              <p><Folder className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>File (mobile):</strong> Opens Save, Open, Import, Export, New, and Reset.</span></p>
               <p><Save className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Save:</strong> Save the current inspection to Google Drive.</span></p>
               <p><FolderOpen className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Open:</strong> Open a saved inspection from Google Drive.</span></p>
               <p><FileInput className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Import:</strong> Choose measurements (EagleView XML) or bulk-assign photos to form categories.</span></p>

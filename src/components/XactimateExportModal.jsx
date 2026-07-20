@@ -4,12 +4,13 @@ import {
   downloadTextFile,
   downloadXactimatePdf,
 } from '../lib/xactimateExport'
+import ModalSheetBack from './ModalSheetBack'
 
 function slugify(value) {
   return String(value || 'inspection').trim().replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '') || 'inspection'
 }
 
-export default function XactimateExportModal({ exportData, inspectionData, onClose }) {
+export default function XactimateExportModal({ exportData, inspectionData, onBack, onClose }) {
   const { job, lineItems } = exportData
   const base = slugify(job.customer || inspectionData?.jobInfo?.cust)
 
@@ -36,7 +37,10 @@ export default function XactimateExportModal({ exportData, inspectionData, onClo
       <div className="modal-backdrop" onClick={onClose} />
       <div className="modal-sheet xactimate-export-modal" role="dialog" aria-modal="true" aria-labelledby="xactimate-export-title">
         <div className="modal-sheet__header">
-          <h2 id="xactimate-export-title" className="modal-sheet__title">Export Preview</h2>
+          <div className="modal-sheet__header-main">
+            {onBack && <ModalSheetBack onClick={onBack} />}
+            <h2 id="xactimate-export-title" className="modal-sheet__title">Export Preview</h2>
+          </div>
           <button className="modal-sheet__close" type="button" onClick={onClose} aria-label="Close">
             <X size={20} />
           </button>

@@ -6,6 +6,8 @@ export default defineConfig(({ mode }) => ({
   // GitHub Pages needs the repo path in production; local dev is simpler at /.
   base: mode === 'production' ? '/field-inspection-system/' : '/',
   server: {
+    port: 5173,
+    strictPort: true,
     allowedHosts: true,
   },
 }))

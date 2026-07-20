@@ -927,6 +927,21 @@ button:disabled {
   stroke-width: 2.35;
 }
 
+/* Mobile: File menu replaces Save/Open/Import/Export/New/Reset in the toolbar */
+.action-bar .action-bar__btn--desktop-only {
+  display: none !important;
+}
+
+@media (min-width: 760px) {
+  .action-bar .action-bar__btn--mobile-only {
+    display: none !important;
+  }
+
+  .action-bar .action-bar__btn--desktop-only {
+    display: inline-grid !important;
+  }
+}
+
 .app-button__icon {
   width: 18px;
   height: 18px;
@@ -1222,21 +1237,49 @@ button:disabled {
 }
 
 .modal-sheet__header {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   padding: 16px 16px 12px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+  min-height: 52px;
+}
+
+.modal-sheet__header-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.modal-sheet__back:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .modal-sheet__title {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 96px);
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
   font-size: 16px;
   font-weight: 700;
   color: var(--text);
+  pointer-events: none;
 }
 
 .modal-sheet__close {
+  position: relative;
+  z-index: 1;
   background: none;
   border: none;
   cursor: pointer;
@@ -1244,6 +1287,7 @@ button:disabled {
   padding: 4px;
   display: flex;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .modal-sheet__search-row {
@@ -1782,7 +1826,7 @@ button:disabled {
 }
 
 .import-chooser-modal__body {
-  padding: 0 16px 16px;
+  padding: 14px 16px 16px;
 }
 
 .import-chooser-modal__intro {

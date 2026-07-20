@@ -4,6 +4,7 @@ import { listInspectionFolders, loadInspectionFromDrive, TokenExpiredError } fro
 import { useAuth } from '../context/AuthContext'
 import { usePermissions } from '../context/PermissionsContext'
 import { ROLES, isInspectionOwnedByUser } from '../lib/accessConfig'
+import ModalSheetBack from './ModalSheetBack'
 
 const DATE_FILTERS = [
   { label: 'This Week', days: 7 },
@@ -50,7 +51,7 @@ function CurrentBadge() {
   return <span className="modal-inspection-row__badge">Current</span>
 }
 
-export default function OpenInspectionModal({ token, saveStatus, currentFolderId = null, onLoad, onClose }) {
+export default function OpenInspectionModal({ token, saveStatus, currentFolderId = null, onLoad, onBack, onClose }) {
   const { user, setTokenExpired } = useAuth()
   const { viewableOrgs, role } = usePermissions()
   const [folders, setFolders] = useState([])
@@ -177,7 +178,10 @@ export default function OpenInspectionModal({ token, saveStatus, currentFolderId
       <div className="modal-backdrop" onClick={onClose} />
       <div className="modal-sheet" role="dialog" aria-modal="true" aria-label="Open Inspection">
         <div className="modal-sheet__header">
-          <h2 className="modal-sheet__title">Open Inspection</h2>
+          <div className="modal-sheet__header-main">
+            {onBack && <ModalSheetBack onClick={onBack} />}
+            <h2 className="modal-sheet__title">Open Inspection</h2>
+          </div>
           <button className="modal-sheet__close" onClick={onClose} aria-label="Close">
             <X size={20} />
           </button>
