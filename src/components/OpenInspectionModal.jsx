@@ -51,8 +51,8 @@ function CurrentBadge() {
   return <span className="modal-inspection-row__badge">Current</span>
 }
 
-export default function OpenInspectionModal({ token, saveStatus, currentFolderId = null, onLoad, onBack, onClose }) {
-  const { user, setTokenExpired } = useAuth()
+export default function OpenInspectionModal({ saveStatus, currentFolderId = null, onLoad, onBack, onClose }) {
+  const { user, ensureAccessToken, recoverFromTokenExpiry } = useAuth()
   const { viewableOrgs, role } = usePermissions()
   const [folders, setFolders] = useState([])
   const [listStatus, setListStatus] = useState('loading') // loading | ready | error
@@ -68,24 +68,44 @@ export default function OpenInspectionModal({ token, saveStatus, currentFolderId
   const isNewInspection = !currentFolderId
 
   useEffect(() => {
-    listInspectionFolders(token, viewableOrgs)
-      .then(files => {
+    let cancelled = false
+
+    async function loadFolders() {
+      setListStatus('loading')
+      try {
+        let token = await ensureAccessToken()
+        if (!token) {
+          if (!cancelled) onClose()
+          return
+        }
+        let files
+        try {
+          files = await listInspectionFolders(token, viewableOrgs)
+        } catch (err) {
+          if (!(err instanceof TokenExpiredError)) throw err
+          token = await recoverFromTokenExpiry()
+          if (!token) {
+            if (!cancelled) onClose()
+            return
+          }
+          files = await listInspectionFolders(token, viewableOrgs)
+        }
+        if (cancelled) return
         let next = files.map(parseFolder).sort(sortByNewestInspection)
         if (role === ROLES.sales) {
           next = next.filter(folder => isInspectionOwnedByUser(folder, user))
         }
         setFolders(next)
         setListStatus('ready')
-      })
-      .catch(err => {
-        if (err instanceof TokenExpiredError) {
-          onClose()
-          setTokenExpired(true)
-        } else {
-          setListStatus('error')
-        }
-      })
-  }, [token, viewableOrgs, role, user, onClose, setTokenExpired])
+      } catch (err) {
+        console.error('Failed to list inspections:', err)
+        if (!cancelled) setListStatus('error')
+      }
+    }
+
+    loadFolders()
+    return () => { cancelled = true }
+  }, [viewableOrgs, role, user, onClose, ensureAccessToken, recoverFromTokenExpiry])
 
   useEffect(() => {
     if (listStatus === 'ready') searchRef.current?.focus()
@@ -135,16 +155,27 @@ export default function OpenInspectionModal({ token, saveStatus, currentFolderId
     setConfirmOpen(false)
     setLoadingId(folder.id)
     try {
-      const data = await loadInspectionFromDrive(token, folder.id)
+      let token = await ensureAccessToken()
+      if (!token) {
+        onClose()
+        return
+      }
+      let data
+      try {
+        data = await loadInspectionFromDrive(token, folder.id)
+      } catch (err) {
+        if (!(err instanceof TokenExpiredError)) throw err
+        token = await recoverFromTokenExpiry()
+        if (!token) {
+          onClose()
+          return
+        }
+        data = await loadInspectionFromDrive(token, folder.id)
+      }
       onLoad(data, folder.id)
     } catch (err) {
       console.error('Failed to load inspection:', err)
-      if (err instanceof TokenExpiredError) {
-        onClose()
-        setTokenExpired(true)
-      } else {
-        alert('Failed to load inspection. Please try again.')
-      }
+      alert('Failed to load inspection. Please try again.')
     } finally {
       setLoadingId(null)
     }

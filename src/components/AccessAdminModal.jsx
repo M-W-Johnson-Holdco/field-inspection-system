@@ -19,7 +19,7 @@ import { useAuth } from '../context/AuthContext'
 const ROLE_OPTIONS = [ROLES.sales, ROLES.supervisor, ROLES.admin]
 
 export default function AccessAdminModal({ onClose }) {
-  const { user, accessToken, setTokenExpired } = useAuth()
+  const { user, ensureAccessToken, recoverFromTokenExpiry } = useAuth()
   const { permissions, updatePermissions } = usePermissions()
   const [draftUsers, setDraftUsers] = useState(() =>
     withBootstrapAdmins(permissions).users.map(entry => ({
@@ -80,9 +80,9 @@ export default function AccessAdminModal({ onClose }) {
   }
 
   async function handleSave() {
-    if (!accessToken) {
+    const token = await ensureAccessToken()
+    if (!token) {
       setError('Google Drive session expired. Sign in again, then save.')
-      setTokenExpired(true)
       return
     }
 
@@ -116,21 +116,26 @@ export default function AccessAdminModal({ onClose }) {
         }
       }
 
-      await updatePermissions(withBootstrapAdmins({ users }))
+      try {
+        await updatePermissions(withBootstrapAdmins({ users }))
+      } catch (err) {
+        if (!(err instanceof TokenExpiredError)) throw err
+        const recovered = await recoverFromTokenExpiry()
+        if (!recovered) {
+          setError('Google Drive session expired. Sign in again, then save.')
+          return
+        }
+        await updatePermissions(withBootstrapAdmins({ users }))
+      }
       onClose()
     } catch (err) {
       console.error('Failed to save access settings:', err)
-      if (err instanceof TokenExpiredError) {
-        setError('Google Drive session expired. Sign in again, then save.')
-        setTokenExpired(true)
-      } else {
-        const detail = String(err?.message || '').trim()
-        setError(
-          detail
-            ? `Could not save access settings. ${detail}`
-            : 'Could not save access settings. Try again.'
-        )
-      }
+      const detail = String(err?.message || '').trim()
+      setError(
+        detail
+          ? `Could not save access settings. ${detail}`
+          : 'Could not save access settings. Try again.'
+      )
     } finally {
       setSaving(false)
     }
