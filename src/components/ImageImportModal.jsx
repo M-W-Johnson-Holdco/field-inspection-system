@@ -3,6 +3,7 @@ import { Check, ChevronRight, Folder, ImagePlus, Undo2, Upload, X } from 'lucide
 import { useInspection } from '../context/InspectionContext'
 import { buildPhotoTargetTree, findNodeByPath, getLeafPhotos } from '../lib/photoTargets'
 import PhotoLightbox from './PhotoLightbox'
+import ModalSheetBack from './ModalSheetBack'
 
 let stagingId = 0
 function nextStagingId() {
@@ -25,7 +26,7 @@ function revokePreview(item) {
   }
 }
 
-export default function ImageImportModal({ onClose }) {
+export default function ImageImportModal({ onBack, onClose }) {
   const {
     data,
     addRoofPhoto,
@@ -314,7 +315,10 @@ export default function ImageImportModal({ onClose }) {
         aria-labelledby="image-import-title"
       >
         <div className="modal-sheet__header">
-          <h2 id="image-import-title" className="modal-sheet__title">Import Images</h2>
+          <div className="modal-sheet__header-main">
+            {onBack && <ModalSheetBack onClick={onBack} />}
+            <h2 id="image-import-title" className="modal-sheet__title">Import Images</h2>
+          </div>
           <button className="modal-sheet__close" type="button" onClick={onClose} aria-label="Close">
             <X size={20} />
           </button>

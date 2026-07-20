@@ -1,4 +1,9 @@
 import { normalizeEmail, orgForEmail } from './accessConfig'
+import {
+  collectInspectionPhotos,
+  sanitizePhotoName,
+  stripPhotosFromInspection,
+} from './inspectionPhotos'
 
 const DRIVE = 'https://www.googleapis.com/drive/v3'
 const UPLOAD = 'https://www.googleapis.com/upload/drive/v3'
@@ -127,10 +132,12 @@ function dataUrlToBlob(dataUrl) {
 
 export function folderName(jobInfo, inspectorName) {
   const date = jobInfo?.claimFileDate || jobInfo?.stormDate || jobInfo?.date || new Date().toISOString().slice(0, 10)
-  const addr = jobInfo?.addr || jobInfo?.addrParts?.address1 || 'Unknown Address'
-  const cust = jobInfo?.cust || 'Unknown'
-  const insp = inspectorName || jobInfo?.insp || 'Unknown Inspector'
-  return `${date} - ${addr} - ${cust} - ${insp}`.replace(/[/\\:*?"<>|]/g, '-').slice(0, 120)
+  const addr = sanitizePhotoName(jobInfo?.addr || jobInfo?.addrParts?.address1 || 'Unknown Address')
+  const cust = sanitizePhotoName(jobInfo?.cust || 'Unknown')
+  const insp = sanitizePhotoName(inspectorName || jobInfo?.insp || 'Unknown Inspector')
+  return sanitizePhotoName(`${date} - ${addr} - ${cust} - ${insp}`)
+    .replace(/[/\\:*?"<>|]/g, '-')
+    .slice(0, 120)
 }
 
 export async function listInspectionFolders(token, orgKeys) {
@@ -168,69 +175,6 @@ export async function loadInspectionFromDrive(token, folderId) {
   return res.json()
 }
 
-// Maps roof item IDs → [section folder name, item folder name]
-const ROOF_ITEM_PATH = {
-  ri0:  ['1a-general_roof',              'shingle_style'],
-  ri1:  ['1a-general_roof',              'edge_flashings'],
-  ri2:  ['1a-general_roof',              'underlayment'],
-  ri3:  ['1a-general_roof',              'ridge_cap'],
-  ri4:  ['1a-general_roof',              'starter_shingle'],
-  ri5:  ['1a-general_roof',              'valley'],
-  ri6:  ['1b-ventilation',               'ridge_vent'],
-  ri7:  ['1b-ventilation',               'box_vents'],
-  ri8:  ['1b-ventilation',               'turbines'],
-  ri9:  ['1b-ventilation',               'power_vents'],
-  ri10: ['1b-ventilation',               'solar_vents'],
-  ri11: ['1c-pipe_jacks_and_exhaust',    'pipe_jacks'],
-  ri12: ['1c-pipe_jacks_and_exhaust',    'exhaust_stacks'],
-  ri13: ['1d-kickouts',                  'kickouts'],
-  ri14: ['1e-skylights_and_flashings',   'skylights'],
-  ri15: ['1e-skylights_and_flashings',   'rain_diverter'],
-  ri16: ['1e-skylights_and_flashings',   'power_meter_mast'],
-  ri17: ['1e-skylights_and_flashings',   'chimney_flashing'],
-  ri18: ['1e-skylights_and_flashings',   'step_flashing'],
-  ri19: ['1e-skylights_and_flashings',   'counter_flashing'],
-  ri20: ['1e-skylights_and_flashings',   'l_flashing'],
-  ri21: ['1e-skylights_and_flashings',   'cornice_gables'],
-  ri22: ['1f-low_slope_and_other',       'low_slope'],
-  ri23: ['1f-low_slope_and_other',       'other_structures'],
-  ri24: ['1a-general_roof',              'solar_panels'],
-}
-
-// Maps elevation item IDs → folder name
-const ELEV_ITEM_FOLDER = {
-  ev0:  'siding',
-  ev1:  'fascia',
-  ev2:  'soffit',
-  ev3:  'gutters',
-  ev4:  'downspouts',
-  ev5:  'window_screens',
-  ev6:  'shutters',
-  ev7:  'entry_doors',
-  ev8:  'garage_doors',
-  ev9:  'ac_condenser',
-  ev10: 'other_notes',
-}
-
-// Maps exterior item IDs → [section folder, item folder]
-const EXTERIOR_ITEM_PATH = {
-  ei_fence:   ['4a-fencing_and_gates',           'fence'],
-  ei_gates:   ['4a-fencing_and_gates',           'gates'],
-  ei_pool:    ['4b-pool_and_outdoor_equipment',  'pool'],
-  ei_outdoor: ['4c-outdoor_structures',          'outdoor_items'],
-  ei_site:    ['4d-site_access',                 'site_access'],
-}
-
-function slugify(str) {
-  return String(str || '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')
-}
-
-/** Drive file name from leaf folder + 1-based index, e.g. shingle_style → shingle-style1.jpg */
-function photoFileName(leafFolder, index) {
-  const prefix = String(leafFolder || 'photo').replace(/_/g, '-')
-  return `${prefix}${index + 1}.jpg`
-}
-
 async function listChildren(token, parentId) {
   const q = `${JSON.stringify(parentId)} in parents and trashed=false`
   const r = await gfetch(
@@ -264,71 +208,14 @@ export async function saveInspectionToDrive(token, inspectionData, inspectorName
     }),
   })
 
-  // Strip photos from JSON payload; collect { path: string[], name: string, url: string }
-  const photos = []
+  const photos = collectInspectionPhotos(inspectionData)
   const clean = JSON.parse(JSON.stringify(inspectionData))
   clean.meta = {
     ...(clean.meta || {}),
     ownerEmail,
     savedAt: new Date().toISOString(),
   }
-
-  // ── Roof ──────────────────────────────────────────────────────────
-  for (const [itemId, item] of Object.entries(clean.roofData || {})) {
-    const pathParts = ROOF_ITEM_PATH[itemId]
-    if (!pathParts) continue
-    const [section, itemFolder] = pathParts
-
-    // Item-level photos (no sub-items)
-    ;(item.photos || []).forEach((url, i) => {
-      photos.push({ path: ['photos', '1-roof', section, itemFolder], name: photoFileName(itemFolder, i), url })
-    })
-    item.photos = []
-
-    // Sub-item photos (pipe jacks, skylights, etc.)
-    ;(item.subItems || []).forEach((sub, subIndex) => {
-      ;(sub.photos || []).forEach((url, i) => {
-        const subFolder = `${subIndex + 1}-${slugify(itemFolder.replace(/s$/, ''))}`
-        photos.push({ path: ['photos', '1-roof', section, itemFolder, subFolder], name: photoFileName(subFolder, i), url })
-      })
-      sub.photos = []
-    })
-  }
-
-  // ── Elevations ────────────────────────────────────────────────────
-  const DIRECTIONS = ['Front', 'Right', 'Rear', 'Left']
-  for (const [cellKey, cell] of Object.entries(clean.elevData || {})) {
-    const parts = cellKey.split('_')
-    const itemId = parts[0]
-    const dir = parts.slice(1).join('_')
-    const dirSlug = slugify(dir)
-    const itemFolder = ELEV_ITEM_FOLDER[itemId] || slugify(itemId)
-    ;(cell.photos || []).forEach((url, i) => {
-      photos.push({ path: ['photos', '2-elevations', dirSlug, itemFolder], name: photoFileName(itemFolder, i), url })
-    })
-    cell.photos = []
-  }
-
-  // ── Exterior ──────────────────────────────────────────────────────
-  for (const [itemId, item] of Object.entries(clean.exteriorData || {})) {
-    const pathParts = EXTERIOR_ITEM_PATH[itemId]
-    if (!pathParts) continue
-    const [section, itemFolder] = pathParts
-    ;(item.photos || []).forEach((url, i) => {
-      photos.push({ path: ['photos', '3-exterior', section, itemFolder], name: photoFileName(itemFolder, i), url })
-    })
-    if (item.photos) item.photos = []
-  }
-
-  // ── Interior ──────────────────────────────────────────────────────
-  ;(clean.interiorData?.rooms || []).forEach(room => {
-    const displayName = room.customName || room.name || room.id
-    const roomSlug = slugify(displayName)
-    ;(room.photos || []).forEach((url, i) => {
-      photos.push({ path: ['photos', '4-interior', roomSlug], name: photoFileName(roomSlug, i), url })
-    })
-    room.photos = []
-  })
+  stripPhotosFromInspection(clean)
 
   // ── Upload inspection.json ─────────────────────────────────────────
   const jsonBlob = new Blob([JSON.stringify(clean, null, 2)], { type: 'application/json' })
@@ -380,5 +267,9 @@ export async function saveInspectionToDrive(token, inspectionData, inspectorName
     }
   }
 
-  return { folderName: folderName(inspectionData.jobInfo), photoCount: photos.length }
+  return {
+    folderId: jobFolderId,
+    folderName: folderName(inspectionData.jobInfo),
+    photoCount: photos.length,
+  }
 }

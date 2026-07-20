@@ -1181,22 +1181,36 @@ export function InspectionProvider({ children }) {
   const [expandedSections, setExpandedSectionsState] = useState({})
   const [saveStatus, setSaveStatus] = useState('saved')
   const [driveSaveStatus, setDriveSaveStatus] = useState('unsaved')
+  // Drive folder currently open in the app (null = new / not yet saved to Drive).
+  const [driveFolderId, setDriveFolderIdState] = useState(null)
   // Lifted out of AIParseSection so the transcript, status, and flags survive switching tabs away and back.
   const [aiParseState, setAiParseState] = useState({ transcript: '', status: 'idle', statusMsg: '', flags: [] })
   const saveTimer = useRef(null)
   const dataRef = useRef(data)
   const activeTabRef = useRef(activeTab)
   const expandedRef = useRef(expandedSections)
+  const driveFolderIdRef = useRef(driveFolderId)
 
   dataRef.current = data
   activeTabRef.current = activeTab
   expandedRef.current = expandedSections
+  driveFolderIdRef.current = driveFolderId
+
+  function setDriveFolderId(nextId, { persist = true } = {}) {
+    const id = nextId || null
+    driveFolderIdRef.current = id
+    setDriveFolderIdState(id)
+    if (persist) {
+      persistSnapshot(dataRef.current, { driveFolderId: id }).catch(() => {})
+    }
+  }
 
   function persistSnapshot(inspectionData, overrides = {}) {
     return idbSave('current', {
       ...inspectionData,
       activeTab: activeTabRef.current,
       expandedSections: expandedRef.current,
+      driveFolderId: driveFolderIdRef.current,
       ...overrides,
     })
   }
@@ -1206,9 +1220,10 @@ export function InspectionProvider({ children }) {
       if (saved) {
         const jobInfo = normalizeJobInfo({ ...INITIAL_STATE.jobInfo, ...(saved.jobInfo || {}) })
         if (!jobInfo.residenceType) jobInfo.residenceType = 'Primary'
+        const { driveFolderId: savedDriveFolderId, activeTab: _at, expandedSections: _es, ...rest } = saved
         setData({
           ...INITIAL_STATE,
-          ...saved,
+          ...rest,
           jobInfo,
           roofData: normalizeRoofData({ ...INITIAL_ROOF_DATA, ...(saved.roofData || {}) }),
           elevData: normalizeElevData({ ...INITIAL_ELEV_DATA, ...(saved.elevData || {}) }),
@@ -1219,6 +1234,9 @@ export function InspectionProvider({ children }) {
         if (Number.isInteger(saved.activeTab)) setActiveTabState(saved.activeTab)
         if (saved.expandedSections && typeof saved.expandedSections === 'object') {
           setExpandedSectionsState(saved.expandedSections)
+        }
+        if (typeof savedDriveFolderId === 'string' && savedDriveFolderId) {
+          setDriveFolderId(savedDriveFolderId, { persist: false })
         }
       }
     }).catch(() => {})
@@ -1804,12 +1822,13 @@ export function InspectionProvider({ children }) {
       .catch(() => setSaveStatus('unsaved'))
   }
 
-  function loadInspection(saved) {
+  function loadInspection(saved, options = {}) {
+    const { driveFolderId: _omitDriveFolderId, activeTab: _omitTab, expandedSections: savedExpanded, ...rest } = saved
     const jobInfo = normalizeJobInfo({ ...INITIAL_STATE.jobInfo, ...(saved.jobInfo || {}) })
     if (!jobInfo.residenceType) jobInfo.residenceType = 'Primary'
     const next = {
       ...INITIAL_STATE,
-      ...saved,
+      ...rest,
       jobInfo,
       roofData: normalizeRoofData({ ...INITIAL_ROOF_DATA, ...(saved.roofData || {}) }),
       elevData: normalizeElevData({ ...INITIAL_ELEV_DATA, ...(saved.elevData || {}) }),
@@ -1817,15 +1836,17 @@ export function InspectionProvider({ children }) {
       exteriorData: normalizeExteriorData({ ...INITIAL_EXTERIOR_DATA, ...(saved.exteriorData || {}) }),
       notesData: { ...INITIAL_NOTES_DATA, ...(saved.notesData || {}) },
     }
+    const nextDriveFolderId = options.driveFolderId ?? null
+    setDriveFolderId(nextDriveFolderId, { persist: false })
     setData(next)
     setActiveTabState(0)
-    if (saved.expandedSections && typeof saved.expandedSections === 'object') {
-      setExpandedSectionsState(saved.expandedSections)
-      expandedRef.current = saved.expandedSections
+    if (savedExpanded && typeof savedExpanded === 'object') {
+      setExpandedSectionsState(savedExpanded)
+      expandedRef.current = savedExpanded
     }
-    persistSnapshot(next, { activeTab: 0 })
+    persistSnapshot(next, { activeTab: 0, driveFolderId: nextDriveFolderId })
     setSaveStatus('saved')
-    setDriveSaveStatus('saved')
+    setDriveSaveStatus(nextDriveFolderId ? 'saved' : 'unsaved')
     setAiParseState({ transcript: '', status: 'idle', statusMsg: '', flags: [] })
   }
 
@@ -1835,7 +1856,8 @@ export function InspectionProvider({ children }) {
     setActiveTabState(0)
     setExpandedSectionsState({})
     expandedRef.current = {}
-    persistSnapshot(INITIAL_STATE, { activeTab: 0, expandedSections: {} })
+    setDriveFolderId(null, { persist: false })
+    persistSnapshot(INITIAL_STATE, { activeTab: 0, expandedSections: {}, driveFolderId: null })
     setSaveStatus('saved')
     setDriveSaveStatus('unsaved')
     setAiParseState({ transcript: '', status: 'idle', statusMsg: '', flags: [] })
@@ -1846,7 +1868,8 @@ export function InspectionProvider({ children }) {
     setActiveTabState(0)
     setExpandedSectionsState({})
     expandedRef.current = {}
-    persistSnapshot(INITIAL_STATE, { activeTab: 0, expandedSections: {} })
+    setDriveFolderId(null, { persist: false })
+    persistSnapshot(INITIAL_STATE, { activeTab: 0, expandedSections: {}, driveFolderId: null })
     setSaveStatus('saved')
     setDriveSaveStatus('unsaved')
     setAiParseState({ transcript: '', status: 'idle', statusMsg: '', flags: [] })
@@ -1858,7 +1881,7 @@ export function InspectionProvider({ children }) {
     <InspectionContext.Provider value={{
       data, activeTab, setActiveTab,
       expandedSections, setSectionExpanded,
-      saveStatus, driveSaveStatus, setDriveSaveStatus, completion, updateJobInfo, manualSave, resetAll, startNewInspection, loadInspection, applyXmlImport,
+      saveStatus, driveSaveStatus, setDriveSaveStatus, driveFolderId, setDriveFolderId, completion, updateJobInfo, manualSave, resetAll, startNewInspection, loadInspection, applyXmlImport,
       aiParseState, setAiParseState,
       toggleRoofExclude, updateRoofField,
       addRoofSubItem, removeRoofSubItem, updateRoofSubField, importRoofPipeJacks, importRoofExhaustStacks, importRoofChimneys, importRoofFlashingItems, importRoofLowSlopeItems,
