@@ -5,10 +5,12 @@ import { saveInspectionToDrive, TokenExpiredError } from '../lib/driveService'
 import OpenInspectionModal from './OpenInspectionModal'
 import AccessAdminModal from './AccessAdminModal'
 import ImportChooserModal from './ImportChooserModal'
+import ExportChooserModal from './ExportChooserModal'
 import ImageImportModal from './ImageImportModal'
 import XmlImportModal from './XmlImportModal'
 import { usePermissions } from '../context/PermissionsContext'
 import { buildXactimateExport } from '../lib/xactimateExport'
+import { savePhotosLocal } from '../lib/savePhotosLocal'
 import XactimateExportModal from './XactimateExportModal'
 import {
   ArrowLeft,
@@ -126,6 +128,8 @@ export default function ActionBar() {
   const [showImportChooser, setShowImportChooser] = useState(false)
   const [showImportXml, setShowImportXml] = useState(false)
   const [showImportImages, setShowImportImages] = useState(false)
+  const [showExportChooser, setShowExportChooser] = useState(false)
+  const [savingPhotos, setSavingPhotos] = useState(false)
   const [exportPreview, setExportPreview] = useState(null)
   const [toolbarScale, setToolbarScale] = useState(readToolbarScale)
   const actionBarRef = useRef(null)
@@ -320,11 +324,34 @@ export default function ActionBar() {
   }
 
   function handleExport() {
+    setShowExportChooser(true)
+  }
+
+  function handleChooseExportPreview() {
+    setShowExportChooser(false)
     try {
       setExportPreview(buildXactimateExport(data))
     } catch (err) {
       console.error('Export failed:', err)
       window.alert('Export failed. See console for details.')
+    }
+  }
+
+  async function handleChooseSavePhotos() {
+    setSavingPhotos(true)
+    try {
+      const result = await savePhotosLocal(data, user?.fullName)
+      if (result === 'empty') {
+        window.alert('This inspection has no photos to save.')
+        return
+      }
+      if (result === 'aborted') return
+      setShowExportChooser(false)
+    } catch (err) {
+      console.error('Save photos failed:', err)
+      window.alert('Could not save photos. Please try again.')
+    } finally {
+      setSavingPhotos(false)
     }
   }
 
@@ -398,8 +425,8 @@ export default function ActionBar() {
           <button
             className="app-button app-button--export"
             type="button"
-            aria-label="Export Xactimate line items"
-            title="Export Xactimate line items (CSV + JSON)"
+            aria-label="Export preview or save photos"
+            title="Export preview or save photos"
             onClick={handleExport}
           >
             <ExternalLink className="app-button__icon" aria-hidden="true" />
@@ -476,6 +503,17 @@ export default function ActionBar() {
         <ImageImportModal onClose={() => setShowImportImages(false)} />
       )}
 
+      {showExportChooser && (
+        <ExportChooserModal
+          onChoosePreview={handleChooseExportPreview}
+          onChooseSavePhotos={handleChooseSavePhotos}
+          savingPhotos={savingPhotos}
+          onClose={() => {
+            if (!savingPhotos) setShowExportChooser(false)
+          }}
+        />
+      )}
+
       {exportPreview && (
         <XactimateExportModal
           exportData={exportPreview}
@@ -518,7 +556,7 @@ export default function ActionBar() {
               <p><Save className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Save:</strong> Save the current inspection to Google Drive.</span></p>
               <p><FolderOpen className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Open:</strong> Open a saved inspection from Google Drive.</span></p>
               <p><FileInput className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Import:</strong> Choose measurements (EagleView XML) or bulk-assign photos to form categories.</span></p>
-              <p><ExternalLink className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Export:</strong> Preview line items and download a PDF/CSV for estimating, or download the full inspection JSON (same data stored locally).</span></p>
+              <p><ExternalLink className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Export:</strong> Choose Export Preview (PDF/CSV/JSON) or Save Photos (share to Photos on phone, or download a ZIP on computer).</span></p>
               <p><FilePlus className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>New:</strong> Start a new inspection form.</span></p>
               <p><RotateCcw className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Reset:</strong> Clear all current inspection data.</span></p>
               <p><CircleHelp className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Help:</strong> Show this toolbar guide.</span></p>
