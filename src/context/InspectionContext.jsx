@@ -22,7 +22,7 @@ const INITIAL_ELEV_DATA = Object.fromEntries(
 const INITIAL_INTERIOR_DATA = { rooms: [] }
 
 const INITIAL_EXTERIOR_DATA = Object.fromEntries(
-  EXTERIOR_ITEMS.map(item => [item.id, { excluded: false, fields: {}, photos: [] }]),
+  EXTERIOR_ITEMS.map(item => [item.id, { excluded: false, fields: {}, photos: [], measurePhotos: {} }]),
 )
 
 const INITIAL_NOTES_DATA = {
@@ -1772,6 +1772,32 @@ export function InspectionProvider({ children }) {
     })
   }
 
+  function setExteriorMeasurePhoto(itemId, key, dataUrl) {
+    setData(prev => {
+      const item = prev.exteriorData[itemId]
+      const next = {
+        ...prev,
+        exteriorData: {
+          ...prev.exteriorData,
+          [itemId]: { ...item, measurePhotos: { ...item.measurePhotos, [key]: dataUrl } },
+        },
+      }
+      scheduleSave(next)
+      return next
+    })
+  }
+
+  function removeExteriorMeasurePhoto(itemId, key) {
+    setData(prev => {
+      const item = prev.exteriorData[itemId]
+      const rest = { ...item.measurePhotos }
+      delete rest[key]
+      const next = { ...prev, exteriorData: { ...prev.exteriorData, [itemId]: { ...item, measurePhotos: rest } } }
+      scheduleSave(next)
+      return next
+    })
+  }
+
   // ─────────────────────────────────────────────────────────────────
 
   function applyXmlImport(parsed) {
@@ -1893,6 +1919,7 @@ export function InspectionProvider({ children }) {
       addInteriorPhoto, removeInteriorPhoto,
       toggleExteriorExclude, updateExteriorField,
       addExteriorPhoto, removeExteriorPhoto,
+      setExteriorMeasurePhoto, removeExteriorMeasurePhoto,
       updateNote,
     }}>
       {children}

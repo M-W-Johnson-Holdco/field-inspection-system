@@ -2,6 +2,7 @@ import { useRef } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { useInspection } from '../../context/InspectionContext'
 import PhotoZone from '../PhotoZone'
+import FenceMeasureTool from '../FenceMeasureTool'
 import FieldsGrid from '../FieldsGrid'
 import DamageDescriptionInput from '../DamageDescriptionInput'
 import MeasurementInput, { isLinearMeasurementField } from '../MeasurementInput'
@@ -10,10 +11,21 @@ import { fieldGroupProps } from '../../utils/fieldLayout'
 import { fieldSelectClass, withSelectPlaceholderClass, ynOptionsForField, optionsForField } from '../../utils/fieldGrid'
 import useExpandedSection from '../../hooks/useExpandedSection'
 
+// Maps measured field labels → the fields-object key tracking whether AI filled them
+const AI_FLAG_FIELDS = {
+  'Height (FT)': '_heightAiFilled',
+  'Post Spacing (LF)': '_postSpacingAiFilled',
+}
+
 // ── Field Renderer ─────────────────────────────────────────────────
-function FieldRenderer({ field, value, onChange }) {
+function FieldRenderer({ field, value, onChange, aiFilled }) {
   const { t, l, o, p } = field
   const lbl = <label className="form-label">{l}</label>
+  const extraClass = aiFilled ? 'field-group--ai-filled' : ''
+
+  if (t === 'num' && isLinearMeasurementField(field)) {
+    return <MeasurementInput field={field} value={value} onChange={onChange} aiFilled={aiFilled} />
+  }
 
   if (t === 'yn' || t === 'radio') {
     const opts = t === 'yn' ? ynOptionsForField(field) : optionsForField(field)
@@ -80,10 +92,6 @@ function FieldRenderer({ field, value, onChange }) {
   }
 
   if (t === 'num') {
-    if (isLinearMeasurementField(field)) {
-      return <MeasurementInput field={field} value={value} onChange={onChange} />
-    }
-
     const currentValue = value === '' || value == null ? 0 : Number(value)
     const adjustValue = amount => {
       const base = Number.isFinite(currentValue) ? currentValue : 0
@@ -91,7 +99,7 @@ function FieldRenderer({ field, value, onChange }) {
     }
     const inputCh = Math.max(String(value || p || '').length, 3)
     return (
-      <div {...fieldGroupProps(field)}>
+      <div {...fieldGroupProps(field, extraClass)}>
         {lbl}
         <div className="number-stepper">
           <button type="button" className="number-stepper__btn" onClick={() => adjustValue(-1)} aria-label={`Decrease ${l}`}>−</button>
@@ -144,6 +152,12 @@ function ExteriorItem({ itemDef, trigPhoto }) {
     else if (nextStatus !== 'Yes') updateExteriorField(id, '_damage', '')
   }
 
+  function handleFieldChange(label, val) {
+    updateExteriorField(id, label, val)
+    const flagKey = AI_FLAG_FIELDS[label]
+    if (flagKey && item.fields[flagKey]) updateExteriorField(id, flagKey, false)
+  }
+
   return (
     <div className={`ri-item${excluded ? ' ri-item--excluded' : ''}`}>
       <div className="ri-item__top">
@@ -167,7 +181,8 @@ function ExteriorItem({ itemDef, trigPhoto }) {
                 key={f.l}
                 field={f}
                 value={item.fields[f.l]}
-                onChange={val => updateExteriorField(id, f.l, val)}
+                onChange={val => handleFieldChange(f.l, val)}
+                aiFilled={!!item.fields[AI_FLAG_FIELDS[f.l]]}
               />
             )}
           >
@@ -198,6 +213,7 @@ function ExteriorItem({ itemDef, trigPhoto }) {
                 )}
               </div>
             )}
+            {itemDef.cvMeasure && <FenceMeasureTool itemId={id} />}
             {hasP && (
               <PhotoZone
                 entityId={id}

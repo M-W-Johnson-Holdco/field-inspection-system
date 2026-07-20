@@ -8,6 +8,7 @@ export const EXTERIOR_SUBSECTIONS = {
 export const EXTERIOR_ITEMS = [
   {
     id: 'ei_fence', lbl: 'Fence', flags: ['P', 'M', 'D'],
+    cvMeasure: true,
     fields: [
       { t: 'multiRadio', l: 'Material', o: ['Aluminum', 'Cedar', 'Other Wood', 'Pine', 'Rod Iron', 'Vinyl'] },
       { t: 'radio', l: 'Style', o: ['Privacy', 'Board on Board', 'Picket'] },
