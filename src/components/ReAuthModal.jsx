@@ -5,8 +5,8 @@ export default function ReAuthModal() {
   if (!tokenExpired) return null
 
   function handleSignIn() {
-    reLogin()
     setTokenExpired(false)
+    reLogin()
   }
 
   return (

@@ -12,7 +12,7 @@ import { loadPermissions, savePermissions } from '../lib/permissionsService'
 const PermissionsContext = createContext(null)
 
 export function PermissionsProvider({ children }) {
-  const { accessToken, user, logout } = useAuth()
+  const { accessToken, user, logout, ensureAccessToken } = useAuth()
   const [permissions, setPermissions] = useState(DEFAULT_PERMISSIONS)
   const [status, setStatus] = useState('idle') // idle | loading | ready | error
 
@@ -47,11 +47,12 @@ export function PermissionsProvider({ children }) {
   }, [user?.email, accessToken, status, permissions, logout])
 
   const updatePermissions = useCallback(async (nextPermissions) => {
-    if (!accessToken) throw new Error('Not signed in')
-    const saved = await savePermissions(accessToken, nextPermissions)
+    const token = await ensureAccessToken()
+    if (!token) throw new Error('Not signed in')
+    const saved = await savePermissions(token, nextPermissions)
     setPermissions(saved)
     return saved
-  }, [accessToken])
+  }, [ensureAccessToken])
 
   const role = roleForEmail(user?.email, permissions)
 

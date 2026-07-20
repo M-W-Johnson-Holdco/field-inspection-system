@@ -120,7 +120,7 @@ function getJobInfoSaveError(jobInfo) {
 
 export default function ActionBar() {
   const { activeTab, setActiveTab, resetAll, startNewInspection, data, driveSaveStatus, setDriveSaveStatus, driveFolderId, setDriveFolderId, loadInspection, applyXmlImport, expandedSections } = useInspection()
-  const { accessToken, user, setTokenExpired } = useAuth()
+  const { user, ensureAccessToken, recoverFromTokenExpiry } = useAuth()
   const { isAccessAdmin } = usePermissions()
   const canManageAccess = isAccessAdmin
   const [driveStatus, setDriveStatus] = useState('idle') // idle | saving | done | error
@@ -249,14 +249,13 @@ export default function ActionBar() {
       return
     }
 
-    if (!accessToken) {
-      setTokenExpired(true)
-      return
-    }
+    const token = await ensureAccessToken()
+    if (!token) return
+
     setDriveStatus('saving')
     setDriveSaveStatus('saving')
     try {
-      const { folderId, folderName, photoCount } = await saveInspectionToDrive(accessToken, data, user?.fullName, user?.email)
+      const { folderId, folderName, photoCount } = await saveInspectionToDrive(token, data, user?.fullName, user?.email)
       setDriveFolderId(folderId)
       setDriveStatus('done')
       setDriveSaveStatus('saved')
@@ -265,9 +264,22 @@ export default function ActionBar() {
     } catch (err) {
       console.error('Drive save failed:', err)
       if (err instanceof TokenExpiredError) {
+        const recovered = await recoverFromTokenExpiry()
+        if (recovered) {
+          try {
+            const { folderId, folderName, photoCount } = await saveInspectionToDrive(recovered, data, user?.fullName, user?.email)
+            setDriveFolderId(folderId)
+            setDriveStatus('done')
+            setDriveSaveStatus('saved')
+            setTimeout(() => setDriveStatus('idle'), 3000)
+            console.info(`Saved to Drive: ${folderName} (${photoCount} photos)`)
+            return
+          } catch (retryErr) {
+            console.error('Drive save retry failed:', retryErr)
+          }
+        }
         setDriveStatus('idle')
         setDriveSaveStatus('unsaved')
-        setTokenExpired(true)
       } else {
         setDriveStatus('error')
         setDriveSaveStatus('error')
@@ -327,11 +339,9 @@ export default function ActionBar() {
     window.scrollTo(0, 0)
   }
 
-  function handleOpenInspection() {
-    if (!accessToken) {
-      setTokenExpired(true)
-      return
-    }
+  async function handleOpenInspection() {
+    const token = await ensureAccessToken()
+    if (!token) return
     setShowOpen(true)
   }
 
@@ -619,9 +629,8 @@ export default function ActionBar() {
         />
       )}
 
-      {showOpen && accessToken && (
+      {showOpen && (
         <OpenInspectionModal
-          token={accessToken}
           saveStatus={driveSaveStatus}
           currentFolderId={driveFolderId}
           onLoad={handleLoad}
