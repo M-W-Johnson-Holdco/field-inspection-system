@@ -249,6 +249,7 @@ function CheckItem({ itemDef, trigPhoto }) {
   const {
     updateRoofField, toggleRoofExclude,
     addRoofSubItem, removeRoofSubItem, updateRoofSubField,
+    adjustRoofSubItemSizeCount,
     removeRoofPhoto, data,
   } = useInspection()
 
@@ -298,10 +299,74 @@ function CheckItem({ itemDef, trigPhoto }) {
         {subItemSizeCounters.sizes.map(size => {
           const suffix = subItemSizeCounters.labelSuffix ?? '"'
           return (
-          <div key={size} className="ri-size-counter" aria-label={`${size}${suffix}: ${sizeCounts[size]}`}>
-            <span className="ri-size-counter__label">{size}{suffix}</span>
-            <span className="ri-size-counter__value">{sizeCounts[size]}</span>
-          </div>
+            <div key={size} className="ri-size-counter" aria-label={`${size}${suffix}: ${sizeCounts[size]}`}>
+              <span className="ri-size-counter__label">{size}{suffix}</span>
+              <span className="ri-size-counter__value">{sizeCounts[size]}</span>
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+
+  function renderSizeAdjusters() {
+    if (!subItemSizeCounters?.editable || !sizeCounts) return null
+
+    return (
+      <div className="ri-size-adjusters" aria-label={`${lbl} quantity inputs`}>
+        {subItemSizeCounters.sizes.map(size => {
+          const suffix = subItemSizeCounters.labelSuffix ?? '"'
+          return (
+            <div key={size} className="field-group field-group--compact field-group--stepper-row">
+              <label className="form-label">{size}{suffix} Qty</label>
+              <div className="number-stepper">
+                <button
+                  type="button"
+                  className="number-stepper__btn"
+                  aria-label={`Remove one ${size}${suffix} ${lbl}`}
+                  onClick={() => adjustRoofSubItemSizeCount(
+                    id,
+                    subItemSizeCounters.field,
+                    size,
+                    -1,
+                  )}
+                >
+                  −
+                </button>
+                <input
+                  className="field-input number-stepper__input"
+                  style={{ '--field-ch': 2 }}
+                  type="number"
+                  inputMode="numeric"
+                  min="0"
+                  step="1"
+                  value={sizeCounts[size]}
+                  onChange={event => {
+                    const nextCount = Math.max(0, Number(event.target.value) || 0)
+                    adjustRoofSubItemSizeCount(
+                      id,
+                      subItemSizeCounters.field,
+                      size,
+                      nextCount - sizeCounts[size],
+                    )
+                  }}
+                  aria-label={`${size}${suffix} ${lbl} quantity`}
+                />
+                <button
+                  type="button"
+                  className="number-stepper__btn"
+                  aria-label={`Add one ${size}${suffix} ${lbl}`}
+                  onClick={() => adjustRoofSubItemSizeCount(
+                    id,
+                    subItemSizeCounters.field,
+                    size,
+                    1,
+                  )}
+                >
+                  +
+                </button>
+              </div>
+            </div>
           )
         })}
       </div>
@@ -418,6 +483,7 @@ function CheckItem({ itemDef, trigPhoto }) {
         <div className="ri-item__body">
 
           {renderSizeCounters()}
+          {renderSizeAdjusters()}
           {renderTotalCounter()}
 
           {addMore && addMoreAtTop && (

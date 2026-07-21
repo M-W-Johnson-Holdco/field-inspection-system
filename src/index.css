@@ -3461,6 +3461,18 @@ summary.field-select.field-select--placeholder {
   text-align: right;
 }
 
+.ri-size-adjusters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.ri-size-adjusters .field-group {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
 .ri-sub-card {
   padding: 10px 12px;
   border: 1px solid var(--border);
@@ -3978,6 +3990,11 @@ summary.field-select.field-select--placeholder {
     flex: 0 0 auto;
   }
 
+  .ri-size-adjusters {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .ri-size-counter__label {
     font-size: 10px;
   }
@@ -3992,8 +4009,8 @@ summary.field-select.field-select--placeholder {
   }
 
   .ri-fields-grid .field-group--full-row-mobile .field-select {
-    width: 100%;
-    max-width: 100%;
+    width: min(100%, 190px);
+    max-width: 190px;
   }
 }
 

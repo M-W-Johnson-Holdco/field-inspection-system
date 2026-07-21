@@ -120,7 +120,7 @@ export const ROOF_SUBITEM_LINE_ITEMS = {
   ri11: (f) => ({
     trade: 'Roofing', category: 'RFG',
     description: `Pipe jack - ${str(f, 'Type') || 'unspecified'} (${str(f, 'Size (inches)') || '?'}")`,
-    unit: 'EA', qty: 1, damaged: yn(f, 'Damaged'), note: yn(f, 'Painted') ? 'Painted' : null,
+    unit: 'EA', qty: 1, damaged: null, note: yn(f, 'Painted') ? 'Painted' : null,
   }),
   ri12: (f) => ({
     trade: 'Roofing', category: 'RFG',

@@ -105,18 +105,15 @@ export const ROOF_ITEMS = [
   },
   {
     id: 'ri11', lbl: 'Pipe Jacks', flags: ['P', 'M'],
-    addMore: true,
-    addMoreLabel: 'Add Pipe Jack',
-    subItemPhotos: true,
-    subItemDamaged: true,
-    subFieldsUseMaterialColumnWidth: true,
-    subItemSizeCounters: { field: 'Size (inches)', sizes: ['1.5', '2', '3', '4'], compact: true },
-    fields: [],
-    subFields: [
-      { t: 'select', l: 'Size (inches)', o: ['Select', '1.5', '2', '3', '4'] },
-      { t: 'radio', l: 'Type', o: ['3-in-1/Neoprene', 'Lead', 'Lifetime/Silicone'] },
+    subItemSizeCounters: {
+      field: 'Size (inches)',
+      sizes: ['1.5', '2', '3', '4'],
+      compact: true,
+      editable: true,
+    },
+    fields: [
+      { t: 'radio', l: 'Type', o: ['3-in-1/Neoprene', 'Lead', 'Lifetime/Silicone'], fullRow: true },
       { t: 'yn', l: 'Painted' },
-      { t: 'yn', l: 'Damaged' },
     ],
   },
   {

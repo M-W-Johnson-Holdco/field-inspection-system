@@ -703,25 +703,41 @@ function normalizeRi11(roofData) {
   const hasLegacyQty = PIPE_JACK_SIZE_LABELS.some(({ field }) => fields[field] != null && fields[field] !== '')
   const hasLegacyTopLevel = fields.Type != null || fields.Painted != null
 
-  if (!(ri11.subItems || []).length && (hasLegacyQty || hasLegacyTopLevel)) {
-    next.ri11 = {
-      ...ri11,
-      fields: {},
-      subItems: migratePipeJackFields(fields),
-      photos: ri11.photos || [],
-    }
-    return next
-  }
+  const normalizedSubItems = (ri11.subItems || []).length
+    ? ri11.subItems.map(normalizeRoofSubItem)
+    : (hasLegacyQty || hasLegacyTopLevel ? migratePipeJackFields(fields) : [])
 
-  const normalizedSubItems = (ri11.subItems || []).map(normalizeRoofSubItem)
-  const subItemsChanged = normalizedSubItems.some((sub, index) => {
-    const original = ri11.subItems?.[index]
-    return JSON.stringify(sub.fields) !== JSON.stringify(original?.fields || {})
-      || !Array.isArray(original?.photos)
-  })
+  const sharedType = fields.Type
+    || normalizedSubItems.find(sub => sub.fields?.Type)?.fields.Type
+    || ''
+  const sharedPainted = fields.Painted
+    || normalizedSubItems.find(sub => sub.fields?.Painted)?.fields.Painted
+    || ''
 
-  if (subItemsChanged) {
-    next.ri11 = { ...ri11, subItems: normalizedSubItems }
+  const subItems = normalizedSubItems
+    .filter(sub => sub.fields?.['Size (inches)'])
+    .map(sub => ({
+      fields: {
+        'Size (inches)': sub.fields['Size (inches)'],
+        ...(sharedType ? { Type: sharedType } : {}),
+        ...(sharedPainted ? { Painted: sharedPainted } : {}),
+      },
+      photos: [],
+    }))
+
+  const photos = [
+    ...(Array.isArray(ri11.photos) ? ri11.photos : []),
+    ...normalizedSubItems.flatMap(sub => sub.photos || []),
+  ]
+
+  next.ri11 = {
+    ...ri11,
+    fields: {
+      ...(sharedType ? { Type: sharedType } : {}),
+      ...(sharedPainted ? { Painted: sharedPainted } : {}),
+    },
+    subItems,
+    photos,
   }
 
   return next
@@ -922,8 +938,6 @@ function buildPipeJackSubItemsFromParsed(roof = {}) {
         ...(pj?.size ? { 'Size (inches)': String(pj.size) } : {}),
         ...(pj?.type ? { Type: pj.type } : {}),
         ...(pj?.painted ? { Painted: pj.painted } : {}),
-        ...(pj?.damaged ? { Damaged: pj.damaged } : {}),
-        ...(pj?.damaged === 'Yes' && pj?.damageDescription ? { _damage: pj.damageDescription } : {}),
       },
       photos: [],
     }))
@@ -1303,7 +1317,63 @@ export function InspectionProvider({ children }) {
   function updateRoofField(itemId, label, value) {
     setData(prev => {
       const item = prev.roofData[itemId]
-      const next = { ...prev, roofData: { ...prev.roofData, [itemId]: { ...item, fields: { ...item.fields, [label]: value } } } }
+      const shouldSyncPipeJacks = itemId === 'ri11' && (label === 'Type' || label === 'Painted')
+      const subItems = shouldSyncPipeJacks
+        ? item.subItems.map(sub => ({
+            ...sub,
+            fields: { ...sub.fields, [label]: value },
+          }))
+        : item.subItems
+      const next = {
+        ...prev,
+        roofData: {
+          ...prev.roofData,
+          [itemId]: {
+            ...item,
+            fields: { ...item.fields, [label]: value },
+            subItems,
+          },
+        },
+      }
+      scheduleSave(next)
+      return next
+    })
+  }
+
+  function adjustRoofSubItemSizeCount(itemId, field, size, delta) {
+    setData(prev => {
+      const item = prev.roofData[itemId]
+      if (!item || !delta) return prev
+
+      let subItems = [...(item.subItems || [])]
+      if (delta > 0) {
+        for (let i = 0; i < delta; i += 1) {
+          subItems.push({
+            fields: {
+              [field]: size,
+              ...(item.fields?.Type ? { Type: item.fields.Type } : {}),
+              ...(item.fields?.Painted ? { Painted: item.fields.Painted } : {}),
+            },
+            photos: [],
+          })
+        }
+      } else {
+        for (let i = 0; i < Math.abs(delta); i += 1) {
+          const index = subItems.findLastIndex(sub =>
+            String(sub.fields?.[field] || '').replace(/"/g, '') === String(size),
+          )
+          if (index < 0) break
+          subItems.splice(index, 1)
+        }
+      }
+
+      const next = {
+        ...prev,
+        roofData: {
+          ...prev.roofData,
+          [itemId]: { ...item, subItems },
+        },
+      }
       scheduleSave(next)
       return next
     })
@@ -1418,6 +1488,17 @@ export function InspectionProvider({ children }) {
 
     setData(prev => {
       const item = prev.roofData.ri11
+      const sharedType = subItems.find(sub => sub.fields?.Type)?.fields.Type || ''
+      const sharedPainted = subItems.find(sub => sub.fields?.Painted)?.fields.Painted || ''
+      const syncedSubItems = subItems.map(sub => ({
+        ...sub,
+        fields: {
+          ...sub.fields,
+          ...(sharedType ? { Type: sharedType } : {}),
+          ...(sharedPainted ? { Painted: sharedPainted } : {}),
+        },
+        photos: [],
+      }))
       const next = {
         ...prev,
         roofData: {
@@ -1425,8 +1506,11 @@ export function InspectionProvider({ children }) {
           ri11: {
             ...item,
             excluded: false,
-            fields: {},
-            subItems,
+            fields: {
+              ...(sharedType ? { Type: sharedType } : {}),
+              ...(sharedPainted ? { Painted: sharedPainted } : {}),
+            },
+            subItems: syncedSubItems,
           },
         },
       }
@@ -1915,7 +1999,7 @@ export function InspectionProvider({ children }) {
       saveStatus, driveSaveStatus, setDriveSaveStatus, driveFolderId, setDriveFolderId, completion, updateJobInfo, manualSave, resetAll, startNewInspection, loadInspection, applyXmlImport,
       aiParseState, setAiParseState,
       toggleRoofExclude, updateRoofField,
-      addRoofSubItem, removeRoofSubItem, updateRoofSubField, importRoofPipeJacks, importRoofExhaustStacks, importRoofChimneys, importRoofFlashingItems, importRoofLowSlopeItems,
+      addRoofSubItem, removeRoofSubItem, updateRoofSubField, adjustRoofSubItemSizeCount, importRoofPipeJacks, importRoofExhaustStacks, importRoofChimneys, importRoofFlashingItems, importRoofLowSlopeItems,
       importRoofSkylights, importRoofCorniceGables, importRoofOtherStructures,
       addRoofPhoto, removeRoofPhoto,
       toggleElevExclude, updateElevField,

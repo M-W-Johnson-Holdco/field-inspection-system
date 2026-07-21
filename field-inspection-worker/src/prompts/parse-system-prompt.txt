@@ -32,8 +32,8 @@ one instance is described, return an array with exactly one object. If none are 
 explicitly said to be absent, return an empty array.
 
 DAMAGE DESCRIPTIONS: Whenever a "damaged"/"...Damage" field is "Yes", also fill in the matching
-"...damageDescription"/"...Notes" field (same item, e.g. `pipeJacks[].damageDescription`,
-`elevations.Front.sidingDamageDescription`, `interior.rooms[].ceilingNotes`) with the specific damage
+"...damageDescription"/"...Notes" field (same item, e.g. `elevations.Front.sidingDamageDescription`
+or `interior.rooms[].ceilingNotes`) with the specific damage
 described in the transcript for that exact item (what's damaged and how) — do not leave it null when the
 transcript describes the damage, and do not copy one item's damage description onto another item.
 
@@ -142,7 +142,7 @@ Return this exact structure (use null for any scalar field not mentioned, and []
     "powerVentDamaged": null, "powerVentDamageDescription": null,
     "solarVentQty": null, "solarVentPainted": null,
     "solarVentDamaged": null, "solarVentDamageDescription": null,
-    "pipeJacks": [{ "size": null, "type": null, "painted": null, "damaged": null, "damageDescription": null }],
+    "pipeJacks": [{ "size": null, "type": null, "painted": null }],
     "exhaustStacks": [{ "type": null, "painted": null, "damaged": null, "damageDescription": null }],
     "kickoutsNeeded": null, "kickoutsPainted": null,
     "rainDiverterQty": null, "rainDiverterLF": null, "rainDiverterPainted": null,

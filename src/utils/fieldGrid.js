@@ -83,6 +83,10 @@ export function shouldStackUnderPrevious(previousField, currentField, fields, in
   if (currentField.t !== 'yn') return false
   if (previousField.t !== 'radio' && previousField.t !== 'select') return false
 
+  // A full-row field (e.g. long option lists) must span the whole grid, so it
+  // can't share a stacked half-width column with the following field.
+  if (previousField.fullRow) return false
+
   const prevPrev = index > 0 ? fields[index - 1] : null
   if (prevPrev && (prevPrev.t === 'radio' || prevPrev.t === 'select')) {
     // Type + Material + Painted → Painted on its own row (left), not under Material
