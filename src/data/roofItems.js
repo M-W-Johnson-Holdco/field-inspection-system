@@ -122,12 +122,12 @@ export const ROOF_ITEMS = [
     addMoreLabel: 'Add Exhaust Stack',
     subItemPhotos: true,
     subItemDamaged: true,
-    subItemSizeCounters: { field: 'Type', sizes: ['Cap', 'Flange', 'Stack'], labelSuffix: '', counterLabel: 'type', compact: true },
-    fields: [],
+    fields: [
+      { t: 'yn', l: 'Painted', allowNA: false },
+    ],
     subFields: [
-      { t: 'select', l: 'Type', o: ['Select', 'Cap', 'Flange', 'Stack'] },
-      { t: 'yn', l: 'Painted' },
-      { t: 'yn', l: 'Damaged' },
+      { t: 'select', l: 'Size', o: ['Select', 'Small (4")', 'Medium (5-6")', 'Large (7-8")'], fullRow: true },
+      { t: 'multi', l: 'Damaged', o: ['Cap', 'Stack', 'Flange'], allowNA: false, halfWidthDesktop: true },
     ],
   },
   {

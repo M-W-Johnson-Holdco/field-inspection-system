@@ -119,7 +119,13 @@ function calculateCompletion(data) {
         if (!isFieldVisible(field, sub.fields)) return
         countSubFieldValue(field, sub.fields, totals)
       })
-      if (itemDef.subItemDamaged && sub.fields?.Damaged === 'Yes') {
+      if (
+        itemDef.subItemDamaged
+        && (
+          sub.fields?.Damaged === 'Yes'
+          || (Array.isArray(sub.fields?.Damaged) && sub.fields.Damaged.length > 0)
+        )
+      ) {
         countValue(sub.fields?._damage, totals)
       }
     })
@@ -750,61 +756,79 @@ function isLegacyExhaustStackSubItem(sub) {
     || (fields.Qty != null && fields.Qty !== '')
 }
 
-function normalizeExhaustStackSubItem(sub) {
+function normalizeExhaustStackSize(value) {
+  if (value == null || value === '' || value === 'Select') return ''
+  const text = String(value).trim()
+  if (['Small (4")', 'Medium (5-6")', 'Large (7-8")'].includes(text)) return text
+  if (text === 'Small' || text === '4"' || text.startsWith('Small')) return 'Small (4")'
+  if (text === 'Medium' || text === '5-6"' || text.startsWith('Medium')) return 'Medium (5-6")'
+  if (text === 'Large' || text === '7-8"' || text.startsWith('Large')) return 'Large (7-8")'
+  const inches = Number(text.match(/\d+(?:\.\d+)?/)?.[0])
+  if (inches === 4) return 'Small (4")'
+  if (inches === 5 || inches === 6) return 'Medium (5-6")'
+  if (inches === 7 || inches === 8) return 'Large (7-8")'
+  return ''
+}
+
+function exhaustStackDamageParts(fields = {}) {
+  const raw = Array.isArray(fields.Damaged)
+    ? fields.Damaged
+    : (Array.isArray(fields['Damage To'])
+      ? fields['Damage To']
+      : (EXHAUST_STACK_TYPES.includes(fields['Damage To']) ? [fields['Damage To']] : []))
+  const parts = raw.filter(part => EXHAUST_STACK_TYPES.includes(part))
+  if (parts.length) return [...new Set(parts)]
+  if (fields.Damaged === 'Yes' && EXHAUST_STACK_TYPES.includes(fields.Type)) {
+    return [fields.Type]
+  }
+  return []
+}
+
+function normalizeExhaustStackSubItem(sub, sharedPainted = '') {
+  const source = sub?.fields || {}
+  const size = normalizeExhaustStackSize(
+    source.Size || source['Width (inches)'] || source.Width,
+  )
+  const damaged = exhaustStackDamageParts(source)
   return {
-    fields: { ...(sub?.fields || {}) },
+    fields: {
+      ...(size ? { Size: size } : {}),
+      ...(damaged.length ? { Damaged: damaged } : {}),
+      ...(damaged.length && source._damage ? { _damage: source._damage } : {}),
+      ...(sharedPainted ? { Painted: sharedPainted } : {}),
+    },
     photos: Array.isArray(sub?.photos) ? sub.photos : [],
   }
 }
 
-function migrateExhaustStackFields(ri12) {
-  const fields = ri12.fields || {}
+function normalizeExhaustStackSubItems(ri12, sharedPainted) {
+  const topFields = ri12.fields || {}
   const subItems = []
-  const sharedPainted = fields.Painted || ''
-  const sharedDamaged = fields.Damaged || ''
-  const damageTo = fields['Damage To']
-  const damageTypes = Array.isArray(damageTo)
-    ? damageTo.filter(type => EXHAUST_STACK_TYPES.includes(type))
-    : (damageTo && EXHAUST_STACK_TYPES.includes(damageTo) ? [damageTo] : [])
 
   ;(ri12.subItems || []).forEach(sub => {
+    const normalized = normalizeExhaustStackSubItem(sub, sharedPainted)
     if (isLegacyExhaustStackSubItem(sub)) {
       const qty = Math.max(0, Number(sub.fields?.Qty) || 0)
       const count = qty > 0 ? qty : 1
       for (let i = 0; i < count; i += 1) {
         subItems.push({
-          fields: {
-            ...(sharedPainted ? { Painted: sharedPainted } : {}),
-            ...(sub.fields?.Painted ? { Painted: sub.fields.Painted } : {}),
-            ...(sharedDamaged ? { Damaged: sharedDamaged } : {}),
-            ...(sub.fields?.Damaged ? { Damaged: sub.fields.Damaged } : {}),
-            ...(sub.fields?._damage ? { _damage: sub.fields._damage } : {}),
-          },
-          photos: i === 0 ? (sub.photos || []) : [],
+          ...normalized,
+          photos: i === 0 ? normalized.photos : [],
         })
       }
       return
     }
 
-    subItems.push(normalizeExhaustStackSubItem(sub))
+    subItems.push(normalized)
   })
 
-  if (!subItems.length && damageTypes.length) {
-    damageTypes.forEach(type => {
-      subItems.push({
-        fields: {
-          Type: type,
-          ...(sharedPainted ? { Painted: sharedPainted } : {}),
-          ...(sharedDamaged ? { Damaged: sharedDamaged } : {}),
-        },
-        photos: [],
-      })
-    })
-  } else if (!subItems.length && (sharedPainted || sharedDamaged)) {
+  const topDamage = exhaustStackDamageParts(topFields)
+  if (!subItems.length && topDamage.length) {
     subItems.push({
       fields: {
+        Damaged: topDamage,
+        ...(topFields._damage ? { _damage: topFields._damage } : {}),
         ...(sharedPainted ? { Painted: sharedPainted } : {}),
-        ...(sharedDamaged ? { Damaged: sharedDamaged } : {}),
       },
       photos: [],
     })
@@ -819,18 +843,17 @@ function normalizeRi12(roofData) {
   if (!ri12) return next
 
   const fields = ri12.fields || {}
-  const hasLegacyTopLevel = fields['Damage To'] != null
-    || fields.Painted != null
-    || fields.Damaged != null
-  const hasLegacySubs = (ri12.subItems || []).some(isLegacyExhaustStackSubItem)
+  const sharedPainted = fields.Painted
+    || (ri12.subItems || []).find(sub => sub.fields?.Painted)?.fields.Painted
+    || ''
 
-  if (hasLegacyTopLevel || hasLegacySubs) {
-    next.ri12 = {
-      ...ri12,
-      fields: {},
-      subItems: migrateExhaustStackFields(ri12),
-      photos: ri12.photos || [],
-    }
+  next.ri12 = {
+    ...ri12,
+    fields: {
+      ...(sharedPainted ? { Painted: sharedPainted } : {}),
+    },
+    subItems: normalizeExhaustStackSubItems(ri12, sharedPainted),
+    photos: ri12.photos || [],
   }
 
   return next
@@ -984,48 +1007,39 @@ function buildPipeJackSubItemsFromParsed(roof = {}) {
 function buildExhaustStackSubItemsFromParsed(roof = {}) {
   const list = Array.isArray(roof.exhaustStacks) ? roof.exhaustStacks : []
   if (list.length) {
-    return list.map(es => ({
-      fields: {
-        ...(es?.type ? { Type: es.type } : {}),
-        ...(es?.painted ? { Painted: es.painted } : {}),
-        ...(es?.damaged ? { Damaged: es.damaged } : {}),
-        ...(es?.damaged === 'Yes' && es?.damageDescription ? { _damage: es.damageDescription } : {}),
-      },
-      photos: [],
-    }))
+    return list.map(es => {
+      const damaged = exhaustStackDamageParts({
+        Damaged: es?.damaged,
+        'Damage To': es?.damageTo,
+        Type: es?.type,
+      })
+      return {
+        fields: {
+          ...(normalizeExhaustStackSize(es?.size) ? { Size: normalizeExhaustStackSize(es.size) } : {}),
+          ...(damaged.length ? { Damaged: damaged } : {}),
+          ...(damaged.length && es?.damageDescription ? { _damage: es.damageDescription } : {}),
+        },
+        photos: [],
+      }
+    })
   }
 
-  // Legacy fallback: shared painted/damaged applied per damaged-type.
-  const subItems = []
-  const sharedPainted = roof.exhaustStackPainted || ''
-  const sharedDamaged = roof.exhaustStackDamaged || ''
-  const damageTo = roof.exhaustStackDamageTo
-  const damageTypes = Array.isArray(damageTo)
-    ? damageTo.filter(type => EXHAUST_STACK_TYPES.includes(type))
-    : (damageTo && EXHAUST_STACK_TYPES.includes(damageTo) ? [damageTo] : [])
-
-  damageTypes.forEach(type => {
-    subItems.push({
-      fields: {
-        Type: type,
-        ...(sharedPainted ? { Painted: sharedPainted } : {}),
-        ...(sharedDamaged ? { Damaged: sharedDamaged } : {}),
-      },
-      photos: [],
-    })
+  // Legacy fallback for the previous section-level damage fields.
+  const damaged = exhaustStackDamageParts({
+    Damaged: roof.exhaustStackDamaged,
+    'Damage To': roof.exhaustStackDamageTo,
   })
-
-  if (!subItems.length && (sharedPainted || sharedDamaged)) {
-    subItems.push({
+  if (damaged.length) {
+    return [{
       fields: {
-        ...(sharedPainted ? { Painted: sharedPainted } : {}),
-        ...(sharedDamaged ? { Damaged: sharedDamaged } : {}),
+        Damaged: damaged,
+        ...(roof.exhaustStackDamageDescription ? { _damage: roof.exhaustStackDamageDescription } : {}),
       },
       photos: [],
-    })
+    }]
   }
 
-  return subItems
+  return []
 }
 
 function buildChimneySubItemsFromParsed(roof = {}) {
@@ -1317,8 +1331,12 @@ export function InspectionProvider({ children }) {
   function updateRoofField(itemId, label, value) {
     setData(prev => {
       const item = prev.roofData[itemId]
-      const shouldSyncPipeJacks = itemId === 'ri11' && (label === 'Type' || label === 'Painted')
-      const subItems = shouldSyncPipeJacks
+      const shouldSyncSubItems = (
+        itemId === 'ri11' && (label === 'Type' || label === 'Painted')
+      ) || (
+        itemId === 'ri12' && label === 'Painted'
+      )
+      const subItems = shouldSyncSubItems
         ? item.subItems.map(sub => ({
             ...sub,
             fields: { ...sub.fields, [label]: value },
@@ -1388,7 +1406,15 @@ export function InspectionProvider({ children }) {
           ...prev.roofData,
           [itemId]: {
             ...item,
-            subItems: [...item.subItems, { fields: {}, photos: [] }],
+            subItems: [
+              ...item.subItems,
+              {
+                fields: itemId === 'ri12' && item.fields?.Painted
+                  ? { Painted: item.fields.Painted }
+                  : {},
+                photos: [],
+              },
+            ],
           },
         },
       }
@@ -1412,8 +1438,14 @@ export function InspectionProvider({ children }) {
       const subItems = item.subItems.map((sub, i) => {
         if (i !== index) return sub
         const fields = { ...sub.fields, [label]: value }
-        if (label === 'Damaged' && (value === 'No' || value === 'N/A')) fields._damage = 'n/a'
-        if (label === 'Damaged' && value !== 'Yes' && value !== 'No' && value !== 'N/A') delete fields._damage
+        if (label === 'Damaged') {
+          if (Array.isArray(value)) {
+            if (value.length === 0) delete fields._damage
+          } else {
+            if (value === 'No' || value === 'N/A') fields._damage = 'n/a'
+            else if (value !== 'Yes') delete fields._damage
+          }
+        }
         if (label === 'Location') {
           delete fields['(Other)']
           if (value === 'Other') fields['Location'] = 'Other'
@@ -1521,10 +1553,22 @@ export function InspectionProvider({ children }) {
 
   function importRoofExhaustStacks(roof = {}) {
     const subItems = buildExhaustStackSubItemsFromParsed(roof)
-    if (!subItems.length) return
+    const sharedPainted = roof.exhaustStackPainted
+      || (Array.isArray(roof.exhaustStacks)
+        ? roof.exhaustStacks.find(stack => stack?.painted)?.painted
+        : '')
+      || ''
+    if (!subItems.length && !sharedPainted) return
 
     setData(prev => {
       const item = prev.roofData.ri12
+      const syncedSubItems = subItems.map(sub => ({
+        ...sub,
+        fields: {
+          ...sub.fields,
+          ...(sharedPainted ? { Painted: sharedPainted } : {}),
+        },
+      }))
       const next = {
         ...prev,
         roofData: {
@@ -1532,8 +1576,10 @@ export function InspectionProvider({ children }) {
           ri12: {
             ...item,
             excluded: false,
-            fields: {},
-            subItems,
+            fields: {
+              ...(sharedPainted ? { Painted: sharedPainted } : {}),
+            },
+            subItems: syncedSubItems,
           },
         },
       }

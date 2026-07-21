@@ -45,13 +45,6 @@ function isChimneySubFieldsPattern(fields) {
     && fields[3].t === 'yn' && fields[3].l === 'Damaged'
 }
 
-function isExhaustStackSubFieldsPattern(fields) {
-  return fields.length >= 3
-    && fields[0].t === 'select' && fields[0].l === 'Type'
-    && fields[1].t === 'yn' && fields[1].l === 'Painted'
-    && fields[2].t === 'yn' && fields[2].l === 'Damaged'
-}
-
 function isSkylightSubFieldsPattern(fields) {
   return fields.length === 4
     && fields[0].t === 'select' && fields[0].l === 'Style'
@@ -211,23 +204,6 @@ export function groupFieldsForGrid(fields) {
     ]
   }
 
-  if (isExhaustStackSubFieldsPattern(fields)) {
-    const ynFields = fields.slice(1).filter(field => field.t === 'yn')
-    const groups = [{ type: 'single', field: fields[0] }]
-
-    if (ynFields.length > 1) {
-      groups.push({
-        type: 'row',
-        ynPairRow: true,
-        groups: ynFields.map(field => ({ type: 'single', field })),
-      })
-    } else if (ynFields.length === 1) {
-      groups.push({ type: 'single', field: ynFields[0] })
-    }
-
-    return groups
-  }
-
   if (isPipeJackSubFieldsPattern(fields)) {
     const groups = [
       {
@@ -362,6 +338,7 @@ export function fieldSelectClass(field) {
 /** Yes/No options; Damaged, Painted, and site-access yn fields also include N/A. */
 export function ynOptionsForField(field) {
   const label = String(field?.l || '')
+  if (field?.allowNA === false) return ['Yes', 'No']
   if (
     label === 'Damaged'
     || label === 'Painted'
@@ -378,7 +355,7 @@ export function ynOptionsForField(field) {
 /** Option-list fields (radio/select) always include N/A, so an AI-parsed "N/A" (item explicitly absent) has a matching option to select instead of rendering blank. */
 export function optionsForField(field) {
   const opts = Array.isArray(field?.o) ? [...field.o] : []
-  if (!opts.includes('N/A')) {
+  if (field?.allowNA !== false && !opts.includes('N/A')) {
     opts.push('N/A')
   }
   return opts

@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, Trash2 } from 'lucide-react'
 import { useInspection } from '../../context/InspectionContext'
 import PhotoZone from '../PhotoZone'
 import FieldsGrid from '../FieldsGrid'
@@ -244,6 +244,92 @@ function FieldRenderer({ field, value, onChange, subFields, onSubFieldChange }) 
   )
 }
 
+function ExhaustStackCard({
+  sub,
+  index,
+  subFields,
+  trigPhoto,
+  onUpdateField,
+  onRemove,
+  onRemovePhoto,
+}) {
+  const [open, setOpen] = useExpandedSection(`roof:ri12:sub:${index}`, true)
+  const damagedParts = Array.isArray(sub.fields?.Damaged) ? sub.fields.Damaged : []
+  const sizePill = String(sub.fields?.Size || '').match(/^(Small|Medium|Large)/)?.[1] || ''
+
+  return (
+    <div className={`ri-sub-card${damagedParts.length ? ' ri-sub-card--damage' : ''}`}>
+      <div className="int-room-header">
+        <button
+          type="button"
+          className="int-room-toggle ri-exhaust-stack-toggle"
+          aria-expanded={open}
+          onClick={() => setOpen(value => !value)}
+        >
+          <span className="ri-sub-card__title">Exhaust Stack #{index + 1}</span>
+          <span className="ri-exhaust-stack-pills">
+            {sizePill && <span className="int-room-story">{sizePill}</span>}
+            {damagedParts.map(part => (
+              <span key={part} className="int-damage-badge">{part}</span>
+            ))}
+          </span>
+          <ChevronDown
+            className={`int-room-chevron${open ? ' int-room-chevron--open' : ''}`}
+            aria-hidden="true"
+          />
+        </button>
+        <button
+          type="button"
+          className="int-btn-delete"
+          onClick={onRemove}
+          aria-label={`Delete exhaust stack ${index + 1}`}
+          title="Delete exhaust stack"
+        >
+          <Trash2 size={15} />
+        </button>
+      </div>
+
+      <div className={`collapse-panel ${open ? 'collapse-panel--open' : ''}`} aria-hidden={!open}>
+        <div className="collapse-panel__inner">
+          <div className="ri-exhaust-stack-body">
+            <FieldsGrid
+              fields={visibleFieldsForValues(subFields, sub.fields || {})}
+              renderField={field => (
+                <FieldRenderer
+                  key={field.l}
+                  field={field}
+                  value={sub.fields?.[field.l]}
+                  subFields={sub.fields}
+                  onChange={value => onUpdateField(field.l, value)}
+                  onSubFieldChange={onUpdateField}
+                />
+              )}
+            />
+
+            {damagedParts.length > 0 && (
+              <div className="ri-damage-row">
+                <label className="form-label">Damage Description</label>
+                <DamageDescriptionInput
+                  placeholder="Describe damage..."
+                  value={sub.fields?._damage || ''}
+                  onChange={value => onUpdateField('_damage', value)}
+                />
+              </div>
+            )}
+
+            <PhotoZone
+              entityId={`ri12__sub_${index}`}
+              photos={sub.photos || []}
+              trigPhoto={trigPhoto}
+              onRemove={onRemovePhoto}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Check Item ────────────────────────────────────────────────────
 function CheckItem({ itemDef, trigPhoto }) {
   const {
@@ -394,6 +480,18 @@ function CheckItem({ itemDef, trigPhoto }) {
     return (
       <div className="ri-sub-items">
         {subItems.map((sub, idx) => (
+          id === 'ri12' ? (
+            <ExhaustStackCard
+              key={idx}
+              sub={sub}
+              index={idx}
+              subFields={subFields}
+              trigPhoto={trigPhoto}
+              onUpdateField={(label, value) => updateRoofSubField(id, idx, label, value)}
+              onRemove={() => removeRoofSubItem(id, idx)}
+              onRemovePhoto={removeRoofPhoto}
+            />
+          ) : (
           <div key={idx} className="ri-sub-card">
             <div className="ri-sub-card__top">
               <span className="ri-sub-card__title">
@@ -430,7 +528,10 @@ function CheckItem({ itemDef, trigPhoto }) {
                 }}
               />
             )}
-            {subItemDamaged && sub.fields['Damaged'] === 'Yes' && (
+            {subItemDamaged && (
+              sub.fields['Damaged'] === 'Yes'
+              || (Array.isArray(sub.fields['Damaged']) && sub.fields['Damaged'].length > 0)
+            ) && (
               <div className="ri-damage-row">
                 <label className="form-label">Damage Description</label>
                 <DamageDescriptionInput
@@ -449,6 +550,7 @@ function CheckItem({ itemDef, trigPhoto }) {
               />
             )}
           </div>
+          )
         ))}
         {!addMoreAtTop && (
           <button

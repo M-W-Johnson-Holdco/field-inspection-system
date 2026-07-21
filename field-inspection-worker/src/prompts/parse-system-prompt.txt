@@ -69,7 +69,9 @@ roof.exposedRafters: "Yes" or "No"
 
 roof.pipeJacks[].size: "1.5" or "2" or "3" or "4"
 roof.pipeJacks[].type: "3-in-1/Neoprene" or "Lead" or "Lifetime/Silicone"
-roof.exhaustStacks[].type: "Flange" or "Stack" or "Cap"
+roof.exhaustStackPainted: "Yes" or "No" for whether all exhaust stacks are painted
+roof.exhaustStacks[].size: "Small (4\")" or "Medium (5-6\")" or "Large (7-8\")"
+roof.exhaustStacks[].damaged: array containing any mentioned values from "Cap", "Stack", "Flange"
 roof.chimneys[].size: "Small" (width < 24in) or "Medium" (24-36in) or "Large" (> 36in)
 roof.chimneys[].counterFlashing: "Replace" or "Reuse"
 roof.skylights[].style: "Fixed" or "Tubular" or "Venting"
@@ -143,7 +145,8 @@ Return this exact structure (use null for any scalar field not mentioned, and []
     "solarVentQty": null, "solarVentPainted": null,
     "solarVentDamaged": null, "solarVentDamageDescription": null,
     "pipeJacks": [{ "size": null, "type": null, "painted": null }],
-    "exhaustStacks": [{ "type": null, "painted": null, "damaged": null, "damageDescription": null }],
+    "exhaustStackPainted": null,
+    "exhaustStacks": [{ "size": null, "damaged": [], "damageDescription": null }],
     "kickoutsNeeded": null, "kickoutsPainted": null,
     "rainDiverterQty": null, "rainDiverterLF": null, "rainDiverterPainted": null,
     "powerMeterMastQty": null,

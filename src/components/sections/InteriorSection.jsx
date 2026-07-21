@@ -79,11 +79,13 @@ function RoomCard({ room, trigPhoto }) {
         >
           <span className="int-room-title">
             {room.name?.startsWith('Other - ') && room.customName ? room.customName : (room.name || 'Unnamed Room')}
-            {f.story ? <span className="int-room-story">{f.story}</span> : null}
           </span>
-          {damageTags.map(tag => (
-            <span key={tag} className="int-damage-badge">{tag}</span>
-          ))}
+          <span className="int-room-pills">
+            {f.story ? <span className="int-room-story">{f.story}</span> : null}
+            {damageTags.map(tag => (
+              <span key={tag} className="int-damage-badge">{tag}</span>
+            ))}
+          </span>
           <ChevronDown className={`int-room-chevron${open ? ' int-room-chevron--open' : ''}`} aria-hidden="true" />
         </button>
         <button
