@@ -3019,6 +3019,14 @@ summary.field-select.field-select--placeholder {
   width: min(100%, 210px);
 }
 
+@media (min-width: 760px) {
+  .ri-fields-grid .field-group--full.field-group--half-width-desktop .multi-select {
+    width: min(100%, 210px);
+    min-width: min(100%, 210px);
+    max-width: 210px;
+  }
+}
+
 .multi-select--field-select > .field-select.compact-select {
   display: block;
   width: 100%;
@@ -3461,11 +3469,58 @@ summary.field-select.field-select--placeholder {
   text-align: right;
 }
 
+.ri-size-adjusters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.ri-size-adjusters .field-group {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
 .ri-sub-card {
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--field-bg);
+}
+
+.ri-exhaust-stack-body {
+  padding-top: 12px;
+  margin-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.ri-exhaust-stack-pills {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+@media (max-width: 759px) {
+  .ri-exhaust-stack-toggle {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .ri-exhaust-stack-toggle .ri-sub-card__title {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .ri-exhaust-stack-toggle .ri-exhaust-stack-pills {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .ri-exhaust-stack-toggle .int-room-chevron {
+    grid-column: 2;
+    grid-row: 1;
+  }
 }
 
 .ri-sub-card__top {
@@ -3978,6 +4033,11 @@ summary.field-select.field-select--placeholder {
     flex: 0 0 auto;
   }
 
+  .ri-size-adjusters {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .ri-size-counter__label {
     font-size: 10px;
   }
@@ -3992,8 +4052,8 @@ summary.field-select.field-select--placeholder {
   }
 
   .ri-fields-grid .field-group--full-row-mobile .field-select {
-    width: 100%;
-    max-width: 100%;
+    width: min(100%, 190px);
+    max-width: 190px;
   }
 }
 
@@ -4087,6 +4147,35 @@ summary.field-select.field-select--placeholder {
   border: 1px solid var(--border);
   border-radius: 999px;
   padding: 2px 8px;
+}
+
+.int-room-pills {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+@media (max-width: 759px) {
+  .int-room-card .int-room-toggle {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .int-room-card .int-room-title {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .int-room-card .int-room-pills {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .int-room-card .int-room-chevron {
+    grid-column: 2;
+    grid-row: 1;
+  }
 }
 
 .int-damage-badge {

@@ -164,6 +164,9 @@ function applyParsed(parsed, ctx) {
   if (ji.preferredContact != null) {
     updateJobInfo('preferredContact', toArray(ji.preferredContact))
   }
+  if (ji.lossType != null) {
+    updateJobInfo('lossType', toArray(ji.lossType))
+  }
   if (ji.contactPreferredContact != null) {
     updateJobInfo('contactPreferredContact', toArray(ji.contactPreferredContact))
   }

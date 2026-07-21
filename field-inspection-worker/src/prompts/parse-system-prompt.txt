@@ -32,8 +32,8 @@ one instance is described, return an array with exactly one object. If none are 
 explicitly said to be absent, return an empty array.
 
 DAMAGE DESCRIPTIONS: Whenever a "damaged"/"...Damage" field is "Yes", also fill in the matching
-"...damageDescription"/"...Notes" field (same item, e.g. `pipeJacks[].damageDescription`,
-`elevations.Front.sidingDamageDescription`, `interior.rooms[].ceilingNotes`) with the specific damage
+"...damageDescription"/"...Notes" field (same item, e.g. `elevations.Front.sidingDamageDescription`
+or `interior.rooms[].ceilingNotes`) with the specific damage
 described in the transcript for that exact item (what's damaged and how) — do not leave it null when the
 transcript describes the damage, and do not copy one item's damage description onto another item.
 
@@ -69,7 +69,9 @@ roof.exposedRafters: "Yes" or "No"
 
 roof.pipeJacks[].size: "1.5" or "2" or "3" or "4"
 roof.pipeJacks[].type: "3-in-1/Neoprene" or "Lead" or "Lifetime/Silicone"
-roof.exhaustStacks[].type: "Flange" or "Stack" or "Cap"
+roof.exhaustStackPainted: "Yes" or "No" for whether all exhaust stacks are painted
+roof.exhaustStacks[].size: "Small (4\")" or "Medium (5-6\")" or "Large (7-8\")"
+roof.exhaustStacks[].damaged: array containing any mentioned values from "Cap", "Stack", "Flange"
 roof.chimneys[].size: "Small" (width < 24in) or "Medium" (24-36in) or "Large" (> 36in)
 roof.chimneys[].counterFlashing: "Replace" or "Reuse"
 roof.skylights[].style: "Fixed" or "Tubular" or "Venting"
@@ -103,6 +105,7 @@ jobInfo.preferredContact: comma-separated from Phone, Email, Text
 jobInfo.contactPreferredContact: comma-separated from Phone, Email, Text (for the separate contact)
 jobInfo.claimFileDate: ISO date YYYY-MM-DD when the insurance claim was filed
 jobInfo.stormDate: ISO date YYYY-MM-DD when the storm or loss event occurred
+jobInfo.lossType: array containing any mentioned values from "Wind", "Hail", "Falling Objects or Debris", "Fire", "Lightning", "Ice/Snow"
 jobInfo.address1: street number + street name (e.g. "2214 Maple Ridge Court")
 jobInfo.address2: unit/apt/suite, if any
 jobInfo.city: city name only
@@ -115,7 +118,7 @@ Return this exact structure (use null for any scalar field not mentioned, and []
     "cust": null, "phone": null, "email": null,
     "address1": null, "address2": null, "city": null, "state": null, "zipcode": null,
     "pm": null, "insp": null, "ins": null, "claim": null,
-    "claimFileDate": null, "stormDate": null, "preferredContact": null, "residenceType": null,
+    "claimFileDate": null, "stormDate": null, "lossType": [], "preferredContact": null, "residenceType": null,
     "tenantname": null, "tenantphone": null,
     "hasSeparateContact": null, "contactName": null, "contactPhone": null,
     "contactEmail": null, "contactPreferredContact": null
@@ -141,8 +144,9 @@ Return this exact structure (use null for any scalar field not mentioned, and []
     "powerVentDamaged": null, "powerVentDamageDescription": null,
     "solarVentQty": null, "solarVentPainted": null,
     "solarVentDamaged": null, "solarVentDamageDescription": null,
-    "pipeJacks": [{ "size": null, "type": null, "painted": null, "damaged": null, "damageDescription": null }],
-    "exhaustStacks": [{ "type": null, "painted": null, "damaged": null, "damageDescription": null }],
+    "pipeJacks": [{ "size": null, "type": null, "painted": null }],
+    "exhaustStackPainted": null,
+    "exhaustStacks": [{ "size": null, "damaged": [], "damageDescription": null }],
     "kickoutsNeeded": null, "kickoutsPainted": null,
     "rainDiverterQty": null, "rainDiverterLF": null, "rainDiverterPainted": null,
     "powerMeterMastQty": null,

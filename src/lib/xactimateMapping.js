@@ -19,6 +19,14 @@ function str(fields, label) {
   return v == null || v === '' || v === 'Select' ? null : String(v)
 }
 
+function exhaustStackNote(fields, parentFields) {
+  const notes = []
+  const damaged = Array.isArray(fields?.Damaged) ? fields.Damaged : []
+  if (damaged.length) notes.push(`Damaged: ${damaged.join(', ')}`)
+  if (yn(parentFields, 'Painted') || yn(fields, 'Painted')) notes.push('Painted')
+  return notes.join('; ') || null
+}
+
 // ---- Roof (RFG) --------------------------------------------------------
 
 export const ROOF_LINE_ITEMS = {
@@ -120,12 +128,15 @@ export const ROOF_SUBITEM_LINE_ITEMS = {
   ri11: (f) => ({
     trade: 'Roofing', category: 'RFG',
     description: `Pipe jack - ${str(f, 'Type') || 'unspecified'} (${str(f, 'Size (inches)') || '?'}")`,
-    unit: 'EA', qty: 1, damaged: yn(f, 'Damaged'), note: yn(f, 'Painted') ? 'Painted' : null,
+    unit: 'EA', qty: 1, damaged: null, note: yn(f, 'Painted') ? 'Painted' : null,
   }),
-  ri12: (f) => ({
+  ri12: (f, parentFields) => ({
     trade: 'Roofing', category: 'RFG',
-    description: `Exhaust stack - ${str(f, 'Type') || 'unspecified'}`,
-    unit: 'EA', qty: 1, damaged: yn(f, 'Damaged'), note: yn(f, 'Painted') ? 'Painted' : null,
+    description: `Exhaust stack - ${str(f, 'Size') || 'unspecified size'}`,
+    unit: 'EA',
+    qty: 1,
+    damaged: Array.isArray(f?.Damaged) && f.Damaged.length > 0,
+    note: exhaustStackNote(f, parentFields),
   }),
   ri14: (f) => ({
     trade: 'Roofing', category: 'RFG',
@@ -258,7 +269,9 @@ export function buildRoofLineItems(itemDef, itemData) {
   if (!itemData || itemData.excluded) return []
   const fixed = ROOF_LINE_ITEMS[itemDef.id]?.(itemData.fields || {}) || []
   const subBuilder = ROOF_SUBITEM_LINE_ITEMS[itemDef.id]
-  const subs = subBuilder ? (itemData.subItems || []).map(sub => subBuilder(sub.fields || {})) : []
+  const subs = subBuilder
+    ? (itemData.subItems || []).map(sub => subBuilder(sub.fields || {}, itemData.fields || {}))
+    : []
   return [...fixed, ...subs]
 }
 

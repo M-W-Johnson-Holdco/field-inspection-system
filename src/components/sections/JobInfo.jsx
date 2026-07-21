@@ -7,6 +7,14 @@ import useExpandedSection from '../../hooks/useExpandedSection'
 import { formatPropertyAddress } from '../../utils/address'
 
 const CONTACT_OPTIONS = ['Phone', 'Email', 'Text']
+const LOSS_TYPE_OPTIONS = [
+  'Wind',
+  'Hail',
+  'Falling Objects or Debris',
+  'Fire',
+  'Lightning',
+  'Ice/Snow',
+]
 const EMPTY_ADDRESS = { address1: '', address2: '', city: '', state: '', zipcode: '' }
 
 function phoneDigits(value) {
@@ -166,6 +174,14 @@ export default function JobInfo() {
     const cur = ji.preferredContact || []
     updateJobInfo('preferredContact',
       cur.includes(val) ? cur.filter(v => v !== val) : [...cur, val]
+    )
+  }
+
+  function toggleLossType(val) {
+    const current = Array.isArray(ji.lossType) ? ji.lossType : []
+    updateJobInfo(
+      'lossType',
+      current.includes(val) ? current.filter(item => item !== val) : [...current, val],
     )
   }
 
@@ -334,7 +350,41 @@ export default function JobInfo() {
                 <InsuranceField value={ji.ins || ''} onChange={val => updateJobInfo('ins', val)} />
                 {field('claim', 'Claim #', { placeholder: 'Pending if not filed' })}
                 {field('claimFileDate', 'Claim File Date', { type: 'date', full: true })}
-                {field('stormDate', 'Storm Date', { type: 'date', full: true })}
+                {field('stormDate', 'Date of Loss', { type: 'date', full: true })}
+                <div className="form-field form-field--full">
+                  <label className="form-label">Loss Type</label>
+                  <details className="multi-select multi-select--field-select">
+                    <summary className={withSelectPlaceholderClass(
+                      'field-select compact-select',
+                      (ji.lossType || []).length ? ji.lossType.join(', ') : '',
+                    )}>
+                      {(ji.lossType || []).length ? ji.lossType.join(', ') : 'Select'}
+                    </summary>
+                    <div
+                      className="multi-select__menu"
+                      onMouseDown={e => e.preventDefault()}
+                      onClick={e => e.stopPropagation()}
+                    >
+                      {LOSS_TYPE_OPTIONS.map(option => (
+                        <label key={option} className="multi-select__option">
+                          <input
+                            type="checkbox"
+                            checked={(ji.lossType || []).includes(option)}
+                            onChange={() => toggleLossType(option)}
+                          />
+                          {option}
+                        </label>
+                      ))}
+                    </div>
+                  </details>
+                  {(ji.lossType || []).length > 0 && (
+                    <div className="multi-select__selected" aria-label="Selected loss types">
+                      {ji.lossType.map(option => (
+                        <span key={option} className="multi-select__chip">{option}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </JobInfoGroup>
           </div>

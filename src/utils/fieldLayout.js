@@ -20,7 +20,8 @@ function buildFieldGroupClass(field, extra = '') {
   const wideLabel = hasLongLabel(field) ? 'field-group--wide-label' : ''
   const optionSelect = field.t === 'radio' || field.t === 'select' ? 'field-group--option-select' : ''
   const fullRowMobile = field.fullRow ? 'field-group--full-row-mobile' : ''
-  const classes = [layout, measurement, pitch, stepperRow, wideLabel, optionSelect, fullRowMobile, extra].filter(Boolean).join(' ')
+  const halfWidthDesktop = field.halfWidthDesktop ? 'field-group--half-width-desktop' : ''
+  const classes = [layout, measurement, pitch, stepperRow, wideLabel, optionSelect, fullRowMobile, halfWidthDesktop, extra].filter(Boolean).join(' ')
   return classes ? `field-group ${classes}` : 'field-group'
 }
 

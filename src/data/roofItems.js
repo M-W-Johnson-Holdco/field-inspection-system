@@ -73,7 +73,7 @@ export const ROOF_ITEMS = [
     id: 'ri7', lbl: 'Box Vents', flags: ['P', 'M', 'D'],
     fields: [
       { t: 'num', l: 'Qty' },
-      { t: 'radio', l: 'Material', o: ['Metal', 'Plastic', 'Wood'] },
+      { t: 'radio', l: 'Material', o: ['Metal', 'Plastic'] },
       { t: 'yn', l: 'Painted' },
       { t: 'yn', l: 'Damaged' },
     ],
@@ -105,18 +105,15 @@ export const ROOF_ITEMS = [
   },
   {
     id: 'ri11', lbl: 'Pipe Jacks', flags: ['P', 'M'],
-    addMore: true,
-    addMoreLabel: 'Add Pipe Jack',
-    subItemPhotos: true,
-    subItemDamaged: true,
-    subFieldsUseMaterialColumnWidth: true,
-    subItemSizeCounters: { field: 'Size (inches)', sizes: ['1.5', '2', '3', '4'], compact: true },
-    fields: [],
-    subFields: [
-      { t: 'select', l: 'Size (inches)', o: ['Select', '1.5', '2', '3', '4'] },
-      { t: 'radio', l: 'Type', o: ['3-in-1/Neoprene', 'Lead', 'Lifetime/Silicone'] },
+    subItemSizeCounters: {
+      field: 'Size (inches)',
+      sizes: ['1.5', '2', '3', '4'],
+      compact: true,
+      editable: true,
+    },
+    fields: [
+      { t: 'radio', l: 'Type', o: ['3-in-1/Neoprene', 'Lead', 'Lifetime/Silicone'], fullRow: true },
       { t: 'yn', l: 'Painted' },
-      { t: 'yn', l: 'Damaged' },
     ],
   },
   {
@@ -125,12 +122,12 @@ export const ROOF_ITEMS = [
     addMoreLabel: 'Add Exhaust Stack',
     subItemPhotos: true,
     subItemDamaged: true,
-    subItemSizeCounters: { field: 'Type', sizes: ['Cap', 'Flange', 'Stack'], labelSuffix: '', counterLabel: 'type', compact: true },
-    fields: [],
+    fields: [
+      { t: 'yn', l: 'Painted', allowNA: false },
+    ],
     subFields: [
-      { t: 'select', l: 'Type', o: ['Select', 'Cap', 'Flange', 'Stack'] },
-      { t: 'yn', l: 'Painted' },
-      { t: 'yn', l: 'Damaged' },
+      { t: 'select', l: 'Size', o: ['Select', 'Small (4")', 'Medium (5-6")', 'Large (7-8")'], fullRow: true },
+      { t: 'multi', l: 'Damaged', o: ['Cap', 'Stack', 'Flange'], allowNA: false, halfWidthDesktop: true },
     ],
   },
   {
