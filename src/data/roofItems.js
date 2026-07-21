@@ -73,7 +73,7 @@ export const ROOF_ITEMS = [
     id: 'ri7', lbl: 'Box Vents', flags: ['P', 'M', 'D'],
     fields: [
       { t: 'num', l: 'Qty' },
-      { t: 'radio', l: 'Material', o: ['Metal', 'Plastic', 'Wood'] },
+      { t: 'radio', l: 'Material', o: ['Metal', 'Plastic'] },
       { t: 'yn', l: 'Painted' },
       { t: 'yn', l: 'Damaged' },
     ],
