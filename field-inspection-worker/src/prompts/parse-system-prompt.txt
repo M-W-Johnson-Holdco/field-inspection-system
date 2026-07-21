@@ -103,6 +103,7 @@ jobInfo.preferredContact: comma-separated from Phone, Email, Text
 jobInfo.contactPreferredContact: comma-separated from Phone, Email, Text (for the separate contact)
 jobInfo.claimFileDate: ISO date YYYY-MM-DD when the insurance claim was filed
 jobInfo.stormDate: ISO date YYYY-MM-DD when the storm or loss event occurred
+jobInfo.lossType: array containing any mentioned values from "Wind", "Hail", "Falling Objects or Debris", "Fire", "Lightning", "Ice/Snow"
 jobInfo.address1: street number + street name (e.g. "2214 Maple Ridge Court")
 jobInfo.address2: unit/apt/suite, if any
 jobInfo.city: city name only
@@ -115,7 +116,7 @@ Return this exact structure (use null for any scalar field not mentioned, and []
     "cust": null, "phone": null, "email": null,
     "address1": null, "address2": null, "city": null, "state": null, "zipcode": null,
     "pm": null, "insp": null, "ins": null, "claim": null,
-    "claimFileDate": null, "stormDate": null, "preferredContact": null, "residenceType": null,
+    "claimFileDate": null, "stormDate": null, "lossType": [], "preferredContact": null, "residenceType": null,
     "tenantname": null, "tenantphone": null,
     "hasSeparateContact": null, "contactName": null, "contactPhone": null,
     "contactEmail": null, "contactPreferredContact": null

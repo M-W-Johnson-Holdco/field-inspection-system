@@ -36,6 +36,7 @@ const INITIAL_STATE = {
     pm: '', insp: '', ins: '', claim: '',
     claimFileDate: '',
     stormDate: '',
+    lossType: [],
     preferredContact: [],
     residenceType: 'Primary',
     addrParts: { address1: '', address2: '', city: '', state: '', zipcode: '' },
@@ -93,7 +94,7 @@ function calculateCompletion(data) {
   const totals = { filled: 0, total: 0 }
   const ji = data.jobInfo || {}
 
-  ;['cust', 'preferredContact', 'pm', 'insp', 'ins', 'claim', 'claimFileDate', 'stormDate'].forEach(key => {
+  ;['cust', 'preferredContact', 'pm', 'insp', 'ins', 'claim', 'claimFileDate', 'stormDate', 'lossType'].forEach(key => {
     countValue(ji[key], totals)
   })
   countValue(ji.phone, totals, isValidPhone)
@@ -223,6 +224,10 @@ function normalizeJobInfo(jobInfo = {}) {
   if (next.date != null && next.date !== '') {
     if (!next.claimFileDate) next.claimFileDate = next.date
     delete next.date
+  }
+
+  if (!Array.isArray(next.lossType)) {
+    next.lossType = next.lossType ? [next.lossType] : []
   }
 
   return next

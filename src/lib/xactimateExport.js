@@ -35,6 +35,7 @@ export function buildXactimateExport(data) {
     claimNumber: ji.claim || '',
     claimFileDate: ji.claimFileDate || '',
     stormDate: ji.stormDate || '',
+    lossType: Array.isArray(ji.lossType) ? ji.lossType : [],
     projectManager: ji.pm || '',
     inspector: ji.insp || '',
   }
