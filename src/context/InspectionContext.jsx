@@ -163,7 +163,7 @@ const PIPE_JACK_SIZE_LABELS = [
   { field: 'Qty 4"', size: '4' },
 ]
 
-const EXHAUST_STACK_TYPES = ['Flange', 'Stack', 'Cap']
+const EXHAUST_STACK_TYPES = ['Cap', 'Stack', 'Flange']
 
 function normalizeGutterSizeValue(val) {
   if (val == null || val === '' || val === 'Select') return ''
@@ -360,6 +360,7 @@ function migrateChimneyFields(ri17) {
   const shared = {
     ...(fields['Size / Width'] ? { 'Size / Width': normalizeChimneySizeValue(fields['Size / Width']) } : {}),
     ...(fields['Counter Flashing'] ? { 'Counter Flashing': fields['Counter Flashing'] } : {}),
+    ...(fields['Cricket Present'] ? { 'Cricket Present': fields['Cricket Present'] } : {}),
     ...(fields.Painted ? { Painted: fields.Painted } : {}),
     ...(fields.Damaged ? { Damaged: fields.Damaged } : {}),
     ...(fields._damage ? { _damage: fields._damage } : {}),
@@ -410,38 +411,6 @@ function normalizeRi17(roofData) {
 
 const FLASHING_ITEM_IDS = ['ri18', 'ri19', 'ri20']
 
-function hasLegacyFlashingTopLevel(fields = {}) {
-  return fields.Painted != null
-    || fields.Damaged != null
-    || fields['Length (LF)'] != null
-    || fields._damage != null
-}
-
-function normalizeFlashingSubItem(sub) {
-  return {
-    fields: { ...(sub?.fields || {}) },
-    photos: Array.isArray(sub?.photos) ? sub.photos : [],
-  }
-}
-
-function migrateFlashingFields(item) {
-  const fields = item.fields || {}
-  const existing = (item.subItems || []).map(normalizeFlashingSubItem)
-  if (existing.length) return existing
-
-  if (!hasLegacyFlashingTopLevel(fields)) return []
-
-  return [{
-    fields: {
-      ...(fields['Length (LF)'] ? { 'Length (LF)': fields['Length (LF)'] } : {}),
-      ...(fields.Painted ? { Painted: fields.Painted } : {}),
-      ...(fields.Damaged ? { Damaged: fields.Damaged } : {}),
-      ...(fields._damage ? { _damage: fields._damage } : {}),
-    },
-    photos: item.photos || [],
-  }]
-}
-
 function normalizeFlashingItems(roofData) {
   let next = { ...roofData }
 
@@ -449,82 +418,38 @@ function normalizeFlashingItems(roofData) {
     const item = next[itemId]
     if (!item) continue
 
-    const fields = item.fields || {}
-    if (hasLegacyFlashingTopLevel(fields)) {
-      next[itemId] = {
-        ...item,
-        fields: {},
-        subItems: migrateFlashingFields(item),
-        photos: [],
-      }
-      continue
-    }
-
-    const normalizedSubItems = (item.subItems || []).map(normalizeFlashingSubItem)
-    const subItemsChanged = normalizedSubItems.some((sub, index) => {
-      const original = item.subItems?.[index]
-      return JSON.stringify(sub.fields) !== JSON.stringify(original?.fields || {})
-        || !Array.isArray(original?.photos)
+    const topFields = item.fields || {}
+    const subItems = item.subItems || []
+    const firstSub = subItems.find(sub => {
+      const fields = sub?.fields || {}
+      return fields.Painted || fields.Damaged || fields._damage
     })
+    const lifted = firstSub?.fields || {}
+    const photos = [
+      ...(Array.isArray(item.photos) ? item.photos : []),
+      ...subItems.flatMap(sub => sub.photos || []),
+    ]
 
-    if (subItemsChanged) {
-      next[itemId] = { ...item, subItems: normalizedSubItems }
+    next[itemId] = {
+      ...item,
+      fields: {
+        ...(lifted.Painted || topFields.Painted ? { Painted: lifted.Painted || topFields.Painted } : {}),
+        ...(lifted.Damaged || topFields.Damaged ? { Damaged: lifted.Damaged || topFields.Damaged } : {}),
+        ...(lifted._damage || topFields._damage ? { _damage: lifted._damage || topFields._damage } : {}),
+      },
+      subItems: [],
+      photos,
     }
   }
 
   return next
 }
 
-function hasLegacyCorniceTopLevel(fields = {}) {
-  return fields.Type != null
-    || fields.Qty != null
-    || fields.Story != null
-}
-
-function normalizeCorniceSubItem(sub) {
-  const fields = { ...(sub?.fields || {}) }
-  if (fields.Story != null && fields.Story !== '') {
-    fields.Story = String(fields.Story)
-  }
-  if (fields.Qty != null && fields.Qty !== '') {
-    fields.Qty = String(fields.Qty)
-  }
-  return {
-    fields,
-    photos: Array.isArray(sub?.photos) ? sub.photos : [],
-  }
-}
-
-function migrateCorniceFields(ri21) {
-  const fields = ri21.fields || {}
-  const existing = (ri21.subItems || []).map(normalizeCorniceSubItem)
-  if (existing.length) return existing
-
-  const type = fields.Type || ''
-  const story = fields.Story != null && fields.Story !== '' ? String(fields.Story) : ''
-  const qty = Math.max(0, Number(fields.Qty) || 0)
-  const hasData = type || story || fields.Qty != null
-
-  if (!hasData) return []
-
-  if (qty > 1) {
-    return Array.from({ length: qty }, (_, index) => ({
-      fields: {
-        ...(type ? { Type: type } : {}),
-        ...(story ? { Story: story } : {}),
-      },
-      photos: index === 0 ? (ri21.photos || []) : [],
-    }))
-  }
-
-  return [{
-    fields: {
-      ...(type ? { Type: type } : {}),
-      ...(story ? { Story: story } : {}),
-      ...(fields.Qty != null && fields.Qty !== '' ? { Qty: String(fields.Qty) } : {}),
-    },
-    photos: ri21.photos || [],
-  }]
+function normalizeCorniceFields(fields = {}) {
+  const next = { ...fields }
+  if (next.Story != null && next.Story !== '') next.Story = String(next.Story)
+  if (next.Qty != null && next.Qty !== '') next.Qty = String(next.Qty)
+  return next
 }
 
 function normalizeRi21(roofData) {
@@ -532,26 +457,27 @@ function normalizeRi21(roofData) {
   const ri21 = next.ri21
   if (!ri21) return next
 
-  const fields = ri21.fields || {}
-  if (hasLegacyCorniceTopLevel(fields)) {
-    next.ri21 = {
-      ...ri21,
-      fields: {},
-      subItems: migrateCorniceFields(ri21),
-      photos: [],
-    }
-    return next
-  }
-
-  const normalizedSubItems = (ri21.subItems || []).map(normalizeCorniceSubItem)
-  const subItemsChanged = normalizedSubItems.some((sub, index) => {
-    const original = ri21.subItems?.[index]
-    return JSON.stringify(sub.fields) !== JSON.stringify(original?.fields || {})
-      || !Array.isArray(original?.photos)
+  const topFields = normalizeCorniceFields(ri21.fields || {})
+  const subItems = ri21.subItems || []
+  const firstSub = subItems.find(sub => {
+    const fields = sub?.fields || {}
+    return fields.Type || fields.Story || fields.Qty
   })
+  const lifted = firstSub ? normalizeCorniceFields(firstSub.fields || {}) : {}
+  const photos = [
+    ...(Array.isArray(ri21.photos) ? ri21.photos : []),
+    ...subItems.flatMap(sub => sub.photos || []),
+  ]
 
-  if (subItemsChanged) {
-    next.ri21 = { ...ri21, subItems: normalizedSubItems }
+  next.ri21 = {
+    ...ri21,
+    fields: {
+      ...(lifted.Type || topFields.Type ? { Type: lifted.Type || topFields.Type } : {}),
+      ...(lifted.Story || topFields.Story ? { Story: lifted.Story || topFields.Story } : {}),
+      ...(lifted.Qty || topFields.Qty ? { Qty: lifted.Qty || topFields.Qty } : {}),
+    },
+    subItems: [],
+    photos,
   }
 
   return next
@@ -777,7 +703,7 @@ function exhaustStackDamageParts(fields = {}) {
       ? fields['Damage To']
       : (EXHAUST_STACK_TYPES.includes(fields['Damage To']) ? [fields['Damage To']] : []))
   const parts = raw.filter(part => EXHAUST_STACK_TYPES.includes(part))
-  if (parts.length) return [...new Set(parts)]
+  if (parts.length) return EXHAUST_STACK_TYPES.filter(part => parts.includes(part))
   if (fields.Damaged === 'Yes' && EXHAUST_STACK_TYPES.includes(fields.Type)) {
     return [fields.Type]
   }
@@ -859,11 +785,20 @@ function normalizeRi12(roofData) {
   return next
 }
 
-function parseLegacySkylightSize(text) {
-  if (!text) return {}
-  const match = String(text).trim().match(/(\d+(?:\.\d+)?)\s*(?:in|"|''|″)?\s*[x×]\s*(\d+(?:\.\d+)?)/i)
-  if (!match) return {}
-  return { 'Length (in)': match[1], 'Width (in)': match[2] }
+const SKYLIGHT_SIZES = ['Small', 'Medium', 'Large', 'X-Large']
+
+function normalizeSkylightSize(value) {
+  if (value == null || value === '' || value === 'Select') return ''
+  const text = String(value).trim()
+  if (SKYLIGHT_SIZES.includes(text)) return text
+  const lower = text.toLowerCase()
+  if (lower === 'x-large' || lower === 'xlarge' || lower === 'xl' || lower.startsWith('x-large') || lower.startsWith('extra')) {
+    return 'X-Large'
+  }
+  if (lower.startsWith('small')) return 'Small'
+  if (lower.startsWith('medium')) return 'Medium'
+  if (lower.startsWith('large')) return 'Large'
+  return ''
 }
 
 function isLegacySkylightSubItem(sub) {
@@ -872,8 +807,19 @@ function isLegacySkylightSubItem(sub) {
 }
 
 function normalizeSkylightSubItem(sub) {
+  const source = { ...(sub?.fields || {}) }
+  const size = normalizeSkylightSize(source.Size)
+  delete source['Size (L x W)']
+  delete source['Size (sq in)']
+  delete source['Size (sq. in)']
+  delete source['Length (in)']
+  delete source['Width (in)']
+  delete source.Size
   return {
-    fields: { ...(sub?.fields || {}) },
+    fields: {
+      ...source,
+      ...(size ? { Size: size } : {}),
+    },
     photos: Array.isArray(sub?.photos) ? sub.photos : [],
   }
 }
@@ -888,10 +834,10 @@ function migrateSkylightFields(ri14) {
 
   ;(ri14.subItems || []).forEach(sub => {
     if (isLegacySkylightSubItem(sub)) {
-      const sizeParts = parseLegacySkylightSize(sub.fields?.['Size (L x W)'])
+      const size = normalizeSkylightSize(sub.fields?.Size)
       subItems.push({
         fields: {
-          ...sizeParts,
+          ...(size ? { Size: size } : {}),
           ...(sharedStyle ? { Style: sharedStyle } : {}),
           ...(sub.fields?.Style ? { Style: sub.fields.Style } : {}),
           ...(sharedMount ? { Mount: sharedMount } : {}),
@@ -934,13 +880,25 @@ function normalizeRi14(roofData) {
     || fields.Damaged != null
     || fields._damage != null
   const hasLegacySubs = (ri14.subItems || []).some(isLegacySkylightSubItem)
+  const hasLengthWidthSubs = (ri14.subItems || []).some(sub =>
+    sub?.fields?.['Length (in)'] != null
+    || sub?.fields?.['Width (in)'] != null
+    || sub?.fields?.['Size (L x W)'] != null
+    || sub?.fields?.['Size (sq in)'] != null
+    || sub?.fields?.['Size (sq. in)'] != null,
+  )
 
-  if (hasLegacyTopLevel || hasLegacySubs) {
+  if (hasLegacyTopLevel || hasLegacySubs || hasLengthWidthSubs) {
     next.ri14 = {
       ...ri14,
       fields: {},
       subItems: migrateSkylightFields(ri14),
       photos: [],
+    }
+  } else if ((ri14.subItems || []).length) {
+    next.ri14 = {
+      ...ri14,
+      subItems: (ri14.subItems || []).map(normalizeSkylightSubItem),
     }
   }
 
@@ -1049,6 +1007,7 @@ function buildChimneySubItemsFromParsed(roof = {}) {
       fields: {
         ...(ch?.size ? { 'Size / Width': normalizeChimneySizeValue(ch.size) } : {}),
         ...(ch?.counterFlashing ? { 'Counter Flashing': ch.counterFlashing } : {}),
+        ...(ch?.cricketPresent ? { 'Cricket Present': ch.cricketPresent } : {}),
         ...(ch?.painted ? { Painted: ch.painted } : {}),
         ...(ch?.damaged ? { Damaged: ch.damaged } : {}),
         ...(ch?.damaged === 'Yes' && ch?.damageDescription ? { _damage: ch.damageDescription } : {}),
@@ -1083,9 +1042,30 @@ function buildChimneySubItemsFromParsed(roof = {}) {
 }
 
 const FLASHING_IMPORT_CONFIG = [
-  { itemId: 'ri18', listKey: 'stepFlashing', painted: 'stepFlashingPainted', damaged: 'stepFlashingDamaged', present: 'stepFlashingPresent' },
-  { itemId: 'ri19', listKey: 'counterFlashing', painted: 'counterFlashingPainted', damaged: 'counterFlashingDamaged', present: 'counterFlashingPresent' },
-  { itemId: 'ri20', listKey: 'lFlashing', painted: 'lFlashingPainted', damaged: 'lFlashingDamaged', present: 'lFlashingPresent' },
+  {
+    itemId: 'ri18',
+    listKey: 'stepFlashing',
+    painted: 'stepFlashingPainted',
+    damaged: 'stepFlashingDamaged',
+    damageDescription: 'stepFlashingDamageDescription',
+    present: 'stepFlashingPresent',
+  },
+  {
+    itemId: 'ri19',
+    listKey: 'counterFlashing',
+    painted: 'counterFlashingPainted',
+    damaged: 'counterFlashingDamaged',
+    damageDescription: 'counterFlashingDamageDescription',
+    present: 'counterFlashingPresent',
+  },
+  {
+    itemId: 'ri20',
+    listKey: 'lFlashing',
+    painted: 'lFlashingPainted',
+    damaged: 'lFlashingDamaged',
+    damageDescription: 'lFlashingDamageDescription',
+    present: 'lFlashingPresent',
+  },
 ]
 
 function isPresentValue(value) {
@@ -1096,37 +1076,29 @@ function isPresentValue(value) {
   return null
 }
 
-function buildFlashingSubItemsFromParsed(roof = {}, config) {
+function buildFlashingFieldsFromParsed(roof = {}, config) {
   const list = Array.isArray(roof[config.listKey]) ? roof[config.listKey] : []
-  if (list.length) {
-    return list.map(fl => ({
-      fields: {
-        ...(fl?.lengthLF ? { 'Length (LF)': String(fl.lengthLF) } : {}),
-        ...(fl?.painted ? { Painted: fl.painted } : {}),
-        ...(fl?.damaged ? { Damaged: fl.damaged } : {}),
-        ...(fl?.damaged === 'Yes' && fl?.damageDescription ? { _damage: fl.damageDescription } : {}),
-      },
-      photos: [],
-    }))
-  }
+  const first = list.find(fl => fl?.painted || fl?.damaged || fl?.damageDescription) || list[0]
 
-  // Legacy fallback: single shared flashing run.
-  const painted = roof[config.painted] || ''
-  const damaged = roof[config.damaged] || ''
+  const painted = first?.painted || roof[config.painted] || ''
+  const damaged = first?.damaged || roof[config.damaged] || ''
+  const damageDescription = (
+    (first?.damaged === 'Yes' && first?.damageDescription)
+    || roof[config.damageDescription]
+    || ''
+  )
   const present = isPresentValue(config.present ? roof[config.present] : null)
 
-  if (present === false) return []
+  if (present === false) return null
 
-  const hasData = painted || damaged || present === true
-  if (!hasData) return []
+  const hasData = painted || damaged || damageDescription || present === true
+  if (!hasData) return null
 
-  return [{
-    fields: {
-      ...(painted ? { Painted: painted } : {}),
-      ...(damaged ? { Damaged: damaged } : {}),
-    },
-    photos: [],
-  }]
+  return {
+    ...(painted ? { Painted: painted } : {}),
+    ...(damaged ? { Damaged: damaged } : {}),
+    ...(damaged === 'Yes' && damageDescription ? { _damage: damageDescription } : {}),
+  }
 }
 
 function buildLowSlopeSubItemsFromParsed(roof = {}) {
@@ -1169,29 +1141,19 @@ function buildLowSlopeSubItemsFromParsed(roof = {}) {
 
 function buildSkylightSubItemsFromParsed(roof = {}) {
   const list = Array.isArray(roof.skylights) ? roof.skylights : []
-  return list.map(sk => ({
-    fields: {
-      ...(sk?.style ? { Style: sk.style } : {}),
-      ...(sk?.mount ? { Mount: sk.mount } : {}),
-      ...(sk?.length ? { 'Length (in)': String(sk.length) } : {}),
-      ...(sk?.width ? { 'Width (in)': String(sk.width) } : {}),
-      ...(sk?.damaged ? { Damaged: sk.damaged } : {}),
-      ...(sk?.damaged === 'Yes' && sk?.damageDescription ? { _damage: sk.damageDescription } : {}),
-    },
-    photos: [],
-  }))
-}
-
-function buildCorniceGableSubItemsFromParsed(roof = {}) {
-  const list = Array.isArray(roof.corniceGables) ? roof.corniceGables : []
-  return list.map(cg => ({
-    fields: {
-      ...(cg?.type ? { Type: cg.type } : {}),
-      ...(cg?.story ? { Story: String(cg.story) } : {}),
-      ...(cg?.qty ? { Qty: String(cg.qty) } : {}),
-    },
-    photos: [],
-  }))
+  return list.map(sk => {
+    const size = normalizeSkylightSize(sk?.size)
+    return {
+      fields: {
+        ...(sk?.style ? { Style: sk.style } : {}),
+        ...(sk?.mount ? { Mount: sk.mount } : {}),
+        ...(size ? { Size: size } : {}),
+        ...(sk?.damaged ? { Damaged: sk.damaged } : {}),
+        ...(sk?.damaged === 'Yes' && sk?.damageDescription ? { _damage: sk.damageDescription } : {}),
+      },
+      photos: [],
+    }
+  })
 }
 
 function buildOtherStructureSubItemsFromParsed(roof = {}) {
@@ -1615,22 +1577,25 @@ export function InspectionProvider({ children }) {
     const updates = FLASHING_IMPORT_CONFIG
       .map(config => ({
         itemId: config.itemId,
-        subItems: buildFlashingSubItemsFromParsed(roof, config),
+        fields: buildFlashingFieldsFromParsed(roof, config),
       }))
-      .filter(entry => entry.subItems.length)
+      .filter(entry => entry.fields)
 
     if (!updates.length) return
 
     setData(prev => {
       let roofData = { ...prev.roofData }
-      for (const { itemId, subItems } of updates) {
+      for (const { itemId, fields } of updates) {
         roofData = {
           ...roofData,
           [itemId]: {
             ...roofData[itemId],
             excluded: false,
-            fields: {},
-            subItems,
+            fields: {
+              ...(roofData[itemId]?.fields || {}),
+              ...fields,
+            },
+            subItems: [],
           },
         }
       }
@@ -1674,29 +1639,6 @@ export function InspectionProvider({ children }) {
         roofData: {
           ...prev.roofData,
           ri14: {
-            ...item,
-            excluded: false,
-            fields: {},
-            subItems,
-          },
-        },
-      }
-      scheduleSave(next)
-      return next
-    })
-  }
-
-  function importRoofCorniceGables(roof = {}) {
-    const subItems = buildCorniceGableSubItemsFromParsed(roof)
-    if (!subItems.length) return
-
-    setData(prev => {
-      const item = prev.roofData.ri21
-      const next = {
-        ...prev,
-        roofData: {
-          ...prev.roofData,
-          ri21: {
             ...item,
             excluded: false,
             fields: {},
@@ -2046,7 +1988,7 @@ export function InspectionProvider({ children }) {
       aiParseState, setAiParseState,
       toggleRoofExclude, updateRoofField,
       addRoofSubItem, removeRoofSubItem, updateRoofSubField, adjustRoofSubItemSizeCount, importRoofPipeJacks, importRoofExhaustStacks, importRoofChimneys, importRoofFlashingItems, importRoofLowSlopeItems,
-      importRoofSkylights, importRoofCorniceGables, importRoofOtherStructures,
+      importRoofSkylights, importRoofOtherStructures,
       addRoofPhoto, removeRoofPhoto,
       toggleElevExclude, updateElevField,
       addElevPhoto, removeElevPhoto,

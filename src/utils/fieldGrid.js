@@ -38,18 +38,19 @@ function isFlashingSubFieldsPattern(fields) {
 }
 
 function isChimneySubFieldsPattern(fields) {
-  return fields.length === 4
+  return fields.length === 5
     && fields[0].t === 'select' && fields[0].l === 'Size / Width'
     && isOptionSelectField(fields[1]) && fields[1].l === 'Counter Flashing'
-    && fields[2].t === 'yn' && fields[2].l === 'Painted'
-    && fields[3].t === 'yn' && fields[3].l === 'Damaged'
+    && fields[2].t === 'yn' && fields[2].l === 'Cricket Present'
+    && fields[3].t === 'yn' && fields[3].l === 'Painted'
+    && fields[4].t === 'yn' && fields[4].l === 'Damaged'
 }
 
 function isSkylightSubFieldsPattern(fields) {
   return fields.length === 4
     && fields[0].t === 'select' && fields[0].l === 'Style'
     && fields[1].t === 'select' && fields[1].l === 'Mount'
-    && fields[2].t === 'lwxw'
+    && fields[2].t === 'select' && fields[2].l === 'Size'
     && fields[3].t === 'yn' && fields[3].l === 'Damaged'
 }
 
@@ -192,13 +193,14 @@ export function groupFieldsForGrid(fields) {
   if (isChimneySubFieldsPattern(fields)) {
     return [
       { type: 'single', field: fields[0] },
-      { type: 'single', field: fields[1] },
       {
         type: 'row',
-        ynPairRow: true,
+        chimneyControlsRow: true,
         groups: [
+          { type: 'single', field: fields[1] },
           { type: 'single', field: fields[2] },
           { type: 'single', field: fields[3] },
+          { type: 'single', field: fields[4] },
         ],
       },
     ]
@@ -335,27 +337,45 @@ export function fieldSelectClass(field) {
   return 'field-select'
 }
 
-/** Yes/No options; Damaged, Painted, and site-access yn fields also include N/A. */
-export function ynOptionsForField(field) {
+/** Fields that should never offer an N/A choice in the dropdown. */
+function omitsNAOption(field) {
+  if (field?.allowNA === false) return true
+  if (field?.allowNA === true) return false
   const label = String(field?.l || '')
-  if (field?.allowNA === false) return ['Yes', 'No']
-  if (
+  return (
     label === 'Damaged'
     || label === 'Painted'
-    || label === 'OK Saturday Build'
+    || label === 'Type'
+    || label === 'Material'
+    || label === 'Style'
+    || label === 'Mount'
+    || label === 'Location'
+    || /^Size\b/i.test(label)
+    || /damage/i.test(label)
+  )
+}
+
+/** Yes/No options; some site-access yn fields also include N/A. */
+export function ynOptionsForField(field) {
+  const label = String(field?.l || '')
+  if (omitsNAOption(field)) return ['Yes', 'No']
+  if (
+    label === 'OK Saturday Build'
     || label === 'Pest Control Flashing'
     || label === 'Overhead Clearance Issue'
-    || /damage/i.test(label)
   ) {
     return ['Yes', 'No', 'N/A']
   }
   return ['Yes', 'No']
 }
 
-/** Option-list fields (radio/select) always include N/A, so an AI-parsed "N/A" (item explicitly absent) has a matching option to select instead of rendering blank. */
+/** Option-list fields (radio/select). Type/Material/Size/Damaged/Painted never get N/A. */
 export function optionsForField(field) {
   const opts = Array.isArray(field?.o) ? [...field.o] : []
-  if (field?.allowNA !== false && !opts.includes('N/A')) {
+  if (omitsNAOption(field)) {
+    return opts.filter(opt => opt !== 'N/A')
+  }
+  if (!opts.includes('N/A')) {
     opts.push('N/A')
   }
   return opts

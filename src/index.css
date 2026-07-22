@@ -2806,6 +2806,13 @@ button:disabled {
   justify-content: start;
 }
 
+/* Mobile: Counter Flashing | Cricket Present, then Painted | Damaged */
+.field-row--chimney-controls {
+  grid-template-columns: repeat(2, max-content);
+  justify-content: start;
+  gap: 8px 12px;
+}
+
 .field-row--qty-row {
   grid-template-columns: repeat(2, max-content);
   justify-content: start;
@@ -3020,7 +3027,8 @@ summary.field-select.field-select--placeholder {
 }
 
 @media (min-width: 760px) {
-  .ri-fields-grid .field-group--full.field-group--half-width-desktop .multi-select {
+  .ri-fields-grid .field-group--full.field-group--half-width-desktop .multi-select,
+  .ri-fields-grid .field-group--full.field-group--half-width-desktop .field-select {
     width: min(100%, 210px);
     min-width: min(100%, 210px);
     max-width: 210px;
@@ -3206,6 +3214,20 @@ summary.field-select.field-select--placeholder {
   line-height: 1.2;
 }
 
+.multi-select__chip--remove {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.multi-select__chip--remove span {
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0.75;
+}
+
 .number-stepper {
   display: inline-flex;
   width: max-content;
@@ -3381,11 +3403,19 @@ summary.field-select.field-select--placeholder {
   font-size: 15px;
   resize: vertical;
   min-height: 64px;
+  box-sizing: border-box;
   user-select: text !important;
   -webkit-user-select: text !important;
   -webkit-touch-callout: default;
   touch-action: manipulation;
   pointer-events: auto;
+}
+
+@media (max-width: 759px) {
+  .ri-damage-input {
+    resize: none;
+    overflow: hidden;
+  }
 }
 
 .ri-damage-row,
@@ -3488,13 +3518,13 @@ summary.field-select.field-select--placeholder {
   background: var(--field-bg);
 }
 
-.ri-exhaust-stack-body {
+.ri-collapsible-sub-body {
   padding-top: 12px;
   margin-top: 10px;
   border-top: 1px solid var(--border);
 }
 
-.ri-exhaust-stack-pills {
+.ri-collapsible-sub-pills {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -3502,22 +3532,22 @@ summary.field-select.field-select--placeholder {
 }
 
 @media (max-width: 759px) {
-  .ri-exhaust-stack-toggle {
+  .ri-collapsible-sub-toggle {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
   }
 
-  .ri-exhaust-stack-toggle .ri-sub-card__title {
+  .ri-collapsible-sub-toggle .ri-sub-card__title {
     grid-column: 1;
     grid-row: 1;
   }
 
-  .ri-exhaust-stack-toggle .ri-exhaust-stack-pills {
+  .ri-collapsible-sub-toggle .ri-collapsible-sub-pills {
     grid-column: 1 / -1;
     grid-row: 2;
   }
 
-  .ri-exhaust-stack-toggle .int-room-chevron {
+  .ri-collapsible-sub-toggle .int-room-chevron {
     grid-column: 2;
     grid-row: 1;
   }
@@ -4049,11 +4079,13 @@ summary.field-select.field-select--placeholder {
 
   .ri-fields-grid .field-group--full-row-mobile {
     grid-column: 1 / -1;
+    width: 100%;
+    max-width: 100%;
   }
 
   .ri-fields-grid .field-group--full-row-mobile .field-select {
-    width: min(100%, 190px);
-    max-width: 190px;
+    width: 100%;
+    max-width: 100%;
   }
 }
 
@@ -4658,6 +4690,21 @@ summary.field-select.field-select--placeholder {
     grid-template-columns: repeat(2, 6.75rem);
     justify-content: start;
     gap: 8px 12px;
+  }
+
+  /* Desktop: Counter Flashing alone, then Cricket | Painted | Damaged */
+  .field-row--chimney-controls {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(3, max-content);
+    justify-content: start;
+    gap: 8px 12px;
+  }
+
+  .field-row--chimney-controls > .field-group:first-child {
+    grid-column: 1 / -1;
+    width: max-content;
+    max-width: 100%;
   }
 
   .field-row--qty-row {

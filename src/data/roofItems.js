@@ -11,7 +11,7 @@ export const ROOF_ITEMS = [
   {
     id: 'ri0', lbl: 'Shingle Style / Grade', flags: ['P'],
     fields: [
-      { t: 'multiRadio', l: 'Style', o: ['3-Tab', 'Architectural', 'Designer', 'Disco', 'Impact Resistant'] },
+      { t: 'multiRadio', l: 'Style', o: ['3-Tab', 'Architectural', 'Designer', 'Disco', 'Impact Resistant'], allowNA: false, nativeMenu: true },
       { t: 'num', l: 'Stories' },
       { t: 'num', l: 'Layers' },
       { t: 'pitch', l: 'Predominant Pitch', p: '4/12' },
@@ -127,12 +127,13 @@ export const ROOF_ITEMS = [
     ],
     subFields: [
       { t: 'select', l: 'Size', o: ['Select', 'Small (4")', 'Medium (5-6")', 'Large (7-8")'], fullRow: true },
-      { t: 'multi', l: 'Damaged', o: ['Cap', 'Stack', 'Flange'], allowNA: false, halfWidthDesktop: true },
+      { t: 'multi', l: 'Damaged', o: ['Cap', 'Stack', 'Flange'], allowNA: false, halfWidthDesktop: true, nativeMenu: true },
     ],
   },
   {
     id: 'ri13', lbl: 'Kickouts', flags: ['P'],
     fields: [
+      { t: 'yn', l: 'Existing' },
       { t: 'yn', l: 'Needed' },
       { t: 'yn', l: 'Painted' },
     ],
@@ -148,7 +149,7 @@ export const ROOF_ITEMS = [
     subFields: [
       { t: 'select', l: 'Style', o: ['Select', 'Fixed', 'Tubular', 'Venting'] },
       { t: 'select', l: 'Mount', o: ['Select', 'Flush Mount', 'Curb Mount'] },
-      { t: 'lwxw', l: 'Size (L x W – Inches)', lengthKey: 'Length (in)', widthKey: 'Width (in)' },
+      { t: 'select', l: 'Size', fullRow: true, o: ['Select', 'Small', 'Medium', 'Large', 'X-Large'] },
       { t: 'yn', l: 'Damaged' },
     ],
   },
@@ -177,60 +178,35 @@ export const ROOF_ITEMS = [
     subFields: [
       { t: 'select', l: 'Size / Width', fullRow: true, o: ['Select', 'Small (width < 24")', 'Medium (width 24"–36")', 'Large (width > 36")'] },
       { t: 'radio', l: 'Counter Flashing', o: ['Replace', 'Reuse'] },
+      { t: 'yn', l: 'Cricket Present' },
       { t: 'yn', l: 'Painted' },
       { t: 'yn', l: 'Damaged' },
     ],
   },
   {
     id: 'ri18', lbl: 'Step Flashing', flags: ['P', 'M'],
-    addMore: true,
-    addMoreLabel: 'Add Step Flashing',
-    subItemPhotos: true,
-    subItemDamaged: true,
-    subItemTotalCounter: { label: 'Flashes' },
-    fields: [],
-    subFields: [
-      { t: 'num', l: 'Length (LF)', lfFeetOnly: true },
+    fields: [
       { t: 'yn', l: 'Painted' },
       { t: 'yn', l: 'Damaged' },
     ],
   },
   {
     id: 'ri19', lbl: 'Counter Flashing', flags: ['P', 'M'],
-    addMore: true,
-    addMoreLabel: 'Add Counter Flashing',
-    subItemPhotos: true,
-    subItemDamaged: true,
-    subItemTotalCounter: { label: 'Flashes' },
-    fields: [],
-    subFields: [
-      { t: 'num', l: 'Length (LF)', lfFeetOnly: true },
+    fields: [
       { t: 'yn', l: 'Painted' },
       { t: 'yn', l: 'Damaged' },
     ],
   },
   {
     id: 'ri20', lbl: 'L Flashing', flags: ['P', 'M'],
-    addMore: true,
-    addMoreLabel: 'Add L Flashing',
-    subItemPhotos: true,
-    subItemDamaged: true,
-    subItemTotalCounter: { label: 'Flashes' },
-    fields: [],
-    subFields: [
-      { t: 'num', l: 'Length (LF)', lfFeetOnly: true },
+    fields: [
       { t: 'yn', l: 'Painted' },
       { t: 'yn', l: 'Damaged' },
     ],
   },
   {
     id: 'ri21', lbl: 'Cornice Gables', flags: ['P', 'M'],
-    addMore: true,
-    addMoreLabel: 'Add Cornice Gable',
-    subItemPhotos: true,
-    subItemSizeCounters: { field: 'Type', sizes: ['Shingles', 'Metal'], labelSuffix: '', counterLabel: 'type', compact: true },
-    fields: [],
-    subFields: [
+    fields: [
       { t: 'select', l: 'Type', o: ['Select', 'Metal', 'Shingles'] },
       { t: 'num', l: 'Story', p: '1' },
       { t: 'num', l: 'Qty' },
@@ -256,7 +232,7 @@ export const ROOF_ITEMS = [
   {
     id: 'ri23', lbl: 'Other Structures', flags: ['P', 'M'],
     addMore: true,
-    addMoreLabel: 'Add Structure',
+    addMoreLabel: 'Add Other Structure',
     subItemPhotos: true,
     subItemDamaged: true,
     subItemTotalCounter: { label: 'Structures' },

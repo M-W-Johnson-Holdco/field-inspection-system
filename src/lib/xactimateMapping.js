@@ -21,7 +21,10 @@ function str(fields, label) {
 
 function exhaustStackNote(fields, parentFields) {
   const notes = []
-  const damaged = Array.isArray(fields?.Damaged) ? fields.Damaged : []
+  const damagedOrder = ['Cap', 'Stack', 'Flange']
+  const damaged = damagedOrder.filter(part =>
+    Array.isArray(fields?.Damaged) && fields.Damaged.includes(part),
+  )
   if (damaged.length) notes.push(`Damaged: ${damaged.join(', ')}`)
   if (yn(parentFields, 'Painted') || yn(fields, 'Painted')) notes.push('Painted')
   return notes.join('; ') || null
@@ -121,6 +124,27 @@ export const ROOF_LINE_ITEMS = {
     description: 'Power meter mast - reset',
     unit: 'EA', qty: num(fields, 'Qty'), damaged: null, note: null,
   }],
+  ri18: (fields) => [{
+    trade: 'Roofing', category: 'RFG',
+    description: 'Step flashing',
+    unit: 'EA', qty: null, damaged: yn(fields, 'Damaged'), note: yn(fields, 'Painted') ? 'Painted' : null,
+  }],
+  ri19: (fields) => [{
+    trade: 'Roofing', category: 'RFG',
+    description: 'Counter flashing',
+    unit: 'EA', qty: null, damaged: yn(fields, 'Damaged'), note: yn(fields, 'Painted') ? 'Painted' : null,
+  }],
+  ri20: (fields) => [{
+    trade: 'Roofing', category: 'RFG',
+    description: 'L flashing',
+    unit: 'EA', qty: null, damaged: yn(fields, 'Damaged'), note: yn(fields, 'Painted') ? 'Painted' : null,
+  }],
+  ri21: (fields) => [{
+    trade: 'Roofing', category: 'RFG',
+    description: `Cornice gable - ${str(fields, 'Type') || 'unspecified'}`,
+    unit: 'EA', qty: num(fields, 'Qty') ?? 1, damaged: null,
+    note: fields?.Story ? `Story ${fields.Story}` : null,
+  }],
 }
 
 // Sub-item (addMore) roof items -> one line item per sub-item.
@@ -142,34 +166,17 @@ export const ROOF_SUBITEM_LINE_ITEMS = {
     trade: 'Roofing', category: 'RFG',
     description: `Skylight - ${str(f, 'Style') || 'unspecified'} (${str(f, 'Mount') || '?'})`,
     unit: 'EA', qty: 1, damaged: yn(f, 'Damaged'),
-    note: (f?.['Length (in)'] && f?.['Width (in)']) ? `${f['Length (in)']}" x ${f['Width (in)']}"` : null,
+    note: str(f, 'Size') || null,
   }),
   ri17: (f) => ({
     trade: 'Roofing', category: 'RFG',
     description: `Chimney flashing - ${str(f, 'Size / Width') || 'unspecified size'}`,
     unit: 'EA', qty: 1, damaged: yn(f, 'Damaged'),
-    note: `Counter flashing: ${str(f, 'Counter Flashing') || '?'}${yn(f, 'Painted') ? ', painted' : ''}`,
-  }),
-  ri18: (f) => ({
-    trade: 'Roofing', category: 'RFG',
-    description: 'Step flashing',
-    unit: 'LF', qty: num(f, 'Length (LF)') ?? 1, damaged: yn(f, 'Damaged'), note: yn(f, 'Painted') ? 'Painted' : null,
-  }),
-  ri19: (f) => ({
-    trade: 'Roofing', category: 'RFG',
-    description: 'Counter flashing',
-    unit: 'LF', qty: num(f, 'Length (LF)') ?? 1, damaged: yn(f, 'Damaged'), note: yn(f, 'Painted') ? 'Painted' : null,
-  }),
-  ri20: (f) => ({
-    trade: 'Roofing', category: 'RFG',
-    description: 'L flashing',
-    unit: 'LF', qty: num(f, 'Length (LF)') ?? 1, damaged: yn(f, 'Damaged'), note: yn(f, 'Painted') ? 'Painted' : null,
-  }),
-  ri21: (f) => ({
-    trade: 'Roofing', category: 'RFG',
-    description: `Cornice gable - ${str(f, 'Type') || 'unspecified'}`,
-    unit: 'EA', qty: num(f, 'Qty') ?? 1, damaged: null,
-    note: f?.Story ? `Story ${f.Story}` : null,
+    note: [
+      `Counter flashing: ${str(f, 'Counter Flashing') || '?'}`,
+      str(f, 'Cricket Present') ? `Cricket: ${str(f, 'Cricket Present')}` : null,
+      yn(f, 'Painted') ? 'painted' : null,
+    ].filter(Boolean).join(', '),
   }),
   ri22: (f) => ({
     trade: 'Roofing', category: 'RFG',

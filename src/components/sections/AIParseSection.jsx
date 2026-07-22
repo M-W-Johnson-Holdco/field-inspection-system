@@ -55,17 +55,21 @@ const ROOF_MAP = [
   { key: 'solarVentPainted',        itemId: 'ri10', label: 'Painted' },
   { key: 'solarVentDamaged',        itemId: 'ri10', label: 'Damaged' },
   { key: 'solarVentDamageDescription', itemId: 'ri10', label: '_damage' },
+  { key: 'kickoutsExisting',        itemId: 'ri13', label: 'Existing' },
   { key: 'kickoutsNeeded',          itemId: 'ri13', label: 'Needed' },
   { key: 'kickoutsPainted',         itemId: 'ri13', label: 'Painted' },
   { key: 'rainDiverterQty',         itemId: 'ri15', label: 'Qty' },
   { key: 'rainDiverterLF',          itemId: 'ri15', label: 'Length (LF)' },
   { key: 'rainDiverterPainted',     itemId: 'ri15', label: 'Painted' },
   { key: 'powerMeterMastQty',       itemId: 'ri16', label: 'Qty' },
+  { key: 'corniceGableType',        itemId: 'ri21', label: 'Type' },
+  { key: 'corniceGableStory',       itemId: 'ri21', label: 'Story' },
+  { key: 'corniceGableQty',         itemId: 'ri21', label: 'Qty' },
 ]
-// Pipe jacks, exhaust stacks, chimneys, step/counter/L flashing, skylights,
-// cornice gables, and low-slope sections are variable-length repeatables —
-// each is imported directly from its roof.<key>[] array (see applyParsed),
-// not through ROOF_MAP.
+// Pipe jacks, exhaust stacks, chimneys, skylights, and low-slope sections
+// are variable-length repeatables — each is imported directly from its
+// roof.<key>[] array (see applyParsed), not through ROOF_MAP.
+// Step/counter/L flashing use importRoofFlashingItems.
 
 // Maps AI JSON elevation keys → { itemId, fieldLabel } per direction
 const ELEV_MAP = [
@@ -152,7 +156,7 @@ function applyParsed(parsed, ctx) {
   const {
     updateJobInfo, updateRoofField, updateElevField, updateExteriorField, updateNote,
     importRoofPipeJacks, importRoofExhaustStacks, importRoofChimneys, importRoofFlashingItems,
-    importRoofLowSlopeItems, importRoofSkylights, importRoofCorniceGables, importRoofOtherStructures,
+    importRoofLowSlopeItems, importRoofSkylights, importRoofOtherStructures,
     importInteriorRooms,
   } = ctx
 
@@ -227,7 +231,6 @@ function applyParsed(parsed, ctx) {
   importRoofFlashingItems(roof)
   importRoofLowSlopeItems(roof)
   importRoofSkylights(roof)
-  importRoofCorniceGables(roof)
   importRoofOtherStructures(roof)
 
   const chimneyNotes = (Array.isArray(roof.chimneys) ? roof.chimneys : [])

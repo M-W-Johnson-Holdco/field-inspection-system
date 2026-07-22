@@ -64,6 +64,7 @@ roof.starterStyle: "Starter Strip" or "3-Tab"
 roof.valleyStyle: "Ice & Water" or "W-Valley" or "Valley Metal"
 roof.boxVentMaterial: "Metal" or "Plastic" or "Wood" or "N/A"
 roof.turbineMaterial: "Metal" or "Plastic" or "N/A"
+roof.kickoutsExisting: "Yes" or "No"
 roof.kickoutsNeeded: "Yes" or "No"
 roof.exposedRafters: "Yes" or "No"
 
@@ -74,10 +75,12 @@ roof.exhaustStacks[].size: "Small (4\")" or "Medium (5-6\")" or "Large (7-8\")"
 roof.exhaustStacks[].damaged: array containing any mentioned values from "Cap", "Stack", "Flange"
 roof.chimneys[].size: "Small" (width < 24in) or "Medium" (24-36in) or "Large" (> 36in)
 roof.chimneys[].counterFlashing: "Replace" or "Reuse"
+roof.chimneys[].cricketPresent: "Yes" or "No"
 roof.skylights[].style: "Fixed" or "Tubular" or "Venting"
 roof.skylights[].mount: "Flush Mount" or "Curb Mount"
+roof.skylights[].size: "Small" or "Medium" or "Large" or "X-Large"
 roof.lowSlope[].location: "Front Porch" or "Back Porch" or "Other"
-roof.corniceGables[].type: "Shingles" or "Metal"
+roof.corniceGableType: "Shingles" or "Metal"
 
 elevations.[direction].gutterMaterial: "Aluminum" or "Steel" or "Copper" or "Vinyl" or "N/A"
 elevations.[direction].gutterSize: "4\"" or "5\"" or "6\""
@@ -147,15 +150,15 @@ Return this exact structure (use null for any scalar field not mentioned, and []
     "pipeJacks": [{ "size": null, "type": null, "painted": null }],
     "exhaustStackPainted": null,
     "exhaustStacks": [{ "size": null, "damaged": [], "damageDescription": null }],
-    "kickoutsNeeded": null, "kickoutsPainted": null,
+    "kickoutsExisting": null, "kickoutsNeeded": null, "kickoutsPainted": null,
     "rainDiverterQty": null, "rainDiverterLF": null, "rainDiverterPainted": null,
     "powerMeterMastQty": null,
-    "chimneys": [{ "size": null, "counterFlashing": null, "painted": null, "damaged": null, "damageDescription": null, "conditionNotes": null }],
-    "stepFlashing": [{ "lengthLF": null, "painted": null, "damaged": null, "damageDescription": null }],
-    "counterFlashing": [{ "lengthLF": null, "painted": null, "damaged": null, "damageDescription": null }],
-    "lFlashing": [{ "lengthLF": null, "painted": null, "damaged": null, "damageDescription": null }],
-    "skylights": [{ "style": null, "mount": null, "length": null, "width": null, "damaged": null, "damageDescription": null }],
-    "corniceGables": [{ "type": null, "story": null, "qty": null }],
+    "chimneys": [{ "size": null, "counterFlashing": null, "cricketPresent": null, "painted": null, "damaged": null, "damageDescription": null, "conditionNotes": null }],
+    "stepFlashingPainted": null, "stepFlashingDamaged": null, "stepFlashingDamageDescription": null,
+    "counterFlashingPainted": null, "counterFlashingDamaged": null, "counterFlashingDamageDescription": null,
+    "lFlashingPainted": null, "lFlashingDamaged": null, "lFlashingDamageDescription": null,
+    "skylights": [{ "style": null, "mount": null, "size": null, "damaged": null, "damageDescription": null }],
+    "corniceGableType": null, "corniceGableStory": null, "corniceGableQty": null,
     "lowSlope": [{ "location": null, "grade": null, "pitch": null, "exposedRafters": null, "damaged": null, "damageDescription": null }],
     "otherStructures": [{ "type": null, "grade": null, "pitch": null, "damaged": null, "damageDescription": null }]
   },

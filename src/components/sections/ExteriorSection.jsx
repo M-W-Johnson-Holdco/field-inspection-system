@@ -198,7 +198,6 @@ function ExteriorItem({ itemDef, trigPhoto }) {
                     <option value="">Select</option>
                     <option value="Yes">Yes</option>
                     <option value="No">No</option>
-                    <option value="N/A">N/A</option>
                   </select>
                 </div>
                 {damageStatus === 'Yes' && (
