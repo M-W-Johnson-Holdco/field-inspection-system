@@ -57,7 +57,6 @@ const ROOF_ITEM_PATH = {
 const ELEV_ITEM_FOLDER = {
   ev0:  'siding',
   ev1:  'fascia',
-  ev2:  'soffit',
   ev3:  'gutters',
   ev11: 'gutter_guards',
   ev4:  'downspouts',

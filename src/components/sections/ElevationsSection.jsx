@@ -6,7 +6,7 @@ import FieldsGrid from '../FieldsGrid'
 import DamageDescriptionInput from '../DamageDescriptionInput'
 import { ELEV_ITEMS, DIRECTIONS } from '../../data/elevItems'
 import { fieldGroupProps } from '../../utils/fieldLayout'
-import { fieldSelectClass, withSelectPlaceholderClass, ynOptionsForField, optionsForField } from '../../utils/fieldGrid'
+import { fieldSelectClass, withSelectPlaceholderClass, ynOptionsForField, optionsForField, visibleFieldsForValues } from '../../utils/fieldGrid'
 import MeasurementInput, { isLinearMeasurementField } from '../MeasurementInput'
 
 function orderElevFields(fields = []) {
@@ -103,12 +103,17 @@ function FieldRenderer({ field, value, onChange }) {
   }
 
   if (t === 'select') {
+    let selectValue = value || o[0]
+    // "Other - custom" (siding Style) should keep the dropdown on Other
+    if (typeof selectValue === 'string' && selectValue.startsWith('Other - ')) {
+      selectValue = 'Other'
+    }
     return (
       <div {...fieldGroupProps(field)}>
         {lbl}
         <select
-          className="field-select"
-          value={value || o[0]}
+          className={withSelectPlaceholderClass(fieldSelectClass(field), selectValue)}
+          value={selectValue}
           onChange={e => onChange(e.target.value)}
         >
           {optionsForField(field).map(opt => (
@@ -138,8 +143,18 @@ function FieldRenderer({ field, value, onChange }) {
   }
 
   if (t === 'num') {
-    const currentValue = value === '' || value == null ? 0 : Number(value)
+    const empty = value === '' || value == null
+    const placeholderNum = Number(p)
+    const currentValue = empty
+      ? (Number.isFinite(placeholderNum) ? placeholderNum : 0)
+      : Number(value)
     const adjustValue = amount => {
+      if (empty) {
+        const start = Number.isFinite(placeholderNum) ? placeholderNum : 0
+        // First + commits the placeholder; first - steps down from it
+        onChange(String(Math.max(0, start + (amount > 0 ? 0 : amount))))
+        return
+      }
       const base = Number.isFinite(currentValue) ? currentValue : 0
       onChange(String(Math.max(0, base + amount)))
     }
@@ -182,7 +197,7 @@ function FieldRenderer({ field, value, onChange }) {
   }
 
   return (
-    <div className="field-group">
+    <div {...fieldGroupProps(field)}>
       {lbl}
       <input
         className="field-input"
@@ -222,22 +237,29 @@ function ElevItem({ itemDef, direction, trigPhoto }) {
       {!excluded && (
         <div className="ri-item__body">
           <FieldsGrid
-            fields={orderElevFields(itemDef.fields)}
+            fields={orderElevFields(visibleFieldsForValues(itemDef.fields, cell.fields))}
             compactOptionPairRow={compactOptionPairRow}
-            renderField={f => (
-              <FieldRenderer
-                key={f.l}
-                field={f}
-                value={cell.fields[f.l]}
-                onChange={val => {
-                  updateElevField(cellKey, f.l, val)
-                  if (f.l === 'Damaged') {
-                    if (val === 'No' || val === 'N/A') updateElevField(cellKey, '_damage', 'n/a')
-                    else if (val !== 'Yes') updateElevField(cellKey, '_damage', '')
-                  }
-                }}
-              />
-            )}
+            renderField={f => {
+              let fieldValue = cell.fields[f.l]
+              if (f.l === '(Other)') {
+                const style = cell.fields?.Style || ''
+                fieldValue = style.startsWith('Other - ') ? style.slice(8) : ''
+              }
+              return (
+                <FieldRenderer
+                  key={f.l}
+                  field={f}
+                  value={fieldValue}
+                  onChange={val => {
+                    updateElevField(cellKey, f.l, val)
+                    if (f.l === 'Damaged') {
+                      if (val === 'No' || val === 'N/A') updateElevField(cellKey, '_damage', 'n/a')
+                      else if (val !== 'Yes') updateElevField(cellKey, '_damage', '')
+                    }
+                  }}
+                />
+              )
+            }}
           >
             {cell.fields['Damaged'] === 'Yes' && (
               <div className="ri-damage-row">

@@ -115,12 +115,6 @@ export const ROOF_LINE_ITEMS = {
     unit: 'EA', qty: null, damaged: true,
     note: 'Not currently present; recommend at time of install to prevent siding damage',
   }] : [],
-  ri15: (fields) => [{
-    trade: 'Roofing', category: 'RFG',
-    description: 'Rain diverter',
-    unit: 'LF', qty: num(fields, 'Length (LF)') ?? num(fields, 'Qty'),
-    damaged: null, note: yn(fields, 'Painted') ? 'Painted' : null,
-  }],
   ri16: (fields) => [{
     trade: 'Roofing', category: 'RFG',
     description: 'Power meter mast - reset',
@@ -170,6 +164,14 @@ export const ROOF_SUBITEM_LINE_ITEMS = {
     unit: 'EA', qty: 1, damaged: yn(f, 'Damaged'),
     note: str(f, 'Size') || null,
   }),
+  ri15: (f, parentFields) => ({
+    trade: 'Roofing', category: 'RFG',
+    description: 'Rain diverter',
+    unit: 'LF',
+    qty: num(f, 'Length (LF)'),
+    damaged: null,
+    note: yn(parentFields, 'Painted') ? 'Painted' : null,
+  }),
   ri17: (f) => ({
     trade: 'Roofing', category: 'RFG',
     description: `Chimney flashing - ${str(f, 'Size / Width') || 'unspecified size'}`,
@@ -196,19 +198,25 @@ export const ROOF_SUBITEM_LINE_ITEMS = {
 // ---- Elevations (SDG / GTR / FCA / DOR) --------------------------------
 
 export const ELEV_LINE_ITEMS = {
-  ev0: (fields, dir) => [{
-    trade: 'Siding', category: 'SDG',
-    description: `Siding - ${str(fields, 'Material') || 'unspecified'}`,
-    unit: 'SF', qty: null, damaged: yn(fields, 'Damaged'), note: `${dir} elevation`,
-  }],
+  ev0: (fields, dir) => {
+    const style = str(fields, 'Style') || 'unspecified'
+    const styleLabel = style.startsWith('Other') ? (style === 'Other' ? 'Other' : style) : style
+    const grade = str(fields, 'Grade')
+    const exposure = num(fields, 'Exposure (Inches)')
+    const parts = [
+      styleLabel,
+      grade || null,
+      exposure != null ? `${exposure}" exposure` : null,
+    ].filter(Boolean)
+    return [{
+      trade: 'Siding', category: 'SDG',
+      description: `Siding - ${parts.join(', ')}`,
+      unit: 'SF', qty: null, damaged: yn(fields, 'Damaged'), note: `${dir} elevation`,
+    }]
+  },
   ev1: (fields, dir) => [{
     trade: 'Siding', category: 'FCA',
-    description: `Fascia / eave board - ${str(fields, 'Material') || 'unspecified'}`,
-    unit: 'LF', qty: null, damaged: yn(fields, 'Damaged'), note: `${dir} elevation`,
-  }],
-  ev2: (fields, dir) => [{
-    trade: 'Siding', category: 'SFT',
-    description: `Soffit - ${str(fields, 'Material') || 'unspecified'}`,
+    description: `Fascia - ${str(fields, 'Material') || 'unspecified'}${num(fields, 'Width (Inches)') != null ? `, ${num(fields, 'Width (Inches)')}"` : ''}`,
     unit: 'LF', qty: null, damaged: yn(fields, 'Damaged'), note: `${dir} elevation`,
   }],
   ev3: (fields, dir) => [{

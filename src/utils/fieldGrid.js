@@ -79,7 +79,7 @@ export function shouldStackUnderPrevious(previousField, currentField, fields, in
 
   // A full-row field (e.g. long option lists) must span the whole grid, so it
   // can't share a stacked half-width column with the following field.
-  if (previousField.fullRow) return false
+  if (previousField.fullRow || previousField.full || currentField.full) return false
 
   const prevPrev = index > 0 ? fields[index - 1] : null
   if (prevPrev && (prevPrev.t === 'radio' || prevPrev.t === 'select')) {
@@ -106,39 +106,11 @@ function isShingleStyleFieldsPattern(fields) {
 
 export function groupFieldsForGrid(fields) {
   if (isEdgeFlashingFieldsPattern(fields)) {
-    return [
-      {
-        type: 'row',
-        pairRow: true,
-        groups: [
-          { type: 'single', field: fields[0] },
-          { type: 'single', field: fields[1] },
-        ],
-      },
-      {
-        type: 'row',
-        ynPairRow: true,
-        groups: [
-          { type: 'single', field: fields[2] },
-          { type: 'single', field: fields[3] },
-        ],
-      },
-    ]
+    return fields.map(field => ({ type: 'single', field }))
   }
 
   if (isShingleStyleFieldsPattern(fields)) {
-    return [
-      { type: 'single', field: fields[0] },
-      {
-        type: 'row',
-        qtyRow: true,
-        groups: [
-          { type: 'single', field: fields[1] },
-          { type: 'single', field: fields[2] },
-        ],
-      },
-      { type: 'single', field: fields[3] },
-    ]
+    return fields.map(field => ({ type: 'single', field }))
   }
 
   if (isLengthTypePaintedPattern(fields)) {
@@ -150,60 +122,19 @@ export function groupFieldsForGrid(fields) {
   }
 
   if (isSkylightSubFieldsPattern(fields)) {
-    return [
-      {
-        type: 'row',
-        pairRow: true,
-        pairRowCompact: true,
-        groups: [
-          { type: 'single', field: fields[0] },
-          { type: 'single', field: fields[1] },
-        ],
-      },
-      { type: 'single', field: fields[2] },
-      { type: 'single', field: fields[3] },
-    ]
+    return fields.map(field => ({ type: 'single', field }))
   }
 
   if (isDualYnPairPattern(fields)) {
-    return [{
-      type: 'row',
-      ynPairRow: true,
-      groups: [
-        { type: 'single', field: fields[0] },
-        { type: 'single', field: fields[1] },
-      ],
-    }]
+    return fields.map(field => ({ type: 'single', field }))
   }
 
   if (isFlashingSubFieldsPattern(fields)) {
-    return [
-      { type: 'single', field: fields[0] },
-      {
-        type: 'row',
-        ynPairRow: true,
-        groups: [
-          { type: 'single', field: fields[1] },
-          { type: 'single', field: fields[2] },
-        ],
-      },
-    ]
+    return fields.map(field => ({ type: 'single', field }))
   }
 
   if (isChimneySubFieldsPattern(fields)) {
-    return [
-      { type: 'single', field: fields[0] },
-      {
-        type: 'row',
-        chimneyControlsRow: true,
-        groups: [
-          { type: 'single', field: fields[1] },
-          { type: 'single', field: fields[2] },
-          { type: 'single', field: fields[3] },
-          { type: 'single', field: fields[4] },
-        ],
-      },
-    ]
+    return fields.map(field => ({ type: 'single', field }))
   }
 
   if (isPipeJackSubFieldsPattern(fields)) {
@@ -218,15 +149,8 @@ export function groupFieldsForGrid(fields) {
       },
     ]
 
-    const ynFields = fields.slice(2).filter(field => field.t === 'yn')
-    if (ynFields.length > 1) {
-      groups.push({
-        type: 'row',
-        ynPairRow: true,
-        groups: ynFields.map(field => ({ type: 'single', field })),
-      })
-    } else if (ynFields.length === 1) {
-      groups.push({ type: 'single', field: ynFields[0] })
+    for (const field of fields.slice(2).filter(f => f.t === 'yn')) {
+      groups.push({ type: 'single', field })
     }
 
     return groups
@@ -242,6 +166,7 @@ export function groupFieldsForGrid(fields) {
     if (
       field.t === 'num' && field.l === 'Qty'
       && next?.t === 'num' && /\bLF\b/i.test(next.l)
+      && !field.full && !next.full
     ) {
       groups.push({
         type: 'row',
@@ -258,6 +183,7 @@ export function groupFieldsForGrid(fields) {
     if (
       field.t === 'num' && field.l === 'Story'
       && next?.t === 'num' && next.l === 'Qty'
+      && !field.full && !next.full
     ) {
       groups.push({
         type: 'row',
@@ -296,22 +222,6 @@ export function groupFieldsForGrid(fields) {
       groups.push({
         type: 'row',
         qtyRow: true,
-        groups: [
-          { type: 'single', field },
-          { type: 'single', field: next },
-        ],
-      })
-      i += 2
-      continue
-    }
-
-    if (
-      field.t === 'yn'
-      && next?.t === 'yn' && next.l === 'Damaged'
-    ) {
-      groups.push({
-        type: 'row',
-        ynPairRow: true,
         groups: [
           { type: 'single', field },
           { type: 'single', field: next },
@@ -378,7 +288,7 @@ export function clusterGroupsForGrid(groups) {
   }
 
   for (const group of groups) {
-    if (group.type === 'single' && isOptionSelectField(group.field)) {
+    if (group.type === 'single' && isOptionSelectField(group.field) && !group.field.full) {
       optionBuffer.push(group)
       if (optionBuffer.length === 2) flushOptions()
       continue
@@ -399,7 +309,7 @@ function compactSelectClass(field) {
 }
 
 export function fieldSelectClass(field) {
-  if (field.t === 'yn' || field.t === 'radio') return compactSelectClass(field)
+  if (field.t === 'yn' || field.t === 'radio' || field.t === 'select') return compactSelectClass(field)
   return 'field-select'
 }
 

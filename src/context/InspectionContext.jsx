@@ -329,6 +329,7 @@ function normalizeRoofData(roofData = {}) {
   next = normalizeRi11(next)
   next = normalizeRi12(next)
   next = normalizeRi14(next)
+  next = normalizeRi15(next)
   next = normalizeRi17(next)
   next = normalizeFlashingItems(next)
   next = normalizeRi21(next)
@@ -912,6 +913,69 @@ function normalizeRi14(roofData) {
   return next
 }
 
+function hasLegacyRainDiverterTopLevel(fields = {}) {
+  return fields.Qty != null
+    || fields['Length (LF)'] != null
+}
+
+function migrateRainDiverterFields(ri15) {
+  const fields = ri15.fields || {}
+  const existing = (ri15.subItems || []).map(sub => ({
+    fields: { ...(sub?.fields || {}) },
+    photos: Array.isArray(sub?.photos) ? sub.photos : [],
+  }))
+  if (existing.length) return existing
+
+  const qty = Math.max(0, Number(fields.Qty) || 0)
+  const length = fields['Length (LF)']
+  const hasLength = length != null && length !== ''
+  const count = qty > 0 ? qty : (hasLength || (ri15.photos || []).length ? 1 : 0)
+  const subItems = []
+
+  for (let i = 0; i < count; i += 1) {
+    subItems.push({
+      fields: i === 0 && hasLength ? { 'Length (LF)': length } : {},
+      photos: i === 0 ? (ri15.photos || []) : [],
+    })
+  }
+
+  return subItems
+}
+
+function normalizeRi15(roofData) {
+  const next = { ...roofData }
+  const ri15 = next.ri15
+  if (!ri15) return next
+
+  const fields = ri15.fields || {}
+  if (hasLegacyRainDiverterTopLevel(fields)) {
+    const {
+      Qty: _qty,
+      'Length (LF)': _length,
+      ...keptFields
+    } = fields
+    next.ri15 = {
+      ...ri15,
+      fields: keptFields,
+      subItems: migrateRainDiverterFields(ri15),
+      photos: [],
+    }
+    return next
+  }
+
+  if ((ri15.subItems || []).length) {
+    next.ri15 = {
+      ...ri15,
+      subItems: (ri15.subItems || []).map(sub => ({
+        fields: { ...(sub?.fields || {}) },
+        photos: Array.isArray(sub?.photos) ? sub.photos : [],
+      })),
+    }
+  }
+
+  return next
+}
+
 function parseRoofPhotoTarget(target) {
   const match = String(target).match(/^(.+)__sub_(\d+)$/)
   if (match) return { itemId: match[1], subIndex: Number(match[2]) }
@@ -1161,6 +1225,32 @@ function buildSkylightSubItemsFromParsed(roof = {}) {
       photos: [],
     }
   })
+}
+
+function buildRainDiverterSubItemsFromParsed(roof = {}) {
+  const list = Array.isArray(roof.rainDiverters) ? roof.rainDiverters : []
+  if (list.length) {
+    return list.map(rd => ({
+      fields: {
+        ...(rd?.lengthLF != null && rd.lengthLF !== '' ? { 'Length (LF)': String(rd.lengthLF) } : {}),
+      },
+      photos: [],
+    }))
+  }
+
+  // Legacy fallback: qty + shared LF
+  const qty = Math.max(0, Number(roof.rainDiverterQty) || 0)
+  const length = roof.rainDiverterLF
+  const hasLength = length != null && length !== ''
+  const count = qty > 0 ? qty : (hasLength ? 1 : 0)
+  const subItems = []
+  for (let i = 0; i < count; i += 1) {
+    subItems.push({
+      fields: i === 0 && hasLength ? { 'Length (LF)': String(length) } : {},
+      photos: [],
+    })
+  }
+  return subItems
 }
 
 function buildOtherStructureSubItemsFromParsed(roof = {}) {
@@ -1567,6 +1657,31 @@ export function InspectionProvider({ children }) {
     })
   }
 
+  function importRoofRainDiverters(roof = {}) {
+    const subItems = buildRainDiverterSubItemsFromParsed(roof)
+    const painted = roof.rainDiverterPainted || ''
+    if (!subItems.length && !painted) return
+
+    setData(prev => {
+      const item = prev.roofData.ri15
+      const next = {
+        ...prev,
+        roofData: {
+          ...prev.roofData,
+          ri15: {
+            ...withRoofItemStatus(item, 'present'),
+            fields: {
+              ...(painted ? { Painted: painted } : {}),
+            },
+            subItems: subItems.length ? subItems : (item.subItems || []),
+          },
+        },
+      }
+      scheduleSave(next)
+      return next
+    })
+  }
+
   function importRoofChimneys(roof = {}) {
     const subItems = buildChimneySubItemsFromParsed(roof)
     if (!subItems.length) return
@@ -1724,7 +1839,17 @@ export function InspectionProvider({ children }) {
   function updateElevField(cellKey, label, value) {
     setData(prev => {
       const cell = prev.elevData[cellKey]
-      const next = { ...prev, elevData: { ...prev.elevData, [cellKey]: { ...cell, fields: { ...cell.fields, [label]: value } } } }
+      const fields = { ...cell.fields, [label]: value }
+      // Siding Style "Other" mirrors Low Slope Location: store custom text as "Other - …"
+      if (cellKey.startsWith('ev0_') && label === 'Style') {
+        delete fields['(Other)']
+        if (value === 'Other') fields.Style = 'Other'
+      }
+      if (cellKey.startsWith('ev0_') && label === '(Other)') {
+        fields.Style = value ? `Other - ${value}` : 'Other'
+        delete fields['(Other)']
+      }
+      const next = { ...prev, elevData: { ...prev.elevData, [cellKey]: { ...cell, fields } } }
       scheduleSave(next)
       return next
     })
@@ -1999,7 +2124,7 @@ export function InspectionProvider({ children }) {
       saveStatus, driveSaveStatus, setDriveSaveStatus, driveFolderId, setDriveFolderId, completion, updateJobInfo, manualSave, resetAll, startNewInspection, loadInspection, applyXmlImport,
       aiParseState, setAiParseState,
       toggleRoofExclude, cycleRoofStatus, updateRoofField,
-      addRoofSubItem, removeRoofSubItem, updateRoofSubField, adjustRoofSubItemSizeCount, importRoofPipeJacks, importRoofExhaustStacks, importRoofChimneys, importRoofFlashingItems, importRoofLowSlopeItems,
+      addRoofSubItem, removeRoofSubItem, updateRoofSubField, adjustRoofSubItemSizeCount, importRoofPipeJacks, importRoofExhaustStacks, importRoofRainDiverters, importRoofChimneys, importRoofFlashingItems, importRoofLowSlopeItems,
       importRoofSkylights, importRoofOtherStructures,
       addRoofPhoto, removeRoofPhoto,
       toggleElevExclude, updateElevField,

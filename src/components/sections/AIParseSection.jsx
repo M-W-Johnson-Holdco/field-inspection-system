@@ -58,30 +58,28 @@ const ROOF_MAP = [
   { key: 'kickoutsExisting',        itemId: 'ri13', label: 'Existing' },
   { key: 'kickoutsNeeded',          itemId: 'ri13', label: 'Needed' },
   { key: 'kickoutsPainted',         itemId: 'ri13', label: 'Painted' },
-  { key: 'rainDiverterQty',         itemId: 'ri15', label: 'Qty' },
-  { key: 'rainDiverterLF',          itemId: 'ri15', label: 'Length (LF)' },
   { key: 'rainDiverterPainted',     itemId: 'ri15', label: 'Painted' },
   { key: 'powerMeterMastQty',       itemId: 'ri16', label: 'Qty' },
   { key: 'corniceGableType',        itemId: 'ri21', label: 'Type' },
   { key: 'corniceGableStory',       itemId: 'ri21', label: 'Story' },
   { key: 'corniceGableQty',         itemId: 'ri21', label: 'Qty' },
 ]
-// Pipe jacks, exhaust stacks, chimneys, skylights, and low-slope sections
+// Pipe jacks, exhaust stacks, rain diverters, chimneys, skylights, and low-slope sections
 // are variable-length repeatables — each is imported directly from its
 // roof.<key>[] array (see applyParsed), not through ROOF_MAP.
 // Step/counter/L flashing use importRoofFlashingItems.
 
 // Maps AI JSON elevation keys → { itemId, fieldLabel } per direction
 const ELEV_MAP = [
-  { key: 'sidingMaterial',       itemId: 'ev0',  label: 'Material' },
+  { key: 'sidingStyle',          itemId: 'ev0',  label: 'Style' },
+  { key: 'sidingGrade',          itemId: 'ev0',  label: 'Grade' },
+  { key: 'sidingExposure',       itemId: 'ev0',  label: 'Exposure (Inches)' },
   { key: 'sidingDamage',         itemId: 'ev0',  label: 'Damaged' },
   { key: 'sidingDamageDescription', itemId: 'ev0', label: '_damage' },
   { key: 'fasciaMaterial',       itemId: 'ev1',  label: 'Material' },
+  { key: 'fasciaWidth',          itemId: 'ev1',  label: 'Width (Inches)' },
   { key: 'fasciaDamage',         itemId: 'ev1',  label: 'Damaged' },
   { key: 'fasciaDamageDescription', itemId: 'ev1', label: '_damage' },
-  { key: 'soffitMaterial',       itemId: 'ev2',  label: 'Material' },
-  { key: 'soffitDamage',         itemId: 'ev2',  label: 'Damaged' },
-  { key: 'soffitDamageDescription', itemId: 'ev2', label: '_damage' },
   { key: 'gutterMaterial',       itemId: 'ev3',  label: 'Material' },
   { key: 'gutterStyle',          itemId: 'ev3',  label: 'Style' },
   { key: 'gutterSize',           itemId: 'ev3',  label: 'Size (Inches)' },
@@ -165,6 +163,17 @@ function normalizeGutterSize(val) {
   return match ? match[1] : String(val).trim()
 }
 
+const SIDING_STYLES = new Set(['Flat', 'Double Dutch', 'Textured', 'Other', 'N/A', 'Select'])
+
+function normalizeSidingStyle(val) {
+  const raw = String(val || '').trim()
+  if (!raw) return raw
+  if (SIDING_STYLES.has(raw) || raw.startsWith('Other - ')) return raw
+  const known = [...SIDING_STYLES].find(opt => opt.toLowerCase() === raw.toLowerCase())
+  if (known) return known
+  return `Other - ${raw}`
+}
+
 // Convert comma string from AI to array for multiRadio fields
 function toArray(val) {
   if (Array.isArray(val)) return val
@@ -176,7 +185,7 @@ function toArray(val) {
 function applyParsed(parsed, ctx) {
   const {
     updateJobInfo, updateRoofField, updateElevField, updateExteriorField, updateNote,
-    importRoofPipeJacks, importRoofExhaustStacks, importRoofChimneys, importRoofFlashingItems,
+    importRoofPipeJacks, importRoofExhaustStacks, importRoofRainDiverters, importRoofChimneys, importRoofFlashingItems,
     importRoofLowSlopeItems, importRoofSkylights, importRoofOtherStructures,
     importInteriorRooms,
   } = ctx
@@ -248,6 +257,7 @@ function applyParsed(parsed, ctx) {
 
   importRoofPipeJacks(roof)
   importRoofExhaustStacks(roof)
+  importRoofRainDiverters(roof)
   importRoofChimneys(roof)
   importRoofFlashingItems(roof)
   importRoofLowSlopeItems(roof)
@@ -269,6 +279,11 @@ function applyParsed(parsed, ctx) {
       let val = dirData[key]
       if (val == null) return
       if (key === 'gutterSize') val = normalizeGutterSize(val)
+      if (key === 'sidingStyle' || key === 'sidingMaterial') {
+        val = normalizeSidingStyle(val)
+        updateElevField(`${itemId}_${dir}`, 'Style', val)
+        return
+      }
       updateElevField(`${itemId}_${dir}`, label, val)
     })
   })
@@ -409,7 +424,7 @@ export default function AIParseSection() {
       <div className="ai-card app-card">
         <label className="ai-card__label">ℹ️ How It Works</label>
         <div className="ai-card__info">
-          <p><strong>What populates automatically:</strong> Customer name, address, insurance info, roof specs, stories, pitch, layers, all vent types and quantities, pipe jacks, flashings, chimney, valley, underlayment — plus per-elevation details (siding, fascia, soffit, gutters, downspouts, screens, shutters, entry doors, garage doors, A/C) for all four sides. Also exterior items and all notes fields.</p>
+          <p><strong>What populates automatically:</strong> Customer name, address, insurance info, roof specs, stories, pitch, layers, all vent types and quantities, pipe jacks, flashings, chimney, valley, underlayment — plus per-elevation details (siding, fascia, gutters, downspouts, screens, shutters, entry doors, garage doors, A/C) for all four sides. Also exterior items and all notes fields.</p>
           <p><strong>What requires manual entry:</strong> Photos (always manual) and any fields flagged for review below the Parse button.</p>
           <p><strong>Review before saving:</strong> Flagged fields are ones the AI was uncertain about. Always verify them before hitting Save.</p>
           <p><strong>Plaud tip:</strong> Walk through each section out loud by name. For example: "Roof — architectural shingles, two stories, four-twelve pitch, one layer. Ridge vent — twenty linear feet, metal, not painted. Front elevation — five-inch aluminum gutters, damaged. Two downspouts, aluminum, not damaged." The more structured your dictation, the fewer flags you'll see.</p>

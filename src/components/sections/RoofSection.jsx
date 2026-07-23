@@ -184,12 +184,13 @@ function FieldRenderer({ field, value, onChange, subFields, onSubFieldChange }) 
   }
 
   if (t === 'select') {
+    const selectValue = value || o[0]
     return (
       <div {...fieldGroupProps(field)}>
         {lbl}
         <select
-          className="field-select"
-          value={value || o[0]}
+          className={withSelectPlaceholderClass(fieldSelectClass(field), selectValue)}
+          value={selectValue}
           onChange={e => onChange(e.target.value)}
         >
           {optionsForField(field).map(opt => (
@@ -306,6 +307,9 @@ function collapsibleSubPills(itemId, fields = {}) {
     if (style) grey.push(style)
     if (size) grey.push(size)
     if (fields.Damaged === 'Yes') red.push('Damaged')
+  } else if (itemId === 'ri15') {
+    const length = selectValue(fields['Length (LF)'])
+    if (length) grey.push(`${length} LF`)
   } else if (itemId === 'ri17') {
     const size = String(fields['Size / Width'] || '').match(/^(Small|Medium|Large)/)?.[1]
     const counter = selectValue(fields['Counter Flashing'])
@@ -350,6 +354,7 @@ function CollapsibleRoofSubCard({
   const [open, setOpen] = useExpandedSection(`roof:${itemId}:sub:${index}`, true)
   const { grey, red } = collapsibleSubPills(itemId, sub.fields || {})
   const showDamage = showSubItemDamageDescription(sub.fields || {})
+  const itemLabel = `${title} #${index + 1}`
 
   return (
     <div className={`ri-sub-card${red.length ? ' ri-sub-card--damage' : ''}`}>
@@ -360,7 +365,11 @@ function CollapsibleRoofSubCard({
           aria-expanded={open}
           onClick={() => setOpen(value => !value)}
         >
-          <span className="ri-sub-card__title">{title} #{index + 1}</span>
+          <span className="ri-sub-card__title">{itemLabel}</span>
+          <ChevronDown
+            className={`int-room-chevron${open ? ' int-room-chevron--open' : ''}`}
+            aria-hidden="true"
+          />
           <span className="ri-collapsible-sub-pills">
             {grey.map(pill => (
               <span key={`grey-${pill}`} className="int-room-story">{pill}</span>
@@ -369,17 +378,16 @@ function CollapsibleRoofSubCard({
               <span key={`red-${pill}`} className="int-damage-badge">{pill}</span>
             ))}
           </span>
-          <ChevronDown
-            className={`int-room-chevron${open ? ' int-room-chevron--open' : ''}`}
-            aria-hidden="true"
-          />
         </button>
         <button
           type="button"
           className="int-btn-delete"
-          onClick={onRemove}
-          aria-label={`Delete ${title.toLowerCase()} ${index + 1}`}
-          title={`Delete ${title.toLowerCase()}`}
+          onClick={() => {
+            if (!window.confirm(`Are you sure you want to delete ${itemLabel}?`)) return
+            onRemove()
+          }}
+          aria-label={`Delete ${itemLabel}`}
+          title={`Delete ${itemLabel}`}
         >
           <Trash2 size={15} />
         </button>
@@ -456,6 +464,30 @@ function CheckItem({ itemDef, trigPhoto }) {
   const hasInlineDamaged = fields.some(f => f.l === 'Damaged')
   const subItemLabel = (addMoreLabel || 'Item').replace('Add ', '')
   const showItemPhotos = hasP && !subItemPhotos
+  const typeAboveSizeQty = Boolean(subItemSizeCounters?.editable)
+  const leadingFields = typeAboveSizeQty
+    ? fields.filter(f => f.l === 'Type' || f.l === 'Painted')
+    : []
+  const mainFields = typeAboveSizeQty
+    ? fields.filter(f => f.l !== 'Type' && f.l !== 'Painted')
+    : fields
+
+  function renderFieldControl(f) {
+    return (
+      <FieldRenderer
+        key={f.l}
+        field={f}
+        value={item.fields[f.l]}
+        onChange={val => {
+          updateRoofField(id, f.l, val)
+          if (f.l === 'Damaged') {
+            if (val === 'No' || val === 'N/A') updateRoofField(id, '_damage', 'n/a')
+            else if (val !== 'Yes') updateRoofField(id, '_damage', '')
+          }
+        }}
+      />
+    )
+  }
 
   const sizeCounts = subItemSizeCounters
     ? Object.fromEntries(
@@ -488,6 +520,7 @@ function CheckItem({ itemDef, trigPhoto }) {
     const counterClass = [
       'ri-size-counters',
       subItemSizeCounters.compact && 'ri-size-counters--compact',
+      subItemSizeCounters.equalWidth && 'ri-size-counters--equal',
     ].filter(Boolean).join(' ')
 
     return (
@@ -531,7 +564,6 @@ function CheckItem({ itemDef, trigPhoto }) {
                 </button>
                 <input
                   className="field-input number-stepper__input"
-                  style={{ '--field-ch': 2 }}
                   type="number"
                   inputMode="numeric"
                   min="0"
@@ -647,6 +679,9 @@ function CheckItem({ itemDef, trigPhoto }) {
         </button>
         <span className={`ri-item__name${status === 'na' ? ' ri-item__name--excl' : ''}${status === 'supplement' ? ' ri-item__name--supplement' : ''}`}>
           {lbl}
+          {status === 'supplement' && (
+            <span className="ri-item__status-pill ri-item__status-pill--supplement">Supplement</span>
+          )}
         </span>
       </div>
 
@@ -654,6 +689,15 @@ function CheckItem({ itemDef, trigPhoto }) {
         <div className="ri-item__body">
 
           {renderSizeCounters()}
+
+          {leadingFields.length > 0 && (
+            <FieldsGrid
+              fields={leadingFields}
+              compactOptionPairRow={compactOptionPairRow}
+              renderField={renderFieldControl}
+            />
+          )}
+
           {renderSizeAdjusters()}
           {renderTotalCounter()}
 
@@ -667,24 +711,11 @@ function CheckItem({ itemDef, trigPhoto }) {
             </button>
           )}
 
-          {fields.length > 0 && (
+          {(mainFields.length > 0 || showItemPhotos || (hasD && !hasInlineDamaged)) && (
             <FieldsGrid
-              fields={fields}
+              fields={mainFields}
               compactOptionPairRow={compactOptionPairRow}
-              renderField={f => (
-                <FieldRenderer
-                  key={f.l}
-                  field={f}
-                  value={item.fields[f.l]}
-                  onChange={val => {
-                    updateRoofField(id, f.l, val)
-                    if (f.l === 'Damaged') {
-                      if (val === 'No' || val === 'N/A') updateRoofField(id, '_damage', 'n/a')
-                      else if (val !== 'Yes') updateRoofField(id, '_damage', '')
-                    }
-                  }}
-                />
-              )}
+              renderField={renderFieldControl}
             >
               {hasD && !hasInlineDamaged && (
                 <FieldRenderer
