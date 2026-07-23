@@ -1,3 +1,5 @@
+import { isRoofItemActive } from '../utils/roofItemStatus'
+
 // Maps inspection field data to Xactimate-style trade/category line items so the
 // export can be pasted or transcribed into an estimate with minimal rework.
 // Each entry corresponds to a ROOF_ITEMS / ELEV_ITEMS / EXTERIOR_ITEMS id (elevation
@@ -211,14 +213,57 @@ export const ELEV_LINE_ITEMS = {
   }],
   ev3: (fields, dir) => [{
     trade: 'Gutters', category: 'GTR',
-    description: `Gutter - ${str(fields, 'Material') || 'unspecified'}, ${num(fields, 'Size (Inches)') ?? '?'}"`,
-    unit: 'LF', qty: null, damaged: yn(fields, 'Damaged'), note: `${dir} elevation`,
+    description: `Gutter - ${str(fields, 'Style') || 'unspecified style'}, ${str(fields, 'Material') || 'unspecified'}, ${num(fields, 'Size (Inches)') ?? '?'}"`,
+    unit: 'LF', qty: num(fields, 'Length (LF)'), damaged: yn(fields, 'Damaged'), note: `${dir} elevation`,
   }],
+  ev11: (fields, dir) => {
+    if (str(fields, 'Style') === 'None') return []
+    return [{
+      trade: 'Gutters', category: 'GTR',
+      description: `Gutter guard - ${str(fields, 'Style') || 'unspecified style'}, ${str(fields, 'Material') || 'unspecified'}`,
+      unit: 'LF', qty: num(fields, 'Length (LF)') ?? num(fields, 'Qty'),
+      damaged: yn(fields, 'Damaged'),
+      note: [
+        `${dir} elevation`,
+        num(fields, 'Qty') != null ? `Qty: ${num(fields, 'Qty')}` : null,
+      ].filter(Boolean).join('; '),
+    }]
+  },
   ev4: (fields, dir) => [{
     trade: 'Gutters', category: 'GTR',
-    description: `Downspout - ${str(fields, 'Material') || 'unspecified'}`,
-    unit: 'EA', qty: num(fields, 'Qty'), damaged: yn(fields, 'Damaged'), note: `${dir} elevation`,
+    description: `Downspout - ${str(fields, 'Style') || 'unspecified style'}, ${str(fields, 'Width') || 'unspecified width'}, ${str(fields, 'Material') || 'unspecified'}`,
+    unit: 'LF', qty: num(fields, 'Length (LF)') ?? num(fields, 'Qty'),
+    damaged: yn(fields, 'Damaged'),
+    note: [
+      `${dir} elevation`,
+      num(fields, 'Qty') != null ? `Qty: ${num(fields, 'Qty')}` : null,
+      yn(fields, 'Painted') ? 'Painted' : null,
+    ].filter(Boolean).join('; '),
   }],
+  ev12: (fields, dir) => {
+    const sizes = [
+      'Small (3–11 sq ft)',
+      'Medium (12–19 sq ft)',
+      'Large (19+ sq ft)',
+    ]
+    const baseNote = [
+      `${dir} elevation`,
+      yn(fields, 'Painted') ? 'Painted' : null,
+    ].filter(Boolean).join('; ')
+    const desc = `Window - ${str(fields, 'Grade') || 'unspecified'}, ${str(fields, 'Type') || 'unspecified type'}, ${str(fields, 'Glaze') || '?'} glaze`
+
+    return sizes.flatMap(size => {
+      const qty = num(fields, size)
+      if (!qty) return []
+      return [{
+        trade: 'Siding', category: 'WDW',
+        description: `${desc}; ${size}`,
+        unit: 'EA', qty,
+        damaged: yn(fields, 'Damaged'),
+        note: baseNote || null,
+      }]
+    })
+  },
   ev5: (fields, dir) => [{
     trade: 'Siding', category: 'WDW',
     description: 'Window screen',
@@ -273,13 +318,18 @@ export const EXTERIOR_LINE_ITEMS = {
 }
 
 export function buildRoofLineItems(itemDef, itemData) {
-  if (!itemData || itemData.excluded) return []
+  if (!itemData || !isRoofItemActive(itemData)) return []
   const fixed = ROOF_LINE_ITEMS[itemDef.id]?.(itemData.fields || {}) || []
   const subBuilder = ROOF_SUBITEM_LINE_ITEMS[itemDef.id]
   const subs = subBuilder
     ? (itemData.subItems || []).map(sub => subBuilder(sub.fields || {}, itemData.fields || {}))
     : []
-  return [...fixed, ...subs]
+  const lines = [...fixed, ...subs]
+  if (itemData.status !== 'supplement') return lines
+  return lines.map(line => ({
+    ...line,
+    note: [line.note, 'Supplement'].filter(Boolean).join('; '),
+  }))
 }
 
 export function buildElevLineItems(itemDef, dir, cellData) {

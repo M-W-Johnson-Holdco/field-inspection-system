@@ -57,7 +57,7 @@ Yes/No fields (yn): return exactly "Yes", "No", or "N/A"
 roof.shingleStyle: array, values from ["3-Tab","Architectural","Designer","Disco","Impact Resistant"]
 roof.edgeFlashingType: "Drip Edge" or "Critter Guard"
 roof.edgeMaterial: "Galvanized" or "Aluminum" or "N/A"
-roof.underlaymentGrade: "Synthetic" or "Felt" or "Unknown"
+roof.underlaymentGrade: "Felt - 15lbs" or "Felt - 30lbs" or "Synthetic" or "Premium Synthetic" or "Unknown"
 roof.ridgeCapGrade: "3-Tab" or "H&R" or "Hi Profile"
 roof.ridgeVentType: "Metal" or "Shingle Over"
 roof.starterStyle: "Starter Strip" or "3-Tab"
@@ -71,7 +71,7 @@ roof.exposedRafters: "Yes" or "No"
 roof.pipeJacks[].size: "1.5" or "2" or "3" or "4"
 roof.pipeJacks[].type: "3-in-1/Neoprene" or "Lead" or "Lifetime/Silicone"
 roof.exhaustStackPainted: "Yes" or "No" for whether all exhaust stacks are painted
-roof.exhaustStacks[].size: "Small (4\")" or "Medium (5-6\")" or "Large (7-8\")"
+roof.exhaustStacks[].size: "Small (3-4\")" or "Medium (5-7\")" or "Large (8\"+)"
 roof.exhaustStacks[].damaged: array containing any mentioned values from "Cap", "Stack", "Flange"
 roof.chimneys[].size: "Small" (width < 24in) or "Medium" (24-36in) or "Large" (> 36in)
 roof.chimneys[].counterFlashing: "Replace" or "Reuse"
@@ -83,8 +83,25 @@ roof.lowSlope[].location: "Front Porch" or "Back Porch" or "Other"
 roof.corniceGableType: "Shingles" or "Metal"
 
 elevations.[direction].gutterMaterial: "Aluminum" or "Steel" or "Copper" or "Vinyl" or "N/A"
+elevations.[direction].gutterStyle: "Half Round" or "K-Style"
 elevations.[direction].gutterSize: "4\"" or "5\"" or "6\""
+elevations.[direction].gutterLF: linear feet of gutter (number)
+elevations.[direction].gutterGuardStyle: "Screen" or "Micro-Mesh" or "Reverse Curve" or "Proprietary" or "None"
+elevations.[direction].gutterGuardMaterial: "Plastic" or "Metal" or "N/A"
+elevations.[direction].gutterGuardQty: number of gutter guard sections/runs
+elevations.[direction].gutterGuardLF: linear feet of gutter guard (number)
 elevations.[direction].downspoutMaterial: "Aluminum" or "Steel" or "Copper" or "Vinyl" or "N/A"
+elevations.[direction].downspoutStyle: "Round" or "Box"
+elevations.[direction].downspoutWidth: "3\" Std" or "4\" Oversized"
+elevations.[direction].downspoutPainted: "Yes" or "No"
+elevations.[direction].downspoutLF: linear feet of downspout (number)
+elevations.[direction].windowGrade: "Vinyl" or "Wood" or "Composite" or "Aluminum"
+elevations.[direction].windowType: "Single Hung" or "Double Hung" or "Casement" or "Fixed"
+elevations.[direction].windowGlaze: "Single" or "Double" or "Triple"
+elevations.[direction].windowPainted: "Yes" or "No"
+elevations.[direction].windowSmallQty: qty of windows 3–11 sq ft
+elevations.[direction].windowMediumQty: qty of windows 12–19 sq ft
+elevations.[direction].windowLargeQty: qty of windows 19+ sq ft
 elevations.[direction].sidingMaterial: "Vinyl" or "Aluminum" or "Wood" or "Fiber Cement" or "Stucco" or "Brick" or "Stone" or "EIFS" or "N/A"
 elevations.[direction].fasciaMaterial: "Wood" or "Aluminum" or "Vinyl" or "Fiber Cement" or "N/A"
 elevations.[direction].soffitMaterial: "Wood" or "Aluminum" or "Vinyl" or "Fiber Cement" or "N/A"
@@ -167,8 +184,10 @@ Return this exact structure (use null for any scalar field not mentioned, and []
       "sidingMaterial": null, "sidingDamage": null, "sidingDamageDescription": null,
       "fasciaMaterial": null, "fasciaDamage": null, "fasciaDamageDescription": null,
       "soffitMaterial": null, "soffitDamage": null, "soffitDamageDescription": null,
-      "gutterMaterial": null, "gutterSize": null, "gutterDamage": null, "gutterDamageDescription": null,
-      "downspoutQty": null, "downspoutMaterial": null, "downspoutDamage": null, "downspoutDamageDescription": null,
+      "gutterMaterial": null, "gutterStyle": null, "gutterSize": null, "gutterLF": null, "gutterDamage": null, "gutterDamageDescription": null,
+      "gutterGuardStyle": null, "gutterGuardMaterial": null, "gutterGuardQty": null, "gutterGuardLF": null, "gutterGuardDamage": null, "gutterGuardDamageDescription": null,
+      "downspoutQty": null, "downspoutLF": null, "downspoutMaterial": null, "downspoutStyle": null, "downspoutWidth": null, "downspoutPainted": null, "downspoutDamage": null, "downspoutDamageDescription": null,
+      "windowGrade": null, "windowType": null, "windowGlaze": null, "windowPainted": null, "windowSmallQty": null, "windowMediumQty": null, "windowLargeQty": null, "windowDamage": null, "windowDamageDescription": null,
       "screenQty": null, "screenDamage": null, "screenDamageDescription": null,
       "shutterMaterial": null, "shutterQty": null, "shutterDamage": null, "shutterDamageDescription": null,
       "doorQty": null, "doorMaterial": null, "stormDoor": null, "doorDamage": null, "doorDamageDescription": null,
@@ -180,8 +199,10 @@ Return this exact structure (use null for any scalar field not mentioned, and []
       "sidingMaterial": null, "sidingDamage": null, "sidingDamageDescription": null,
       "fasciaMaterial": null, "fasciaDamage": null, "fasciaDamageDescription": null,
       "soffitMaterial": null, "soffitDamage": null, "soffitDamageDescription": null,
-      "gutterMaterial": null, "gutterSize": null, "gutterDamage": null, "gutterDamageDescription": null,
-      "downspoutQty": null, "downspoutMaterial": null, "downspoutDamage": null, "downspoutDamageDescription": null,
+      "gutterMaterial": null, "gutterStyle": null, "gutterSize": null, "gutterLF": null, "gutterDamage": null, "gutterDamageDescription": null,
+      "gutterGuardStyle": null, "gutterGuardMaterial": null, "gutterGuardQty": null, "gutterGuardLF": null, "gutterGuardDamage": null, "gutterGuardDamageDescription": null,
+      "downspoutQty": null, "downspoutLF": null, "downspoutMaterial": null, "downspoutStyle": null, "downspoutWidth": null, "downspoutPainted": null, "downspoutDamage": null, "downspoutDamageDescription": null,
+      "windowGrade": null, "windowType": null, "windowGlaze": null, "windowPainted": null, "windowSmallQty": null, "windowMediumQty": null, "windowLargeQty": null, "windowDamage": null, "windowDamageDescription": null,
       "screenQty": null, "screenDamage": null, "screenDamageDescription": null,
       "shutterMaterial": null, "shutterQty": null, "shutterDamage": null, "shutterDamageDescription": null,
       "doorQty": null, "doorMaterial": null, "stormDoor": null, "doorDamage": null, "doorDamageDescription": null,
@@ -193,8 +214,10 @@ Return this exact structure (use null for any scalar field not mentioned, and []
       "sidingMaterial": null, "sidingDamage": null, "sidingDamageDescription": null,
       "fasciaMaterial": null, "fasciaDamage": null, "fasciaDamageDescription": null,
       "soffitMaterial": null, "soffitDamage": null, "soffitDamageDescription": null,
-      "gutterMaterial": null, "gutterSize": null, "gutterDamage": null, "gutterDamageDescription": null,
-      "downspoutQty": null, "downspoutMaterial": null, "downspoutDamage": null, "downspoutDamageDescription": null,
+      "gutterMaterial": null, "gutterStyle": null, "gutterSize": null, "gutterLF": null, "gutterDamage": null, "gutterDamageDescription": null,
+      "gutterGuardStyle": null, "gutterGuardMaterial": null, "gutterGuardQty": null, "gutterGuardLF": null, "gutterGuardDamage": null, "gutterGuardDamageDescription": null,
+      "downspoutQty": null, "downspoutLF": null, "downspoutMaterial": null, "downspoutStyle": null, "downspoutWidth": null, "downspoutPainted": null, "downspoutDamage": null, "downspoutDamageDescription": null,
+      "windowGrade": null, "windowType": null, "windowGlaze": null, "windowPainted": null, "windowSmallQty": null, "windowMediumQty": null, "windowLargeQty": null, "windowDamage": null, "windowDamageDescription": null,
       "screenQty": null, "screenDamage": null, "screenDamageDescription": null,
       "shutterMaterial": null, "shutterQty": null, "shutterDamage": null, "shutterDamageDescription": null,
       "doorQty": null, "doorMaterial": null, "stormDoor": null, "doorDamage": null, "doorDamageDescription": null,
@@ -206,8 +229,10 @@ Return this exact structure (use null for any scalar field not mentioned, and []
       "sidingMaterial": null, "sidingDamage": null, "sidingDamageDescription": null,
       "fasciaMaterial": null, "fasciaDamage": null, "fasciaDamageDescription": null,
       "soffitMaterial": null, "soffitDamage": null, "soffitDamageDescription": null,
-      "gutterMaterial": null, "gutterSize": null, "gutterDamage": null, "gutterDamageDescription": null,
-      "downspoutQty": null, "downspoutMaterial": null, "downspoutDamage": null, "downspoutDamageDescription": null,
+      "gutterMaterial": null, "gutterStyle": null, "gutterSize": null, "gutterLF": null, "gutterDamage": null, "gutterDamageDescription": null,
+      "gutterGuardStyle": null, "gutterGuardMaterial": null, "gutterGuardQty": null, "gutterGuardLF": null, "gutterGuardDamage": null, "gutterGuardDamageDescription": null,
+      "downspoutQty": null, "downspoutLF": null, "downspoutMaterial": null, "downspoutStyle": null, "downspoutWidth": null, "downspoutPainted": null, "downspoutDamage": null, "downspoutDamageDescription": null,
+      "windowGrade": null, "windowType": null, "windowGlaze": null, "windowPainted": null, "windowSmallQty": null, "windowMediumQty": null, "windowLargeQty": null, "windowDamage": null, "windowDamageDescription": null,
       "screenQty": null, "screenDamage": null, "screenDamageDescription": null,
       "shutterMaterial": null, "shutterQty": null, "shutterDamage": null, "shutterDamageDescription": null,
       "doorQty": null, "doorMaterial": null, "stormDoor": null, "doorDamage": null, "doorDamageDescription": null,

@@ -10,6 +10,7 @@ import FileMenuModal from './FileMenuModal'
 import ImageImportModal from './ImageImportModal'
 import XmlImportModal from './XmlImportModal'
 import { usePermissions } from '../context/PermissionsContext'
+import { isRoofItemActive } from '../utils/roofItemStatus'
 import { buildXactimateExport } from '../lib/xactimateExport'
 import { savePhotosLocal } from '../lib/savePhotosLocal'
 import XactimateExportModal from './XactimateExportModal'
@@ -580,7 +581,7 @@ export default function ActionBar() {
             addr: data.jobInfo?.addr,
             pitch: data.roofData?.ri0?.fields?.['Predominant Pitch'],
             ridgeLF: data.roofData?.ri6?.fields?.['Length (LF)'],
-            valleyIncluded: !data.roofData?.ri5?.excluded,
+            valleyIncluded: isRoofItemActive(data.roofData?.ri5),
           }}
           onApply={handleXmlApply}
           onBack={() => {

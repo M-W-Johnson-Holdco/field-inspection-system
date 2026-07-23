@@ -7,21 +7,35 @@ import DamageDescriptionInput from '../DamageDescriptionInput'
 import { ELEV_ITEMS, DIRECTIONS } from '../../data/elevItems'
 import { fieldGroupProps } from '../../utils/fieldLayout'
 import { fieldSelectClass, withSelectPlaceholderClass, ynOptionsForField, optionsForField } from '../../utils/fieldGrid'
+import MeasurementInput, { isLinearMeasurementField } from '../MeasurementInput'
 
 function orderElevFields(fields = []) {
   const qty = []
+  const lf = []
+  const story = []
+  const painted = []
   const rest = []
   const otherNums = []
   const damaged = []
+  const hasStory = fields.some(field => field.l === 'Story')
+  const hasWindowSizeQtys = fields.some(field => field.t === 'num' && /^Small\b/i.test(field.l))
 
   for (const field of fields) {
     if (field.l === 'Damaged') damaged.push(field)
+    else if (field.l === 'Painted' && (hasStory || hasWindowSizeQtys)) painted.push(field)
     else if (field.t === 'num' && field.l === 'Qty') qty.push(field)
+    else if (field.t === 'num' && field.l === 'Story') story.push(field)
+    else if (field.t === 'num' && /\bLF\b/i.test(field.l)) lf.push(field)
     else if (field.t === 'num') otherNums.push(field)
     else rest.push(field)
   }
 
-  return [...qty, ...rest, ...otherNums, ...damaged]
+  // Qty + LF (downspouts / gutter guards): after other fields, Damaged last.
+  // Size + LF (gutters): keep Size/LF together before Damaged.
+  // Windows: per-size qty steppers, then Painted/Damaged.
+  if (qty.length) return [...rest, ...otherNums, ...story, ...qty, ...lf, ...painted, ...damaged]
+  if (story.length || hasWindowSizeQtys) return [...rest, ...story, ...otherNums, ...lf, ...painted, ...damaged]
+  return [...rest, ...otherNums, ...lf, ...painted, ...damaged]
 }
 
 // ── Field Renderer — mirrors Cursor's RoofSection pattern ─────────
@@ -117,6 +131,10 @@ function FieldRenderer({ field, value, onChange }) {
         />
       </div>
     )
+  }
+
+  if (t === 'num' && isLinearMeasurementField(field)) {
+    return <MeasurementInput field={field} value={value} onChange={onChange} />
   }
 
   if (t === 'num') {

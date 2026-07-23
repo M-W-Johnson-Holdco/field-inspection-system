@@ -2634,16 +2634,29 @@ button:disabled {
   align-items: center;
   justify-content: center;
   padding: 0;
-  border: 2px solid var(--primary);
+  border: 2px solid #16a34a;
   border-radius: 9px;
-  background: var(--primary-soft);
-  color: var(--primary);
+  background: #f0fdf4;
+  color: #15803d;
   font-size: 14px;
   font-weight: 900;
   cursor: pointer;
   user-select: none;
 }
 
+.ri-item__toggle--present {
+  border-color: #16a34a;
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.ri-item__toggle--supplement {
+  border-color: #7c3aed;
+  background: #f5f3ff;
+  color: #6d28d9;
+}
+
+.ri-item__toggle--na,
 .ri-item__toggle--excl {
   border-color: #fca5a5;
   background: #fee2e2;
@@ -2651,6 +2664,10 @@ button:disabled {
   font-size: 9px;
   font-weight: 800;
   letter-spacing: 0.3px;
+}
+
+.ri-item__name--supplement {
+  color: #6d28d9;
 }
 
 .ri-item__name {
@@ -2668,7 +2685,7 @@ button:disabled {
 }
 
 .ri-item__body {
-  margin: 10px 0 0 40px;
+  margin: 10px 0 0;
 }
 
 .ri-flag-row {
@@ -2824,7 +2841,18 @@ button:disabled {
   max-width: 100%;
 }
 
-.field-row--qty-row > .field-group--stepper-row {
+.field-row--qty-triple {
+  grid-template-columns: repeat(3, max-content);
+  justify-content: start;
+  gap: 8px 12px;
+}
+
+.field-row--qty-triple > .field-group {
+  width: max-content;
+  max-width: 100%;
+}
+
+.field-row--qty-triple > .field-group--stepper-row {
   grid-column: auto;
 }
 
@@ -2840,6 +2868,15 @@ button:disabled {
   align-items: flex-start;
   width: max-content;
   max-width: 100%;
+}
+
+.ri-fields-grid .field-row--qty-row > .field-group--stepper-row,
+.ri-fields-grid .field-row--qty-row > .field-group--measurement {
+  grid-column: auto;
+}
+
+.ri-fields-grid .field-row--qty-triple > .field-group--stepper-row {
+  grid-column: auto;
 }
 
 .ri-fields-grid .field-group--full .multi-select,
@@ -4087,6 +4124,10 @@ summary.field-select.field-select--placeholder {
     width: 100%;
     max-width: 100%;
   }
+
+  .field-row--qty-triple {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ─── Interior Section ──────────────────────────────────────────── */
@@ -4584,7 +4625,7 @@ summary.field-select.field-select--placeholder {
   }
 
   .ri-item__body {
-    margin: 12px 0 0 46px;
+    margin: 12px 0 0;
   }
 
   .field-input:not(.number-stepper__input),
@@ -4719,7 +4760,24 @@ summary.field-select.field-select--placeholder {
     width: max-content;
   }
 
-  .field-row--qty-row > .field-group--stepper-row {
+  .ri-fields-grid .field-row--qty-row > .field-group--stepper-row,
+  .ri-fields-grid .field-row--qty-row > .field-group--measurement {
+    grid-column: auto;
+  }
+
+  .field-row--qty-triple {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(3, max-content);
+    justify-content: start;
+    gap: 8px 12px;
+  }
+
+  .field-row--qty-triple > .field-group {
+    width: max-content;
+  }
+
+  .ri-fields-grid .field-row--qty-triple > .field-group--stepper-row {
     grid-column: auto;
   }
 

@@ -6,11 +6,12 @@ import { EXTERIOR_ITEMS } from '../data/exteriorItems'
 import { formatPitch, parsePitchNumerator } from '../utils/pitch'
 import { parseMeasurement } from '../utils/measurement'
 import { isFieldVisible } from '../utils/fieldGrid'
+import { getRoofItemStatus, isRoofItemActive, nextRoofItemStatus, withRoofItemStatus } from '../utils/roofItemStatus'
 
 const InspectionContext = createContext(null)
 
 const INITIAL_ROOF_DATA = Object.fromEntries(
-  ROOF_ITEMS.map(item => [item.id, { excluded: false, fields: {}, subItems: [], photos: [] }])
+  ROOF_ITEMS.map(item => [item.id, { excluded: false, status: 'present', fields: {}, subItems: [], photos: [] }])
 )
 
 const INITIAL_ELEV_DATA = Object.fromEntries(
@@ -107,7 +108,7 @@ function calculateCompletion(data) {
 
   ROOF_ITEMS.forEach(itemDef => {
     const item = data.roofData?.[itemDef.id]
-    if (!item || item.excluded) return
+    if (!item || !isRoofItemActive(item)) return
 
     ;(itemDef.fields || []).forEach(field => countValue(item.fields?.[field.l], totals))
     if (itemDef.flags?.includes('D')) countValue(item.fields?._damage, totals)
@@ -320,6 +321,11 @@ function normalizeRoofSubItem(sub) {
 
 function normalizeRoofData(roofData = {}) {
   let next = { ...roofData }
+  for (const itemDef of ROOF_ITEMS) {
+    const item = next[itemDef.id]
+    if (!item) continue
+    next[itemDef.id] = withRoofItemStatus(item, getRoofItemStatus(item))
+  }
   next = normalizeRi11(next)
   next = normalizeRi12(next)
   next = normalizeRi14(next)
@@ -685,14 +691,15 @@ function isLegacyExhaustStackSubItem(sub) {
 function normalizeExhaustStackSize(value) {
   if (value == null || value === '' || value === 'Select') return ''
   const text = String(value).trim()
-  if (['Small (4")', 'Medium (5-6")', 'Large (7-8")'].includes(text)) return text
-  if (text === 'Small' || text === '4"' || text.startsWith('Small')) return 'Small (4")'
-  if (text === 'Medium' || text === '5-6"' || text.startsWith('Medium')) return 'Medium (5-6")'
-  if (text === 'Large' || text === '7-8"' || text.startsWith('Large')) return 'Large (7-8")'
+  if (['Small (3-4")', 'Medium (5-7")', 'Large (8"+)'].includes(text)) return text
+  // Migrate previous labels
+  if (text === 'Small (4")' || text === 'Small' || text === '4"' || text.startsWith('Small')) return 'Small (3-4")'
+  if (text === 'Medium (5-6")' || text === 'Medium' || text === '5-6"' || text === '5-7"' || text.startsWith('Medium')) return 'Medium (5-7")'
+  if (text === 'Large (7-8")' || text === 'Large' || text === '7-8"' || text === '8"+' || text.startsWith('Large')) return 'Large (8"+)'
   const inches = Number(text.match(/\d+(?:\.\d+)?/)?.[0])
-  if (inches === 4) return 'Small (4")'
-  if (inches === 5 || inches === 6) return 'Medium (5-6")'
-  if (inches === 7 || inches === 8) return 'Large (7-8")'
+  if (inches === 3 || inches === 4) return 'Small (3-4")'
+  if (inches >= 5 && inches <= 7) return 'Medium (5-7")'
+  if (inches >= 8) return 'Large (8"+)'
   return ''
 }
 
@@ -1281,13 +1288,25 @@ export function InspectionProvider({ children }) {
 
   // ── Roof ──────────────────────────────────────────────────────────
 
-  function toggleRoofExclude(itemId) {
+  function cycleRoofStatus(itemId) {
     setData(prev => {
       const item = prev.roofData[itemId]
-      const next = { ...prev, roofData: { ...prev.roofData, [itemId]: { ...item, excluded: !item.excluded } } }
+      const status = nextRoofItemStatus(getRoofItemStatus(item))
+      const next = {
+        ...prev,
+        roofData: {
+          ...prev.roofData,
+          [itemId]: withRoofItemStatus(item, status),
+        },
+      }
       scheduleSave(next)
       return next
     })
+  }
+
+  /** @deprecated Prefer cycleRoofStatus — kept as alias for older call sites. */
+  function toggleRoofExclude(itemId) {
+    cycleRoofStatus(itemId)
   }
 
   function updateRoofField(itemId, label, value) {
@@ -1498,8 +1517,7 @@ export function InspectionProvider({ children }) {
         roofData: {
           ...prev.roofData,
           ri11: {
-            ...item,
-            excluded: false,
+            ...withRoofItemStatus(item, 'present'),
             fields: {
               ...(sharedType ? { Type: sharedType } : {}),
               ...(sharedPainted ? { Painted: sharedPainted } : {}),
@@ -1536,8 +1554,7 @@ export function InspectionProvider({ children }) {
         roofData: {
           ...prev.roofData,
           ri12: {
-            ...item,
-            excluded: false,
+            ...withRoofItemStatus(item, 'present'),
             fields: {
               ...(sharedPainted ? { Painted: sharedPainted } : {}),
             },
@@ -1561,8 +1578,7 @@ export function InspectionProvider({ children }) {
         roofData: {
           ...prev.roofData,
           ri17: {
-            ...item,
-            excluded: false,
+            ...withRoofItemStatus(item, 'present'),
             fields: {},
             subItems,
           },
@@ -1589,8 +1605,7 @@ export function InspectionProvider({ children }) {
         roofData = {
           ...roofData,
           [itemId]: {
-            ...roofData[itemId],
-            excluded: false,
+            ...withRoofItemStatus(roofData[itemId], 'present'),
             fields: {
               ...(roofData[itemId]?.fields || {}),
               ...fields,
@@ -1616,8 +1631,7 @@ export function InspectionProvider({ children }) {
         roofData: {
           ...prev.roofData,
           ri22: {
-            ...item,
-            excluded: false,
+            ...withRoofItemStatus(item, 'present'),
             fields: {},
             subItems,
           },
@@ -1639,8 +1653,7 @@ export function InspectionProvider({ children }) {
         roofData: {
           ...prev.roofData,
           ri14: {
-            ...item,
-            excluded: false,
+            ...withRoofItemStatus(item, 'present'),
             fields: {},
             subItems,
           },
@@ -1662,8 +1675,7 @@ export function InspectionProvider({ children }) {
         roofData: {
           ...prev.roofData,
           ri23: {
-            ...item,
-            excluded: false,
+            ...withRoofItemStatus(item, 'present'),
             fields: {},
             subItems,
           },
@@ -1904,7 +1916,7 @@ export function InspectionProvider({ children }) {
 
       if (parsed.valleyPresent) {
         const ri5 = roofData.ri5
-        roofData.ri5 = { ...ri5, excluded: false }
+        roofData.ri5 = withRoofItemStatus(ri5, 'present')
       }
 
       if (parsed.lineLengths?.RIDGE > 0) {
@@ -1986,7 +1998,7 @@ export function InspectionProvider({ children }) {
       expandedSections, setSectionExpanded,
       saveStatus, driveSaveStatus, setDriveSaveStatus, driveFolderId, setDriveFolderId, completion, updateJobInfo, manualSave, resetAll, startNewInspection, loadInspection, applyXmlImport,
       aiParseState, setAiParseState,
-      toggleRoofExclude, updateRoofField,
+      toggleRoofExclude, cycleRoofStatus, updateRoofField,
       addRoofSubItem, removeRoofSubItem, updateRoofSubField, adjustRoofSubItemSizeCount, importRoofPipeJacks, importRoofExhaustStacks, importRoofChimneys, importRoofFlashingItems, importRoofLowSlopeItems,
       importRoofSkylights, importRoofOtherStructures,
       addRoofPhoto, removeRoofPhoto,

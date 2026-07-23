@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { ChevronDown, Trash2 } from 'lucide-react'
+import { ChevronDown, Plus, Trash2 } from 'lucide-react'
 import { useInspection } from '../../context/InspectionContext'
 import PhotoZone from '../PhotoZone'
 import FieldsGrid from '../FieldsGrid'
@@ -11,6 +11,7 @@ import { fieldGroupProps } from '../../utils/fieldLayout'
 import { fieldSelectClass, materialOptionColumnStyle, withSelectPlaceholderClass, visibleFieldsForValues, ynOptionsForField, optionsForField } from '../../utils/fieldGrid'
 import { formatPitch, parsePitchNumerator } from '../../utils/pitch'
 import useExpandedSection from '../../hooks/useExpandedSection'
+import { getRoofItemStatus, isRoofItemActive } from '../../utils/roofItemStatus'
 
 // ── Field Renderer ─────────────────────────────────────────────────
 function PitchInput({ field, value, onChange }) {
@@ -438,7 +439,7 @@ function CollapsibleRoofSubCard({
 // ── Check Item ────────────────────────────────────────────────────
 function CheckItem({ itemDef, trigPhoto }) {
   const {
-    updateRoofField, toggleRoofExclude,
+    updateRoofField, cycleRoofStatus,
     addRoofSubItem, removeRoofSubItem, updateRoofSubField,
     adjustRoofSubItemSizeCount,
     removeRoofPhoto, data,
@@ -446,7 +447,9 @@ function CheckItem({ itemDef, trigPhoto }) {
 
   const { id, lbl, flags, fields = [], addMore, addMoreLabel, subFields, addMoreAtTop, subItemPhotos, subFieldsUseMaterialColumnWidth, subItemSizeCounters, subItemTotalCounter, compactOptionPairRow } = itemDef
   const item = data.roofData[id]
-  const { excluded, subItems, photos } = item
+  const { subItems, photos } = item
+  const status = getRoofItemStatus(item)
+  const active = isRoofItemActive(item)
 
   const hasP = flags.includes('P')
   const hasD = flags.includes('D')
@@ -615,22 +618,39 @@ function CheckItem({ itemDef, trigPhoto }) {
   }
 
   return (
-    <div className={`ri-item${excluded ? ' ri-item--excluded' : ''}`}>
+    <div className={`ri-item${status === 'na' ? ' ri-item--excluded' : ''}${status === 'supplement' ? ' ri-item--supplement' : ''}`}>
       <div className="ri-item__top">
         <button
           type="button"
-          className={`ri-item__toggle${excluded ? ' ri-item__toggle--excl' : ''}`}
-          onClick={() => toggleRoofExclude(id)}
-          title={excluded ? 'Click to include' : 'Click to mark as N/A'}
+          className={`ri-item__toggle ri-item__toggle--${status}`}
+          onClick={() => cycleRoofStatus(id)}
+          title={
+            status === 'present'
+              ? 'Present — click for Supplement'
+              : status === 'supplement'
+                ? 'Supplement — click for N/A'
+                : 'N/A — click for Present'
+          }
+          aria-label={
+            status === 'present'
+              ? `${lbl}: Present`
+              : status === 'supplement'
+                ? `${lbl}: Supplement`
+                : `${lbl}: N/A`
+          }
         >
-          {excluded ? 'N/A' : '✓'}
+          {status === 'na' ? 'N/A' : status === 'supplement' ? (
+            <Plus size={18} strokeWidth={3} aria-hidden="true" />
+          ) : (
+            '✓'
+          )}
         </button>
-        <span className={`ri-item__name${excluded ? ' ri-item__name--excl' : ''}`}>
+        <span className={`ri-item__name${status === 'na' ? ' ri-item__name--excl' : ''}${status === 'supplement' ? ' ri-item__name--supplement' : ''}`}>
           {lbl}
         </span>
       </div>
 
-      {!excluded && (
+      {active && (
         <div className="ri-item__body">
 
           {renderSizeCounters()}

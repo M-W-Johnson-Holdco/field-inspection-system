@@ -30,7 +30,7 @@ export const ROOF_ITEMS = [
   {
     id: 'ri2', lbl: 'Underlayment', flags: ['P', 'D'],
     fields: [
-      { t: 'radio', l: 'Grade', o: ['Felt', 'Synthetic', 'Unknown'] },
+      { t: 'radio', l: 'Grade', o: ['Felt - 15lbs', 'Felt - 30lbs', 'Synthetic', 'Premium Synthetic', 'Unknown'] },
       { t: 'num', l: 'Layers' },
     ],
   },
@@ -126,7 +126,7 @@ export const ROOF_ITEMS = [
       { t: 'yn', l: 'Painted', allowNA: false },
     ],
     subFields: [
-      { t: 'select', l: 'Size', o: ['Select', 'Small (4")', 'Medium (5-6")', 'Large (7-8")'], fullRow: true },
+      { t: 'select', l: 'Size', o: ['Select', 'Small (3-4")', 'Medium (5-7")', 'Large (8"+)'], fullRow: true },
       { t: 'multi', l: 'Damaged', o: ['Cap', 'Stack', 'Flange'], allowNA: false, halfWidthDesktop: true, nativeMenu: true },
     ],
   },

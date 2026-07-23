@@ -240,6 +240,72 @@ export function groupFieldsForGrid(fields) {
     const next = fields[i + 1]
 
     if (
+      field.t === 'num' && field.l === 'Qty'
+      && next?.t === 'num' && /\bLF\b/i.test(next.l)
+    ) {
+      groups.push({
+        type: 'row',
+        qtyRow: true,
+        groups: [
+          { type: 'single', field },
+          { type: 'single', field: next },
+        ],
+      })
+      i += 2
+      continue
+    }
+
+    if (
+      field.t === 'num' && field.l === 'Story'
+      && next?.t === 'num' && next.l === 'Qty'
+    ) {
+      groups.push({
+        type: 'row',
+        qtyRow: true,
+        groups: [
+          { type: 'single', field },
+          { type: 'single', field: next },
+        ],
+      })
+      i += 2
+      continue
+    }
+
+    if (
+      field.t === 'num' && /^Small\b/i.test(field.l)
+      && next?.t === 'num' && /^Medium\b/i.test(next.l)
+      && fields[i + 2]?.t === 'num' && /^Large\b/i.test(fields[i + 2].l)
+    ) {
+      groups.push({
+        type: 'row',
+        qtyTripleRow: true,
+        groups: [
+          { type: 'single', field },
+          { type: 'single', field: next },
+          { type: 'single', field: fields[i + 2] },
+        ],
+      })
+      i += 3
+      continue
+    }
+
+    if (
+      field.t === 'num' && /Size/i.test(field.l)
+      && next?.t === 'num' && /\bLF\b/i.test(next.l)
+    ) {
+      groups.push({
+        type: 'row',
+        qtyRow: true,
+        groups: [
+          { type: 'single', field },
+          { type: 'single', field: next },
+        ],
+      })
+      i += 2
+      continue
+    }
+
+    if (
       field.t === 'yn'
       && next?.t === 'yn' && next.l === 'Damaged'
     ) {
@@ -350,6 +416,9 @@ function omitsNAOption(field) {
     || label === 'Style'
     || label === 'Mount'
     || label === 'Location'
+    || label === 'Width'
+    || label === 'Grade'
+    || label === 'Glaze'
     || /^Size\b/i.test(label)
     || /damage/i.test(label)
   )
