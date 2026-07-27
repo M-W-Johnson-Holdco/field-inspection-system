@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, Trash2 } from 'lucide-react'
 import { useInspection } from '../../context/InspectionContext'
 import PhotoZone from '../PhotoZone'
 import FieldsGrid from '../FieldsGrid'
@@ -8,6 +8,7 @@ import { ELEV_ITEMS, DIRECTIONS } from '../../data/elevItems'
 import { fieldGroupProps } from '../../utils/fieldLayout'
 import { fieldSelectClass, withSelectPlaceholderClass, ynOptionsForField, optionsForField, visibleFieldsForValues } from '../../utils/fieldGrid'
 import MeasurementInput, { isLinearMeasurementField } from '../MeasurementInput'
+import useExpandedSection from '../../hooks/useExpandedSection'
 
 function orderElevFields(fields = []) {
   const qty = []
@@ -210,13 +211,113 @@ function FieldRenderer({ field, value, onChange }) {
   )
 }
 
+function ElevSubCard({
+  cellKey,
+  title,
+  sub,
+  index,
+  subFields,
+  trigPhoto,
+  onUpdateField,
+  onRemove,
+  onRemovePhoto,
+}) {
+  const [open, setOpen] = useExpandedSection(`elev:${cellKey}:sub:${index}`, true)
+  const itemLabel = `${title} #${index + 1}`
+  const showDamage = sub.fields?.Damaged === 'Yes'
+  const lengthRaw = sub.fields?.['Length (LF)']
+  const lengthPill = lengthRaw != null && String(lengthRaw).trim() !== ''
+    ? `${String(lengthRaw).trim()} LF`
+    : null
+
+  return (
+    <div className="ri-sub-card">
+      <div className="int-room-header">
+        <button
+          type="button"
+          className="int-room-toggle ri-collapsible-sub-toggle"
+          aria-expanded={open}
+          onClick={() => setOpen(value => !value)}
+        >
+          <span className="ri-sub-card__title">{itemLabel}</span>
+          <ChevronDown
+            className={`int-room-chevron${open ? ' int-room-chevron--open' : ''}`}
+            aria-hidden="true"
+          />
+          {lengthPill && (
+            <span className="ri-collapsible-sub-pills">
+              <span className="int-room-story">{lengthPill}</span>
+            </span>
+          )}
+        </button>
+        <button
+          type="button"
+          className="int-btn-delete"
+          onClick={() => {
+            if (!window.confirm(`Are you sure you want to delete ${itemLabel}?`)) return
+            onRemove()
+          }}
+          aria-label={`Delete ${itemLabel}`}
+          title={`Delete ${itemLabel}`}
+        >
+          <Trash2 size={15} />
+        </button>
+      </div>
+
+      <div className={`collapse-panel ${open ? 'collapse-panel--open' : ''}`} aria-hidden={!open}>
+        <div className="collapse-panel__inner">
+          <div className="ri-collapsible-sub-body">
+            <FieldsGrid
+              fields={orderElevFields(visibleFieldsForValues(subFields, sub.fields || {}))}
+              renderField={field => (
+                <FieldRenderer
+                  key={field.l}
+                  field={field}
+                  value={sub.fields?.[field.l]}
+                  onChange={value => onUpdateField(field.l, value)}
+                />
+              )}
+            >
+              {showDamage && (
+                <div className="ri-damage-row">
+                  <label className="form-label">Damage Description</label>
+                  <DamageDescriptionInput
+                    placeholder="Describe visible damage…"
+                    value={sub.fields?._damage || ''}
+                    onChange={value => onUpdateField('_damage', value)}
+                  />
+                </div>
+              )}
+              <PhotoZone
+                entityId={`${cellKey}__sub_${index}`}
+                photos={sub.photos || []}
+                trigPhoto={trigPhoto}
+                onRemove={onRemovePhoto}
+              />
+            </FieldsGrid>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Elevation Item Row ────────────────────────────────────────────
 function ElevItem({ itemDef, direction, trigPhoto }) {
-  const { updateElevField, toggleElevExclude, removeElevPhoto, data } = useInspection()
-  const { compactOptionPairRow } = itemDef
+  const {
+    updateElevField,
+    toggleElevExclude,
+    removeElevPhoto,
+    addElevSubItem,
+    removeElevSubItem,
+    updateElevSubField,
+    data,
+  } = useInspection()
+  const { compactOptionPairRow, addMore, addMoreLabel, subFields = [], fields = [] } = itemDef
   const cellKey = `${itemDef.id}_${direction}`
-  const cell = data.elevData[cellKey]
-  const { excluded, photos } = cell
+  const cell = data.elevData[cellKey] || { excluded: false, fields: {}, subItems: [], photos: [] }
+  const { excluded, photos, subItems = [] } = cell
+  const subItemTitle = (addMoreLabel || 'Item').replace(/^Add\s+/, '')
 
   return (
     <div className={`ri-item${excluded ? ' ri-item--excluded' : ''}`}>
@@ -236,49 +337,74 @@ function ElevItem({ itemDef, direction, trigPhoto }) {
 
       {!excluded && (
         <div className="ri-item__body">
-          <FieldsGrid
-            fields={orderElevFields(visibleFieldsForValues(itemDef.fields, cell.fields))}
-            compactOptionPairRow={compactOptionPairRow}
-            renderField={f => {
-              let fieldValue = cell.fields[f.l]
-              if (f.l === '(Other)') {
-                const style = cell.fields?.Style || ''
-                fieldValue = style.startsWith('Other - ') ? style.slice(8) : ''
-              }
-              return (
-                <FieldRenderer
-                  key={f.l}
-                  field={f}
-                  value={fieldValue}
-                  onChange={val => {
-                    updateElevField(cellKey, f.l, val)
-                    if (f.l === 'Damaged') {
-                      if (val === 'No' || val === 'N/A') updateElevField(cellKey, '_damage', 'n/a')
-                      else if (val !== 'Yes') updateElevField(cellKey, '_damage', '')
-                    }
-                  }}
+          {addMore ? (
+            <div className="ri-sub-items">
+              {subItems.map((sub, idx) => (
+                <ElevSubCard
+                  key={idx}
+                  cellKey={cellKey}
+                  title={subItemTitle}
+                  sub={sub}
+                  index={idx}
+                  subFields={subFields}
+                  trigPhoto={trigPhoto}
+                  onUpdateField={(label, value) => updateElevSubField(cellKey, idx, label, value)}
+                  onRemove={() => removeElevSubItem(cellKey, idx)}
+                  onRemovePhoto={removeElevPhoto}
                 />
-              )
-            }}
-          >
-            {cell.fields['Damaged'] === 'Yes' && (
-              <div className="ri-damage-row">
-                <label className="form-label">Damage Description</label>
-                <DamageDescriptionInput
-                  placeholder="Describe visible damage…"
-                  value={cell.fields['_damage'] || ''}
-                  onChange={val => updateElevField(cellKey, '_damage', val)}
-                />
-              </div>
-            )}
-            <PhotoZone
-              entityId={cellKey}
-              photos={photos}
-              trigPhoto={trigPhoto}
-              onRemove={removeElevPhoto}
-            />
-          </FieldsGrid>
-
+              ))}
+              <button
+                type="button"
+                className="ri-btn-add-sub"
+                onClick={() => addElevSubItem(cellKey)}
+              >
+                + {addMoreLabel}
+              </button>
+            </div>
+          ) : (
+            <FieldsGrid
+              fields={orderElevFields(visibleFieldsForValues(fields, cell.fields))}
+              compactOptionPairRow={compactOptionPairRow}
+              renderField={f => {
+                let fieldValue = cell.fields[f.l]
+                if (f.l === '(Other)') {
+                  const style = cell.fields?.Style || ''
+                  fieldValue = style.startsWith('Other - ') ? style.slice(8) : ''
+                }
+                return (
+                  <FieldRenderer
+                    key={f.l}
+                    field={f}
+                    value={fieldValue}
+                    onChange={val => {
+                      updateElevField(cellKey, f.l, val)
+                      if (f.l === 'Damaged') {
+                        if (val === 'No' || val === 'N/A') updateElevField(cellKey, '_damage', 'n/a')
+                        else if (val !== 'Yes') updateElevField(cellKey, '_damage', '')
+                      }
+                    }}
+                  />
+                )
+              }}
+            >
+              {cell.fields['Damaged'] === 'Yes' && (
+                <div className="ri-damage-row">
+                  <label className="form-label">Damage Description</label>
+                  <DamageDescriptionInput
+                    placeholder="Describe visible damage…"
+                    value={cell.fields['_damage'] || ''}
+                    onChange={val => updateElevField(cellKey, '_damage', val)}
+                  />
+                </div>
+              )}
+              <PhotoZone
+                entityId={cellKey}
+                photos={photos}
+                trigPhoto={trigPhoto}
+                onRemove={removeElevPhoto}
+              />
+            </FieldsGrid>
+          )}
         </div>
       )}
     </div>
@@ -293,18 +419,18 @@ export default function ElevationsSection() {
   const camRef = useRef(null)
   const galRef = useRef(null)
 
-  function trigPhoto(cellKey, mode) {
-    activeCellRef.current = cellKey
+  function trigPhoto(entityId, mode) {
+    activeCellRef.current = entityId
     if (mode === 'cam') camRef.current?.click()
     else galRef.current?.click()
   }
 
   function handleFiles(e) {
-    const cellKey = activeCellRef.current
-    if (!cellKey) return
+    const target = activeCellRef.current
+    if (!target) return
     Array.from(e.target.files).forEach(file => {
       const reader = new FileReader()
-      reader.onload = ev => addElevPhoto(cellKey, ev.target.result)
+      reader.onload = ev => addElevPhoto(target, ev.target.result)
       reader.readAsDataURL(file)
     })
     e.target.value = ''

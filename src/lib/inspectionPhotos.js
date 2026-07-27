@@ -128,6 +128,19 @@ export function collectInspectionPhotos(inspectionData) {
         url,
       })
     })
+    ;(cell.subItems || []).forEach((sub, subIndex) => {
+      ;(sub.photos || []).forEach((url, i) => {
+        if (!url) return
+        const subFolder = sanitizePathSegment(
+          `${subIndex + 1}-${slugify(itemFolder.replace(/s$/, ''))}`,
+        )
+        photos.push({
+          path: ['photos', '2-elevations', dirSlug, itemFolder, subFolder],
+          name: photoFileName(subFolder, i),
+          url,
+        })
+      })
+    })
   }
 
   for (const [itemId, item] of Object.entries(inspectionData?.exteriorData || {})) {
@@ -173,6 +186,9 @@ export function stripPhotosFromInspection(clean) {
   }
   for (const cell of Object.values(clean.elevData || {})) {
     cell.photos = []
+    ;(cell.subItems || []).forEach(sub => {
+      sub.photos = []
+    })
   }
   for (const item of Object.values(clean.exteriorData || {})) {
     if (item.photos) item.photos = []

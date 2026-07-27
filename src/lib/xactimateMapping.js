@@ -342,7 +342,12 @@ export function buildRoofLineItems(itemDef, itemData) {
 
 export function buildElevLineItems(itemDef, dir, cellData) {
   if (!cellData || cellData.excluded) return []
-  return ELEV_LINE_ITEMS[itemDef.id]?.(cellData.fields || {}, dir) || []
+  const builder = ELEV_LINE_ITEMS[itemDef.id]
+  if (!builder) return []
+  if (itemDef.addMore) {
+    return (cellData.subItems || []).flatMap(sub => builder(sub.fields || {}, dir) || [])
+  }
+  return builder(cellData.fields || {}, dir) || []
 }
 
 export function buildExteriorLineItems(itemDef, itemData) {

@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useRef } from 'react'
 import { idbSave, idbLoad } from '../lib/idb'
 import { ROOF_ITEMS } from '../data/roofItems'
-import { ELEV_ITEMS, DIRECTIONS } from '../data/elevItems'
+import { ELEV_ITEMS, DIRECTIONS, ELEV_ADDMORE_IDS } from '../data/elevItems'
 import { EXTERIOR_ITEMS } from '../data/exteriorItems'
 import { formatPitch, parsePitchNumerator } from '../utils/pitch'
 import { parseMeasurement } from '../utils/measurement'
@@ -16,7 +16,12 @@ const INITIAL_ROOF_DATA = Object.fromEntries(
 
 const INITIAL_ELEV_DATA = Object.fromEntries(
   ELEV_ITEMS.flatMap(item =>
-    DIRECTIONS.map(dir => [`${item.id}_${dir}`, { excluded: false, fields: {}, photos: [] }]),
+    DIRECTIONS.map(dir => [`${item.id}_${dir}`, {
+      excluded: false,
+      fields: {},
+      subItems: [],
+      photos: [],
+    }]),
   ),
 )
 
@@ -137,6 +142,17 @@ function calculateCompletion(data) {
       const cell = data.elevData?.[`${itemDef.id}_${dir}`]
       if (!cell || cell.excluded) return
 
+      if (itemDef.addMore) {
+        ;(cell.subItems || []).forEach(sub => {
+          ;(itemDef.subFields || []).forEach(field => {
+            if (!isFieldVisible(field, sub.fields)) return
+            countValue(sub.fields?.[field.l], totals)
+          })
+          if (sub.fields?.Damaged === 'Yes') countValue(sub.fields?._damage, totals)
+        })
+        return
+      }
+
       ;(itemDef.fields || []).forEach(field => countValue(cell.fields?.[field.l], totals))
       if (cell.fields?.Damaged === 'Yes') countValue(cell.fields?._damage, totals)
     })
@@ -189,17 +205,97 @@ function normalizeElevGutterCell(cell) {
   return { ...cell, fields }
 }
 
-function normalizeElevData(elevData = {}) {
-  const next = { ...elevData }
-  for (const key of Object.keys(next)) {
-    if (key.startsWith('ev3_')) next[key] = normalizeElevGutterCell(next[key])
+function elevCellHasLegacyTopFields(fields = {}) {
+  return Object.entries(fields).some(([key, value]) => {
+    if (key.startsWith('_')) return false
+    if (value == null || value === '' || value === 'Select') return false
+    if (Array.isArray(value)) return value.length > 0
+    return true
+  })
+}
+
+function normalizeElevAddMoreSub(sub) {
+  const fields = { ...(sub?.fields || {}) }
+  if (fields.Size != null) {
+    const parsed = normalizeGutterSizeValue(fields.Size)
+    if (parsed && fields['Size (Inches)'] == null) fields['Size (Inches)'] = parsed
+    delete fields.Size
   }
-  for (const dir of DIRECTIONS) {
-    const key = `ev3_${dir}`
-    if (!next[key]) {
-      next[key] = normalizeElevGutterCell({ excluded: false, fields: {}, photos: [] })
+  if (fields['Size (Inches)'] != null && fields['Size (Inches)'] !== '') {
+    fields['Size (Inches)'] = normalizeGutterSizeValue(fields['Size (Inches)'])
+  }
+  return {
+    fields,
+    photos: Array.isArray(sub?.photos) ? sub.photos : [],
+  }
+}
+
+function migrateElevAddMoreCell(cell) {
+  if (!cell) {
+    return { excluded: false, fields: {}, subItems: [], photos: [] }
+  }
+
+  const base = normalizeElevGutterCell(cell)
+  const existingSubs = Array.isArray(base.subItems) ? base.subItems.map(normalizeElevAddMoreSub) : []
+
+  if (existingSubs.length) {
+    return {
+      ...base,
+      fields: {},
+      subItems: existingSubs,
+      photos: [],
     }
   }
+
+  const topFields = base.fields || {}
+  const topPhotos = Array.isArray(base.photos) ? base.photos : []
+  if (elevCellHasLegacyTopFields(topFields) || topPhotos.length) {
+    return {
+      ...base,
+      fields: {},
+      subItems: [{
+        fields: { ...topFields },
+        photos: topPhotos,
+      }],
+      photos: [],
+    }
+  }
+
+  return {
+    ...base,
+    fields: {},
+    subItems: [],
+    photos: [],
+  }
+}
+
+function normalizeElevData(elevData = {}) {
+  const next = { ...elevData }
+
+  for (const item of ELEV_ITEMS) {
+    for (const dir of DIRECTIONS) {
+      const key = `${item.id}_${dir}`
+      const cell = next[key] || { excluded: false, fields: {}, subItems: [], photos: [] }
+      if (ELEV_ADDMORE_IDS.has(item.id)) {
+        next[key] = migrateElevAddMoreCell(cell)
+      } else {
+        next[key] = {
+          ...cell,
+          fields: cell.fields || {},
+          subItems: Array.isArray(cell.subItems) ? cell.subItems : [],
+          photos: Array.isArray(cell.photos) ? cell.photos : [],
+        }
+      }
+    }
+  }
+
+  // Normalize any leftover gutter cells not covered above (legacy keys)
+  for (const key of Object.keys(next)) {
+    if (key.startsWith('ev3_') || key.startsWith('ev11_') || key.startsWith('ev4_')) {
+      next[key] = migrateElevAddMoreCell(next[key])
+    }
+  }
+
   return next
 }
 
@@ -1855,19 +1951,130 @@ export function InspectionProvider({ children }) {
     })
   }
 
-  function addElevPhoto(cellKey, dataUrl) {
+  function addElevSubItem(cellKey) {
     setData(prev => {
-      const cell = prev.elevData[cellKey]
-      const next = { ...prev, elevData: { ...prev.elevData, [cellKey]: { ...cell, photos: [...cell.photos, dataUrl] } } }
+      const cell = prev.elevData[cellKey] || { excluded: false, fields: {}, subItems: [], photos: [] }
+      const next = {
+        ...prev,
+        elevData: {
+          ...prev.elevData,
+          [cellKey]: {
+            ...cell,
+            subItems: [...(cell.subItems || []), { fields: {}, photos: [] }],
+          },
+        },
+      }
       scheduleSave(next)
       return next
     })
   }
 
-  function removeElevPhoto(cellKey, index) {
+  function removeElevSubItem(cellKey, index) {
     setData(prev => {
       const cell = prev.elevData[cellKey]
-      const next = { ...prev, elevData: { ...prev.elevData, [cellKey]: { ...cell, photos: cell.photos.filter((_, i) => i !== index) } } }
+      const next = {
+        ...prev,
+        elevData: {
+          ...prev.elevData,
+          [cellKey]: {
+            ...cell,
+            subItems: (cell.subItems || []).filter((_, i) => i !== index),
+          },
+        },
+      }
+      scheduleSave(next)
+      return next
+    })
+  }
+
+  function updateElevSubField(cellKey, index, label, value) {
+    setData(prev => {
+      const cell = prev.elevData[cellKey]
+      const subItems = (cell.subItems || []).map((sub, i) => {
+        if (i !== index) return sub
+        const fields = { ...sub.fields, [label]: value }
+        if (label === 'Damaged') {
+          if (value === 'No' || value === 'N/A') fields._damage = 'n/a'
+          else if (value !== 'Yes') delete fields._damage
+        }
+        return { ...sub, fields }
+      })
+      const next = { ...prev, elevData: { ...prev.elevData, [cellKey]: { ...cell, subItems } } }
+      scheduleSave(next)
+      return next
+    })
+  }
+
+  function replaceElevSubItems(cellKey, subItems) {
+    setData(prev => {
+      const cell = prev.elevData[cellKey] || { excluded: false, fields: {}, subItems: [], photos: [] }
+      const next = {
+        ...prev,
+        elevData: {
+          ...prev.elevData,
+          [cellKey]: {
+            ...cell,
+            fields: {},
+            photos: [],
+            subItems: (subItems || []).map(sub => ({
+              fields: { ...(sub.fields || {}) },
+              photos: Array.isArray(sub.photos) ? sub.photos : [],
+            })),
+          },
+        },
+      }
+      scheduleSave(next)
+      return next
+    })
+  }
+
+  function addElevPhoto(target, dataUrl) {
+    const { itemId: cellKey, subIndex } = parseRoofPhotoTarget(target)
+    setData(prev => {
+      const cell = prev.elevData[cellKey]
+      if (!cell) return prev
+
+      if (subIndex != null) {
+        const subItems = (cell.subItems || []).map((sub, i) => (
+          i === subIndex
+            ? { ...sub, photos: [...(sub.photos || []), dataUrl] }
+            : sub
+        ))
+        const next = { ...prev, elevData: { ...prev.elevData, [cellKey]: { ...cell, subItems } } }
+        scheduleSave(next)
+        return next
+      }
+
+      const next = { ...prev, elevData: { ...prev.elevData, [cellKey]: { ...cell, photos: [...(cell.photos || []), dataUrl] } } }
+      scheduleSave(next)
+      return next
+    })
+  }
+
+  function removeElevPhoto(target, index) {
+    const { itemId: cellKey, subIndex } = parseRoofPhotoTarget(target)
+    setData(prev => {
+      const cell = prev.elevData[cellKey]
+      if (!cell) return prev
+
+      if (subIndex != null) {
+        const subItems = (cell.subItems || []).map((sub, i) => (
+          i === subIndex
+            ? { ...sub, photos: (sub.photos || []).filter((_, photoIndex) => photoIndex !== index) }
+            : sub
+        ))
+        const next = { ...prev, elevData: { ...prev.elevData, [cellKey]: { ...cell, subItems } } }
+        scheduleSave(next)
+        return next
+      }
+
+      const next = {
+        ...prev,
+        elevData: {
+          ...prev.elevData,
+          [cellKey]: { ...cell, photos: (cell.photos || []).filter((_, i) => i !== index) },
+        },
+      }
       scheduleSave(next)
       return next
     })
@@ -2128,6 +2335,7 @@ export function InspectionProvider({ children }) {
       importRoofSkylights, importRoofOtherStructures,
       addRoofPhoto, removeRoofPhoto,
       toggleElevExclude, updateElevField,
+      addElevSubItem, removeElevSubItem, updateElevSubField, replaceElevSubItems,
       addElevPhoto, removeElevPhoto,
       addInteriorRoom, removeInteriorRoom, updateInteriorRoom, importInteriorRooms,
       addInteriorPhoto, removeInteriorPhoto,

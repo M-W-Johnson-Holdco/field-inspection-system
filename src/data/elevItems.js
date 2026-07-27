@@ -1,5 +1,7 @@
 export const DIRECTIONS = ['Front', 'Right', 'Rear', 'Left']
 
+export const ELEV_ADDMORE_IDS = new Set(['ev3', 'ev11', 'ev4'])
+
 export const ELEV_ITEMS = [
   {
     id: 'ev0', lbl: 'Siding',
@@ -21,7 +23,11 @@ export const ELEV_ITEMS = [
   },
   {
     id: 'ev3', lbl: 'Gutters',
-    fields: [
+    addMore: true,
+    addMoreLabel: 'Add Gutter',
+    subItemPhotos: true,
+    fields: [],
+    subFields: [
       { t: 'select', l: 'Material', o: ['Select', 'Aluminum', 'Steel', 'Copper', 'Vinyl'], full: true },
       { t: 'select', l: 'Style', o: ['Select', 'Half Round', 'K-Style'], full: true },
       { t: 'num', l: 'Size (Inches)', p: '4' },
@@ -31,7 +37,11 @@ export const ELEV_ITEMS = [
   },
   {
     id: 'ev11', lbl: 'Gutter Guards',
-    fields: [
+    addMore: true,
+    addMoreLabel: 'Add Gutter Guard',
+    subItemPhotos: true,
+    fields: [],
+    subFields: [
       { t: 'select', l: 'Style', o: ['Select', 'Screen', 'Micro-Mesh', 'Reverse Curve', 'Proprietary', 'None'], full: true },
       { t: 'select', l: 'Material', o: ['Select', 'Plastic', 'Metal'], allowNA: true, full: true },
       { t: 'num', l: 'Qty' },
@@ -41,7 +51,11 @@ export const ELEV_ITEMS = [
   },
   {
     id: 'ev4', lbl: 'Downspouts',
-    fields: [
+    addMore: true,
+    addMoreLabel: 'Add Downspout',
+    subItemPhotos: true,
+    fields: [],
+    subFields: [
       { t: 'select', l: 'Material', o: ['Select', 'Aluminum', 'Steel', 'Copper', 'Vinyl'], full: true },
       { t: 'select', l: 'Style', o: ['Select', 'Round', 'Box'], full: true },
       { t: 'select', l: 'Width', o: ['Select', '3" Std', '4" Oversized'], allowNA: false, full: true },

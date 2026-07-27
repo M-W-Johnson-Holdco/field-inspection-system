@@ -104,6 +104,27 @@ function buildElevationsBranch(elevData) {
         const cellKey = `${itemDef.id}_${direction}`
         const cell = elevData?.[cellKey]
         if (cell?.excluded) return []
+
+        if (itemDef.subItemPhotos) {
+          const subItems = Array.isArray(cell?.subItems) ? cell.subItems : []
+          const leaves = subItems.map((sub, index) => ({
+            id: `${cellKey}__sub_${index}`,
+            label: subItemLabel(itemDef, index),
+            kind: 'elev',
+            target: `${cellKey}__sub_${index}`,
+            photoCount: Array.isArray(sub.photos) ? sub.photos.length : 0,
+            leaf: true,
+          }))
+          return [{
+            id: cellKey,
+            label: itemDef.lbl,
+            children: leaves,
+            emptyHint: leaves.length === 0
+              ? `No ${itemDef.lbl.toLowerCase()} yet — add them in Elevations first.`
+              : null,
+          }]
+        }
+
         return [{
           id: cellKey,
           label: itemDef.lbl,
@@ -200,6 +221,12 @@ export function getLeafPhotos(data = {}, leaf) {
   }
 
   if (leaf.kind === 'elev') {
+    const match = String(leaf.target).match(/^(.+)__sub_(\d+)$/)
+    if (match) {
+      const cell = data.elevData?.[match[1]]
+      const sub = cell?.subItems?.[Number(match[2])]
+      return Array.isArray(sub?.photos) ? sub.photos : []
+    }
     return Array.isArray(data.elevData?.[leaf.target]?.photos)
       ? data.elevData[leaf.target].photos
       : []

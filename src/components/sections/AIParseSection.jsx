@@ -188,6 +188,7 @@ function applyParsed(parsed, ctx) {
     importRoofPipeJacks, importRoofExhaustStacks, importRoofRainDiverters, importRoofChimneys, importRoofFlashingItems,
     importRoofLowSlopeItems, importRoofSkylights, importRoofOtherStructures,
     importInteriorRooms,
+    replaceElevSubItems,
   } = ctx
 
   // Job info
@@ -273,8 +274,10 @@ function applyParsed(parsed, ctx) {
   // Elevations
   const elevations = parsed.elevations || {}
   const DIRS = ['Front', 'Right', 'Rear', 'Left']
+  const ADDMORE_ELEV_IDS = new Set(['ev3', 'ev11', 'ev4'])
   DIRS.forEach(dir => {
     const dirData = elevations[dir] || {}
+    const addMoreFields = {}
     ELEV_MAP.forEach(({ key, itemId, label }) => {
       let val = dirData[key]
       if (val == null) return
@@ -284,7 +287,17 @@ function applyParsed(parsed, ctx) {
         updateElevField(`${itemId}_${dir}`, 'Style', val)
         return
       }
+      if (ADDMORE_ELEV_IDS.has(itemId)) {
+        const cellKey = `${itemId}_${dir}`
+        if (!addMoreFields[cellKey]) addMoreFields[cellKey] = {}
+        addMoreFields[cellKey][label] = val
+        return
+      }
       updateElevField(`${itemId}_${dir}`, label, val)
+    })
+    Object.entries(addMoreFields).forEach(([cellKey, fields]) => {
+      if (fields.Damaged === 'No' || fields.Damaged === 'N/A') fields._damage = 'n/a'
+      replaceElevSubItems(cellKey, [{ fields, photos: [] }])
     })
   })
 
