@@ -18,12 +18,11 @@ function orderElevFields(fields = []) {
   const rest = []
   const otherNums = []
   const damaged = []
-  const hasStory = fields.some(field => field.l === 'Story')
   const hasWindowSizeQtys = fields.some(field => field.t === 'num' && /^Small\b/i.test(field.l))
 
   for (const field of fields) {
     if (field.l === 'Damaged') damaged.push(field)
-    else if (field.l === 'Painted' && (hasStory || hasWindowSizeQtys)) painted.push(field)
+    else if (field.l === 'Painted') painted.push(field)
     else if (field.t === 'num' && field.l === 'Qty') qty.push(field)
     else if (field.t === 'num' && field.l === 'Story') story.push(field)
     else if (field.t === 'num' && /\bLF\b/i.test(field.l)) lf.push(field)
@@ -338,29 +337,44 @@ function ElevItem({ itemDef, direction, trigPhoto }) {
       {!excluded && (
         <div className="ri-item__body">
           {addMore ? (
-            <div className="ri-sub-items">
-              {subItems.map((sub, idx) => (
-                <ElevSubCard
-                  key={idx}
-                  cellKey={cellKey}
-                  title={subItemTitle}
-                  sub={sub}
-                  index={idx}
-                  subFields={subFields}
-                  trigPhoto={trigPhoto}
-                  onUpdateField={(label, value) => updateElevSubField(cellKey, idx, label, value)}
-                  onRemove={() => removeElevSubItem(cellKey, idx)}
-                  onRemovePhoto={removeElevPhoto}
+            <>
+              {fields.length > 0 && (
+                <FieldsGrid
+                  fields={orderElevFields(visibleFieldsForValues(fields, cell.fields))}
+                  renderField={f => (
+                    <FieldRenderer
+                      key={f.l}
+                      field={f}
+                      value={cell.fields[f.l]}
+                      onChange={val => updateElevField(cellKey, f.l, val)}
+                    />
+                  )}
                 />
-              ))}
-              <button
-                type="button"
-                className="ri-btn-add-sub"
-                onClick={() => addElevSubItem(cellKey)}
-              >
-                + {addMoreLabel}
-              </button>
-            </div>
+              )}
+              <div className="ri-sub-items">
+                {subItems.map((sub, idx) => (
+                  <ElevSubCard
+                    key={idx}
+                    cellKey={cellKey}
+                    title={subItemTitle}
+                    sub={sub}
+                    index={idx}
+                    subFields={subFields}
+                    trigPhoto={trigPhoto}
+                    onUpdateField={(label, value) => updateElevSubField(cellKey, idx, label, value)}
+                    onRemove={() => removeElevSubItem(cellKey, idx)}
+                    onRemovePhoto={removeElevPhoto}
+                  />
+                ))}
+                <button
+                  type="button"
+                  className="ri-btn-add-sub"
+                  onClick={() => addElevSubItem(cellKey)}
+                >
+                  + {addMoreLabel}
+                </button>
+              </div>
+            </>
           ) : (
             <FieldsGrid
               fields={orderElevFields(visibleFieldsForValues(fields, cell.fields))}

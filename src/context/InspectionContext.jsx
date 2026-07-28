@@ -143,6 +143,7 @@ function calculateCompletion(data) {
       if (!cell || cell.excluded) return
 
       if (itemDef.addMore) {
+        ;(itemDef.fields || []).forEach(field => countValue(cell.fields?.[field.l], totals))
         ;(cell.subItems || []).forEach(sub => {
           ;(itemDef.subFields || []).forEach(field => {
             if (!isFieldVisible(field, sub.fields)) return
@@ -184,8 +185,12 @@ const EXHAUST_STACK_TYPES = ['Cap', 'Stack', 'Flange']
 
 function normalizeGutterSizeValue(val) {
   if (val == null || val === '' || val === 'Select') return ''
+  if (val === '5"' || val === '6"') return val
   const match = String(val).match(/(\d+(?:\.\d+)?)/)
-  return match ? match[1] : String(val).trim()
+  if (!match) return ''
+  const inches = match[1]
+  if (inches === '5' || inches === '6') return `${inches}"`
+  return ''
 }
 
 function normalizeElevGutterCell(cell) {
@@ -205,9 +210,29 @@ function normalizeElevGutterCell(cell) {
   return { ...cell, fields }
 }
 
-function elevCellHasLegacyTopFields(fields = {}) {
+/** Parent-level fields on addMore elev items (not migrated into sub-cards). */
+const ELEV_ADDMORE_SHARED_FIELDS = {
+  ev3: new Set(['Style', 'Material', 'Size (Inches)', 'Painted']),
+  ev11: new Set(['Style', 'Material']),
+  ev4: new Set(['Style', 'Material', 'Width', 'Painted']),
+}
+
+function splitElevSharedFields(itemId, fields = {}) {
+  const sharedKeys = ELEV_ADDMORE_SHARED_FIELDS[itemId] || new Set()
+  const shared = {}
+  const rest = {}
+  for (const [key, value] of Object.entries(fields)) {
+    if (sharedKeys.has(key)) shared[key] = value
+    else rest[key] = value
+  }
+  return { shared, rest }
+}
+
+function elevCellHasLegacyTopFields(fields = {}, itemId) {
+  const sharedKeys = ELEV_ADDMORE_SHARED_FIELDS[itemId] || new Set()
   return Object.entries(fields).some(([key, value]) => {
     if (key.startsWith('_')) return false
+    if (sharedKeys.has(key)) return false
     if (value == null || value === '' || value === 'Select') return false
     if (Array.isArray(value)) return value.length > 0
     return true
@@ -224,37 +249,98 @@ function normalizeElevAddMoreSub(sub) {
   if (fields['Size (Inches)'] != null && fields['Size (Inches)'] !== '') {
     fields['Size (Inches)'] = normalizeGutterSizeValue(fields['Size (Inches)'])
   }
+  if (fields.Width === '3" Std' || fields.Width === '3" STD') {
+    fields.Width = '3" Standard'
+  }
   return {
     fields,
     photos: Array.isArray(sub?.photos) ? sub.photos : [],
   }
 }
 
-function migrateElevAddMoreCell(cell) {
+function stripElevSharedFromSubFields(itemId, fields = {}) {
+  const sharedKeys = ELEV_ADDMORE_SHARED_FIELDS[itemId] || new Set()
+  const next = { ...fields }
+  for (const key of sharedKeys) delete next[key]
+  // Downspout / gutter-guard cards are one-per-run; Qty lived on the old card layout
+  if (itemId === 'ev4' || itemId === 'ev11') delete next.Qty
+  return next
+}
+
+function normalizeElevSharedFields(itemId, fields = {}) {
+  const next = { ...fields }
+  if (itemId === 'ev4' && (next.Width === '3" Std' || next.Width === '3" STD')) {
+    next.Width = '3" Standard'
+  }
+  if (itemId === 'ev3') {
+    if (next.Size != null) {
+      const parsed = normalizeGutterSizeValue(next.Size)
+      if (parsed && next['Size (Inches)'] == null) next['Size (Inches)'] = parsed
+      delete next.Size
+    }
+    if (next['Size (Inches)'] != null && next['Size (Inches)'] !== '') {
+      next['Size (Inches)'] = normalizeGutterSizeValue(next['Size (Inches)'])
+    }
+  }
+  return next
+}
+
+function promoteElevSharedFromSubs(itemId, shared, subs) {
+  const sharedKeys = ELEV_ADDMORE_SHARED_FIELDS[itemId] || new Set()
+  if (!sharedKeys.size) {
+    return {
+      shared: normalizeElevSharedFields(itemId, shared),
+      subs: subs.map(sub => ({
+        ...sub,
+        fields: stripElevSharedFromSubFields(itemId, sub.fields || {}),
+      })),
+    }
+  }
+
+  const nextShared = { ...shared }
+  const nextSubs = subs.map(sub => {
+    const fields = { ...(sub.fields || {}) }
+    for (const key of sharedKeys) {
+      const val = fields[key]
+      const cur = nextShared[key]
+      if ((cur == null || cur === '' || cur === 'Select') && val != null && val !== '' && val !== 'Select') {
+        nextShared[key] = val
+      }
+    }
+    return {
+      ...sub,
+      fields: stripElevSharedFromSubFields(itemId, fields),
+    }
+  })
+  return { shared: normalizeElevSharedFields(itemId, nextShared), subs: nextSubs }
+}
+
+function migrateElevAddMoreCell(cell, itemId) {
   if (!cell) {
     return { excluded: false, fields: {}, subItems: [], photos: [] }
   }
 
   const base = normalizeElevGutterCell(cell)
   const existingSubs = Array.isArray(base.subItems) ? base.subItems.map(normalizeElevAddMoreSub) : []
+  const { shared, rest } = splitElevSharedFields(itemId, base.fields || {})
 
   if (existingSubs.length) {
+    const promoted = promoteElevSharedFromSubs(itemId, shared, existingSubs)
     return {
       ...base,
-      fields: {},
-      subItems: existingSubs,
+      fields: promoted.shared,
+      subItems: promoted.subs,
       photos: [],
     }
   }
 
-  const topFields = base.fields || {}
   const topPhotos = Array.isArray(base.photos) ? base.photos : []
-  if (elevCellHasLegacyTopFields(topFields) || topPhotos.length) {
+  if (elevCellHasLegacyTopFields(rest, itemId) || topPhotos.length) {
     return {
       ...base,
-      fields: {},
+      fields: normalizeElevSharedFields(itemId, shared),
       subItems: [{
-        fields: { ...topFields },
+        fields: stripElevSharedFromSubFields(itemId, rest),
         photos: topPhotos,
       }],
       photos: [],
@@ -263,7 +349,7 @@ function migrateElevAddMoreCell(cell) {
 
   return {
     ...base,
-    fields: {},
+    fields: normalizeElevSharedFields(itemId, shared),
     subItems: [],
     photos: [],
   }
@@ -277,11 +363,19 @@ function normalizeElevData(elevData = {}) {
       const key = `${item.id}_${dir}`
       const cell = next[key] || { excluded: false, fields: {}, subItems: [], photos: [] }
       if (ELEV_ADDMORE_IDS.has(item.id)) {
-        next[key] = migrateElevAddMoreCell(cell)
+        next[key] = migrateElevAddMoreCell(cell, item.id)
       } else {
+        const fields = { ...(cell.fields || {}) }
+        // Legacy Window Screens used a single Qty — map into Small when size qtys are empty
+        if (item.id === 'ev5' && fields.Qty != null && fields.Qty !== '') {
+          if (fields['Small (1–9 sq ft)'] == null || fields['Small (1–9 sq ft)'] === '') {
+            fields['Small (1–9 sq ft)'] = String(fields.Qty)
+          }
+          delete fields.Qty
+        }
         next[key] = {
           ...cell,
-          fields: cell.fields || {},
+          fields,
           subItems: Array.isArray(cell.subItems) ? cell.subItems : [],
           photos: Array.isArray(cell.photos) ? cell.photos : [],
         }
@@ -1945,6 +2039,10 @@ export function InspectionProvider({ children }) {
         fields.Style = value ? `Other - ${value}` : 'Other'
         delete fields['(Other)']
       }
+      // Window Screens: Grade only applies to Solar type
+      if (cellKey.startsWith('ev5_') && label === 'Type' && value !== 'Solar') {
+        delete fields.Grade
+      }
       const next = { ...prev, elevData: { ...prev.elevData, [cellKey]: { ...cell, fields } } }
       scheduleSave(next)
       return next
@@ -2008,16 +2106,18 @@ export function InspectionProvider({ children }) {
   function replaceElevSubItems(cellKey, subItems) {
     setData(prev => {
       const cell = prev.elevData[cellKey] || { excluded: false, fields: {}, subItems: [], photos: [] }
+      const itemId = cellKey.split('_')[0]
+      const { shared } = splitElevSharedFields(itemId, cell.fields || {})
       const next = {
         ...prev,
         elevData: {
           ...prev.elevData,
           [cellKey]: {
             ...cell,
-            fields: {},
+            fields: shared,
             photos: [],
             subItems: (subItems || []).map(sub => ({
-              fields: { ...(sub.fields || {}) },
+              fields: stripElevSharedFromSubFields(itemId, sub.fields || {}),
               photos: Array.isArray(sub.photos) ? sub.photos : [],
             })),
           },

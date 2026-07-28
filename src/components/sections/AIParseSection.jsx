@@ -78,20 +78,23 @@ const ELEV_MAP = [
   { key: 'sidingDamageDescription', itemId: 'ev0', label: '_damage' },
   { key: 'fasciaMaterial',       itemId: 'ev1',  label: 'Material' },
   { key: 'fasciaWidth',          itemId: 'ev1',  label: 'Width (Inches)' },
+  { key: 'fasciaPainted',        itemId: 'ev1',  label: 'Painted' },
   { key: 'fasciaDamage',         itemId: 'ev1',  label: 'Damaged' },
   { key: 'fasciaDamageDescription', itemId: 'ev1', label: '_damage' },
-  { key: 'gutterMaterial',       itemId: 'ev3',  label: 'Material' },
   { key: 'gutterStyle',          itemId: 'ev3',  label: 'Style' },
+  { key: 'gutterMaterial',       itemId: 'ev3',  label: 'Material' },
   { key: 'gutterSize',           itemId: 'ev3',  label: 'Size (Inches)' },
+  { key: 'gutterPainted',        itemId: 'ev3',  label: 'Painted' },
   { key: 'gutterLF',             itemId: 'ev3',  label: 'Length (LF)' },
   { key: 'gutterDamage',         itemId: 'ev3',  label: 'Damaged' },
   { key: 'gutterDamageDescription', itemId: 'ev3', label: '_damage' },
   { key: 'gutterGuardStyle',     itemId: 'ev11', label: 'Style' },
   { key: 'gutterGuardMaterial',  itemId: 'ev11', label: 'Material' },
-  { key: 'gutterGuardQty',       itemId: 'ev11', label: 'Qty' },
   { key: 'gutterGuardLF',        itemId: 'ev11', label: 'Length (LF)' },
   { key: 'gutterGuardDamage',    itemId: 'ev11', label: 'Damaged' },
   { key: 'gutterGuardDamageDescription', itemId: 'ev11', label: '_damage' },
+  // Legacy: qty expands into N cards during apply
+  { key: 'gutterGuardQty',       itemId: 'ev11', label: 'Qty' },
   { key: 'downspoutQty',         itemId: 'ev4',  label: 'Qty' },
   { key: 'downspoutLF',          itemId: 'ev4',  label: 'Length (LF)' },
   { key: 'downspoutMaterial',    itemId: 'ev4',  label: 'Material' },
@@ -109,7 +112,11 @@ const ELEV_MAP = [
   { key: 'windowPainted',        itemId: 'ev12', label: 'Painted' },
   { key: 'windowDamage',         itemId: 'ev12', label: 'Damaged' },
   { key: 'windowDamageDescription', itemId: 'ev12', label: '_damage' },
-  { key: 'screenQty',            itemId: 'ev5',  label: 'Qty' },
+  { key: 'screenType',           itemId: 'ev5',  label: 'Type' },
+  { key: 'screenGrade',          itemId: 'ev5',  label: 'Grade' },
+  { key: 'screenQty',            itemId: 'ev5',  label: 'Small (1–9 sq ft)' },
+  { key: 'screenSmallQty',       itemId: 'ev5',  label: 'Small (1–9 sq ft)' },
+  { key: 'screenMediumQty',      itemId: 'ev5',  label: 'Medium (10–16 sq ft)' },
   { key: 'screenDamage',         itemId: 'ev5',  label: 'Damaged' },
   { key: 'screenDamageDescription', itemId: 'ev5', label: '_damage' },
   { key: 'shutterMaterial',      itemId: 'ev6',  label: 'Material' },
@@ -159,8 +166,21 @@ const EXTERIOR_MAP = [
 ]
 
 function normalizeGutterSize(val) {
+  if (val == null || val === '' || val === 'Select') return ''
+  if (val === '5"' || val === '6"') return val
   const match = String(val).match(/(\d+(?:\.\d+)?)/)
-  return match ? match[1] : String(val).trim()
+  if (!match) return String(val).trim()
+  const inches = match[1]
+  if (inches === '5' || inches === '6') return `${inches}"`
+  return ''
+}
+
+function normalizeDownspoutWidth(val) {
+  if (val == null || val === '' || val === 'Select') return val
+  const raw = String(val).trim()
+  if (/^3"?\s*(std|standard)$/i.test(raw)) return '3" Standard'
+  if (/^4"?\s*oversized$/i.test(raw)) return '4" Oversized'
+  return raw
 }
 
 const SIDING_STYLES = new Set(['Flat', 'Double Dutch', 'Textured', 'Other', 'N/A', 'Select'])
@@ -275,13 +295,20 @@ function applyParsed(parsed, ctx) {
   const elevations = parsed.elevations || {}
   const DIRS = ['Front', 'Right', 'Rear', 'Left']
   const ADDMORE_ELEV_IDS = new Set(['ev3', 'ev11', 'ev4'])
+  const ADDMORE_PARENT_FIELDS_BY_ID = {
+    ev3: new Set(['Style', 'Material', 'Size (Inches)', 'Painted']),
+    ev11: new Set(['Style', 'Material']),
+    ev4: new Set(['Style', 'Material', 'Width', 'Painted']),
+  }
   DIRS.forEach(dir => {
     const dirData = elevations[dir] || {}
     const addMoreFields = {}
+    const parentFieldUpdates = []
     ELEV_MAP.forEach(({ key, itemId, label }) => {
       let val = dirData[key]
       if (val == null) return
       if (key === 'gutterSize') val = normalizeGutterSize(val)
+      if (key === 'downspoutWidth') val = normalizeDownspoutWidth(val)
       if (key === 'sidingStyle' || key === 'sidingMaterial') {
         val = normalizeSidingStyle(val)
         updateElevField(`${itemId}_${dir}`, 'Style', val)
@@ -289,6 +316,10 @@ function applyParsed(parsed, ctx) {
       }
       if (ADDMORE_ELEV_IDS.has(itemId)) {
         const cellKey = `${itemId}_${dir}`
+        if (ADDMORE_PARENT_FIELDS_BY_ID[itemId]?.has(label)) {
+          parentFieldUpdates.push([cellKey, label, val])
+          return
+        }
         if (!addMoreFields[cellKey]) addMoreFields[cellKey] = {}
         addMoreFields[cellKey][label] = val
         return
@@ -297,7 +328,26 @@ function applyParsed(parsed, ctx) {
     })
     Object.entries(addMoreFields).forEach(([cellKey, fields]) => {
       if (fields.Damaged === 'No' || fields.Damaged === 'N/A') fields._damage = 'n/a'
+      const qtyRaw = fields.Qty
+      delete fields.Qty
+      // Downspouts / gutter guards: qty becomes N cards; shared specs live on the parent
+      if (cellKey.startsWith('ev4_') || cellKey.startsWith('ev11_')) {
+        const count = Math.max(1, Math.floor(Number(qtyRaw)) || 1)
+        const cardFields = {
+          ...(fields['Length (LF)'] != null ? { 'Length (LF)': fields['Length (LF)'] } : {}),
+          ...(fields.Damaged != null ? { Damaged: fields.Damaged } : {}),
+          ...(fields._damage != null ? { _damage: fields._damage } : {}),
+        }
+        replaceElevSubItems(
+          cellKey,
+          Array.from({ length: count }, () => ({ fields: { ...cardFields }, photos: [] })),
+        )
+        return
+      }
       replaceElevSubItems(cellKey, [{ fields, photos: [] }])
+    })
+    parentFieldUpdates.forEach(([cellKey, label, val]) => {
+      updateElevField(cellKey, label, val)
     })
   })
 

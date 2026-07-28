@@ -18,6 +18,7 @@ export const ELEV_ITEMS = [
     fields: [
       { t: 'select', l: 'Material', o: ['Select', 'Aluminum', 'Composite', 'Vinyl', 'Wood'], full: true },
       { t: 'num', l: 'Width (Inches)', p: '6' },
+      { t: 'yn', l: 'Painted', full: true },
       { t: 'yn', l: 'Damaged', full: true },
     ],
   },
@@ -26,11 +27,13 @@ export const ELEV_ITEMS = [
     addMore: true,
     addMoreLabel: 'Add Gutter',
     subItemPhotos: true,
-    fields: [],
-    subFields: [
-      { t: 'select', l: 'Material', o: ['Select', 'Aluminum', 'Steel', 'Copper', 'Vinyl'], full: true },
+    fields: [
       { t: 'select', l: 'Style', o: ['Select', 'Half Round', 'K-Style'], full: true },
-      { t: 'num', l: 'Size (Inches)', p: '4' },
+      { t: 'select', l: 'Material', o: ['Select', 'Aluminum', 'Steel', 'Copper', 'Vinyl'], full: true },
+      { t: 'select', l: 'Size (Inches)', o: ['Select', '5"', '6"'], full: true, allowNA: false },
+      { t: 'yn', l: 'Painted', full: true },
+    ],
+    subFields: [
       { t: 'num', l: 'Length (LF)', lfFeetOnly: true },
       { t: 'yn', l: 'Damaged', full: true },
     ],
@@ -40,11 +43,11 @@ export const ELEV_ITEMS = [
     addMore: true,
     addMoreLabel: 'Add Gutter Guard',
     subItemPhotos: true,
-    fields: [],
-    subFields: [
+    fields: [
       { t: 'select', l: 'Style', o: ['Select', 'Screen', 'Micro-Mesh', 'Reverse Curve', 'Proprietary', 'None'], full: true },
       { t: 'select', l: 'Material', o: ['Select', 'Plastic', 'Metal'], allowNA: true, full: true },
-      { t: 'num', l: 'Qty' },
+    ],
+    subFields: [
       { t: 'num', l: 'Length (LF)', lfFeetOnly: true },
       { t: 'yn', l: 'Damaged', full: true },
     ],
@@ -54,13 +57,13 @@ export const ELEV_ITEMS = [
     addMore: true,
     addMoreLabel: 'Add Downspout',
     subItemPhotos: true,
-    fields: [],
-    subFields: [
-      { t: 'select', l: 'Material', o: ['Select', 'Aluminum', 'Steel', 'Copper', 'Vinyl'], full: true },
+    fields: [
       { t: 'select', l: 'Style', o: ['Select', 'Round', 'Box'], full: true },
-      { t: 'select', l: 'Width', o: ['Select', '3" Std', '4" Oversized'], allowNA: false, full: true },
+      { t: 'select', l: 'Material', o: ['Select', 'Aluminum', 'Copper', 'Galvanized'], full: true },
+      { t: 'select', l: 'Width', o: ['Select', '3" Standard', '4" Oversized'], allowNA: false, full: true },
       { t: 'yn', l: 'Painted', full: true },
-      { t: 'num', l: 'Qty' },
+    ],
+    subFields: [
       { t: 'num', l: 'Length (LF)', lfFeetOnly: true },
       { t: 'yn', l: 'Damaged', full: true },
     ],
@@ -81,7 +84,10 @@ export const ELEV_ITEMS = [
   {
     id: 'ev5', lbl: 'Window Screens',
     fields: [
-      { t: 'num', l: 'Qty' },
+      { t: 'select', l: 'Type', o: ['Select', 'Standard', 'Solar'], full: true, allowNA: false },
+      { t: 'select', l: 'Grade', o: ['Select', 'Medium', 'High'], full: true, allowNA: false, showWhen: { field: 'Type', equals: 'Solar' } },
+      { t: 'num', l: 'Small (1–9 sq ft)' },
+      { t: 'num', l: 'Medium (10–16 sq ft)' },
       { t: 'yn', l: 'Damaged', full: true },
     ],
   },
