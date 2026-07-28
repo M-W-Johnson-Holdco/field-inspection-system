@@ -1,3 +1,5 @@
+import { isRoofItemActive } from '../utils/roofItemStatus'
+
 // Maps inspection field data to Xactimate-style trade/category line items so the
 // export can be pasted or transcribed into an estimate with minimal rework.
 // Each entry corresponds to a ROOF_ITEMS / ELEV_ITEMS / EXTERIOR_ITEMS id (elevation
@@ -21,7 +23,10 @@ function str(fields, label) {
 
 function exhaustStackNote(fields, parentFields) {
   const notes = []
-  const damaged = Array.isArray(fields?.Damaged) ? fields.Damaged : []
+  const damagedOrder = ['Cap', 'Stack', 'Flange']
+  const damaged = damagedOrder.filter(part =>
+    Array.isArray(fields?.Damaged) && fields.Damaged.includes(part),
+  )
   if (damaged.length) notes.push(`Damaged: ${damaged.join(', ')}`)
   if (yn(parentFields, 'Painted') || yn(fields, 'Painted')) notes.push('Painted')
   return notes.join('; ') || null
@@ -110,16 +115,31 @@ export const ROOF_LINE_ITEMS = {
     unit: 'EA', qty: null, damaged: true,
     note: 'Not currently present; recommend at time of install to prevent siding damage',
   }] : [],
-  ri15: (fields) => [{
-    trade: 'Roofing', category: 'RFG',
-    description: 'Rain diverter',
-    unit: 'LF', qty: num(fields, 'Length (LF)') ?? num(fields, 'Qty'),
-    damaged: null, note: yn(fields, 'Painted') ? 'Painted' : null,
-  }],
   ri16: (fields) => [{
     trade: 'Roofing', category: 'RFG',
     description: 'Power meter mast - reset',
     unit: 'EA', qty: num(fields, 'Qty'), damaged: null, note: null,
+  }],
+  ri18: (fields) => [{
+    trade: 'Roofing', category: 'RFG',
+    description: 'Step flashing',
+    unit: 'EA', qty: null, damaged: yn(fields, 'Damaged'), note: yn(fields, 'Painted') ? 'Painted' : null,
+  }],
+  ri19: (fields) => [{
+    trade: 'Roofing', category: 'RFG',
+    description: 'Counter flashing',
+    unit: 'EA', qty: null, damaged: yn(fields, 'Damaged'), note: yn(fields, 'Painted') ? 'Painted' : null,
+  }],
+  ri20: (fields) => [{
+    trade: 'Roofing', category: 'RFG',
+    description: 'L flashing',
+    unit: 'EA', qty: null, damaged: yn(fields, 'Damaged'), note: yn(fields, 'Painted') ? 'Painted' : null,
+  }],
+  ri21: (fields) => [{
+    trade: 'Roofing', category: 'RFG',
+    description: `Cornice gable - ${str(fields, 'Type') || 'unspecified'}`,
+    unit: 'EA', qty: num(fields, 'Qty') ?? 1, damaged: null,
+    note: fields?.Story ? `Story ${fields.Story}` : null,
   }],
 }
 
@@ -142,34 +162,25 @@ export const ROOF_SUBITEM_LINE_ITEMS = {
     trade: 'Roofing', category: 'RFG',
     description: `Skylight - ${str(f, 'Style') || 'unspecified'} (${str(f, 'Mount') || '?'})`,
     unit: 'EA', qty: 1, damaged: yn(f, 'Damaged'),
-    note: (f?.['Length (in)'] && f?.['Width (in)']) ? `${f['Length (in)']}" x ${f['Width (in)']}"` : null,
+    note: str(f, 'Size') || null,
+  }),
+  ri15: (f, parentFields) => ({
+    trade: 'Roofing', category: 'RFG',
+    description: 'Rain diverter',
+    unit: 'LF',
+    qty: num(f, 'Length (LF)'),
+    damaged: null,
+    note: yn(parentFields, 'Painted') ? 'Painted' : null,
   }),
   ri17: (f) => ({
     trade: 'Roofing', category: 'RFG',
     description: `Chimney flashing - ${str(f, 'Size / Width') || 'unspecified size'}`,
     unit: 'EA', qty: 1, damaged: yn(f, 'Damaged'),
-    note: `Counter flashing: ${str(f, 'Counter Flashing') || '?'}${yn(f, 'Painted') ? ', painted' : ''}`,
-  }),
-  ri18: (f) => ({
-    trade: 'Roofing', category: 'RFG',
-    description: 'Step flashing',
-    unit: 'LF', qty: num(f, 'Length (LF)') ?? 1, damaged: yn(f, 'Damaged'), note: yn(f, 'Painted') ? 'Painted' : null,
-  }),
-  ri19: (f) => ({
-    trade: 'Roofing', category: 'RFG',
-    description: 'Counter flashing',
-    unit: 'LF', qty: num(f, 'Length (LF)') ?? 1, damaged: yn(f, 'Damaged'), note: yn(f, 'Painted') ? 'Painted' : null,
-  }),
-  ri20: (f) => ({
-    trade: 'Roofing', category: 'RFG',
-    description: 'L flashing',
-    unit: 'LF', qty: num(f, 'Length (LF)') ?? 1, damaged: yn(f, 'Damaged'), note: yn(f, 'Painted') ? 'Painted' : null,
-  }),
-  ri21: (f) => ({
-    trade: 'Roofing', category: 'RFG',
-    description: `Cornice gable - ${str(f, 'Type') || 'unspecified'}`,
-    unit: 'EA', qty: num(f, 'Qty') ?? 1, damaged: null,
-    note: f?.Story ? `Story ${f.Story}` : null,
+    note: [
+      `Counter flashing: ${str(f, 'Counter Flashing') || '?'}`,
+      str(f, 'Cricket Present') ? `Cricket: ${str(f, 'Cricket Present')}` : null,
+      yn(f, 'Painted') ? 'painted' : null,
+    ].filter(Boolean).join(', '),
   }),
   ri22: (f) => ({
     trade: 'Roofing', category: 'RFG',
@@ -187,56 +198,215 @@ export const ROOF_SUBITEM_LINE_ITEMS = {
 // ---- Elevations (SDG / GTR / FCA / DOR) --------------------------------
 
 export const ELEV_LINE_ITEMS = {
-  ev0: (fields, dir) => [{
-    trade: 'Siding', category: 'SDG',
-    description: `Siding - ${str(fields, 'Material') || 'unspecified'}`,
-    unit: 'SF', qty: null, damaged: yn(fields, 'Damaged'), note: `${dir} elevation`,
-  }],
+  ev0: (fields, dir) => {
+    const style = str(fields, 'Style') || 'unspecified'
+    const styleLabel = style.startsWith('Other') ? (style === 'Other' ? 'Other' : style) : style
+    const grade = str(fields, 'Grade')
+    const exposure = num(fields, 'Exposure (Inches)')
+    const parts = [
+      styleLabel,
+      grade || null,
+      exposure != null ? `${exposure}" exposure` : null,
+    ].filter(Boolean)
+    return [{
+      trade: 'Siding', category: 'SDG',
+      description: `Siding - ${parts.join(', ')}`,
+      unit: 'SF', qty: null, damaged: yn(fields, 'Damaged'), note: `${dir} elevation`,
+    }]
+  },
   ev1: (fields, dir) => [{
     trade: 'Siding', category: 'FCA',
-    description: `Fascia / eave board - ${str(fields, 'Material') || 'unspecified'}`,
-    unit: 'LF', qty: null, damaged: yn(fields, 'Damaged'), note: `${dir} elevation`,
+    description: `Fascia - ${str(fields, 'Material') || 'unspecified'}${num(fields, 'Width (Inches)') != null ? `, ${num(fields, 'Width (Inches)')}"` : ''}`,
+    unit: 'LF', qty: null, damaged: yn(fields, 'Damaged'),
+    note: [
+      `${dir} elevation`,
+      yn(fields, 'Painted') ? 'Painted' : null,
+    ].filter(Boolean).join('; '),
   }],
-  ev2: (fields, dir) => [{
-    trade: 'Siding', category: 'SFT',
-    description: `Soffit - ${str(fields, 'Material') || 'unspecified'}`,
-    unit: 'LF', qty: null, damaged: yn(fields, 'Damaged'), note: `${dir} elevation`,
-  }],
-  ev3: (fields, dir) => [{
+  ev3: (fields, dir, parentFields = {}) => [{
     trade: 'Gutters', category: 'GTR',
-    description: `Gutter - ${str(fields, 'Material') || 'unspecified'}, ${num(fields, 'Size (Inches)') ?? '?'}"`,
-    unit: 'LF', qty: null, damaged: yn(fields, 'Damaged'), note: `${dir} elevation`,
+    description: `Gutter - ${str(parentFields, 'Style') || str(fields, 'Style') || 'unspecified style'}, ${str(parentFields, 'Material') || str(fields, 'Material') || 'unspecified'}, ${str(parentFields, 'Size (Inches)') || str(fields, 'Size (Inches)') || 'unspecified size'}`,
+    unit: 'LF', qty: num(fields, 'Length (LF)'), damaged: yn(fields, 'Damaged'),
+    note: [
+      `${dir} elevation`,
+      yn(parentFields, 'Painted') || yn(fields, 'Painted') ? 'Painted' : null,
+    ].filter(Boolean).join('; '),
   }],
-  ev4: (fields, dir) => [{
+  ev11: (fields, dir, parentFields = {}) => {
+    if (str(parentFields, 'Style') === 'None' || str(fields, 'Style') === 'None') return []
+    return [{
+      trade: 'Gutters', category: 'GTR',
+      description: `Gutter guard - ${str(parentFields, 'Style') || str(fields, 'Style') || 'unspecified style'}, ${str(parentFields, 'Material') || str(fields, 'Material') || 'unspecified'}`,
+      unit: 'LF', qty: num(fields, 'Length (LF)') ?? num(fields, 'Qty'),
+      damaged: yn(fields, 'Damaged'),
+      note: `${dir} elevation`,
+    }]
+  },
+  ev4: (fields, dir, parentFields = {}) => [{
     trade: 'Gutters', category: 'GTR',
-    description: `Downspout - ${str(fields, 'Material') || 'unspecified'}`,
+    description: `Downspout - ${str(parentFields, 'Style') || str(fields, 'Style') || 'unspecified style'}, ${str(parentFields, 'Width') || str(fields, 'Width') || 'unspecified width'}, ${str(parentFields, 'Material') || str(fields, 'Material') || 'unspecified'}`,
+    unit: 'LF', qty: num(fields, 'Length (LF)') ?? num(fields, 'Qty'),
+    damaged: yn(fields, 'Damaged'),
+    note: [
+      `${dir} elevation`,
+      yn(parentFields, 'Painted') || yn(fields, 'Painted') ? 'Painted' : null,
+    ].filter(Boolean).join('; '),
+  }],
+  ev12: (fields, dir, parentFields = {}) => {
+    const length = num(fields, 'Length (ft)')
+    const width = num(fields, 'Width (ft)')
+    const area = length != null && width != null ? length * width : null
+    let sizeLabel = null
+    if (area != null) {
+      if (area < 12) sizeLabel = 'Small (<12 sq ft)'
+      else if (area < 19) sizeLabel = 'Medium (12–19 sq ft)'
+      else sizeLabel = 'Large (19+ sq ft)'
+    }
+    const grade = str(fields, 'Grade') || str(parentFields, 'Grade') || 'unspecified'
+    const type = str(fields, 'Type') || str(parentFields, 'Type') || 'unspecified type'
+    const glaze = str(fields, 'Glaze') || str(parentFields, 'Glaze') || '?'
+    const painted = yn(fields, 'Painted') || yn(parentFields, 'Painted')
+    const baseNote = [
+      `${dir} elevation`,
+      painted ? 'Painted' : null,
+      area != null ? `${Number.isInteger(area) ? area : area.toFixed(1)} sq ft` : null,
+    ].filter(Boolean).join('; ')
+    return [{
+      trade: 'Siding', category: 'WDW',
+      description: [
+        'Window',
+        grade,
+        type,
+        `${glaze} glaze`,
+        sizeLabel,
+      ].filter(Boolean).join(' - '),
+      unit: 'EA',
+      qty: 1,
+      damaged: yn(fields, 'Damaged'),
+      note: baseNote || null,
+    }]
+  },
+  ev5: (fields, dir, parentFields = {}) => {
+    const length = num(fields, 'Length (ft)')
+    const width = num(fields, 'Width (ft)')
+    const area = length != null && width != null ? length * width : null
+    let sizeLabel = null
+    if (area != null) {
+      sizeLabel = area < 10 ? 'Small (<10 sq ft)' : 'Medium (10+ sq ft)'
+    }
+    const type = str(fields, 'Type') || str(parentFields, 'Type') || 'unspecified'
+    const grade = type === 'Solar'
+      ? (str(fields, 'Grade') || str(parentFields, 'Grade'))
+      : null
+    const desc = [
+      'Window screen',
+      type,
+      grade || null,
+      sizeLabel,
+    ].filter(Boolean).join(' - ')
+    const baseNote = [
+      `${dir} elevation`,
+      area != null ? `${Number.isInteger(area) ? area : area.toFixed(1)} sq ft` : null,
+    ].filter(Boolean).join('; ')
+    return [{
+      trade: 'Siding', category: 'WDW',
+      description: desc,
+      unit: 'EA',
+      qty: 1,
+      damaged: yn(fields, 'Damaged'),
+      note: baseNote || null,
+    }]
+  },
+  ev13: (fields, dir) => [{
+    trade: 'Siding', category: 'SDG',
+    description: `Gable vent - ${str(fields, 'Material') || 'unspecified'}`,
     unit: 'EA', qty: num(fields, 'Qty'), damaged: yn(fields, 'Damaged'), note: `${dir} elevation`,
   }],
-  ev5: (fields, dir) => [{
-    trade: 'Siding', category: 'WDW',
-    description: 'Window screen',
-    unit: 'EA', qty: num(fields, 'Qty'), damaged: yn(fields, 'Damaged'), note: `${dir} elevation`,
-  }],
-  ev6: (fields, dir) => [{
-    trade: 'Siding', category: 'WDW',
-    description: `Shutter - ${str(fields, 'Material') || 'unspecified'}`,
-    unit: 'EA', qty: num(fields, 'Qty'), damaged: yn(fields, 'Damaged'), note: `${dir} elevation`,
-  }],
-  ev7: (fields, dir) => [{
-    trade: 'Doors', category: 'DOR',
-    description: `Entry door - ${str(fields, 'Material') || 'unspecified'}${yn(fields, 'Storm Door') ? ' + storm door' : ''}`,
-    unit: 'EA', qty: num(fields, 'Qty'), damaged: yn(fields, 'Damaged'), note: `${dir} elevation`,
-  }],
-  ev8: (fields, dir) => [{
-    trade: 'Doors', category: 'DOR',
-    description: `Garage door - ${str(fields, 'Material') || 'unspecified'} (${str(fields, 'Panel Style') || 'unspecified'})`,
-    unit: 'EA', qty: num(fields, 'Qty'), damaged: yn(fields, 'Damaged'), note: `${dir} elevation`,
-  }],
-  ev9: (fields, dir) => [{
-    trade: 'HVAC', category: 'HVC',
-    description: 'A/C condenser',
-    unit: 'EA', qty: null, damaged: yn(fields, 'Damaged'), note: `${dir} elevation`,
-  }],
+  ev6: (fields, dir, parentFields = {}) => {
+    const length = num(fields, 'Length (in)')
+    const width = num(fields, 'Width (in)')
+    const area = length != null && width != null ? length * width : null
+    let sizeLabel = null
+    if (area != null) {
+      if (area < 770) sizeLabel = 'Small (<770 sq in)'
+      else if (area < 1120) sizeLabel = 'Medium (770-1,120 sq in)'
+      else sizeLabel = 'Large (1,120+ sq in)'
+    }
+    const material = str(fields, 'Grade')
+      || str(parentFields, 'Grade')
+      || str(fields, 'Material')
+      || str(parentFields, 'Material')
+      || 'unspecified'
+    const painted = yn(fields, 'Painted') || yn(parentFields, 'Painted')
+    const baseNote = [
+      `${dir} elevation`,
+      painted ? 'Painted' : null,
+      area != null ? `${area} sq in` : null,
+    ].filter(Boolean).join('; ')
+    return [{
+      trade: 'Siding', category: 'WDW',
+      description: [
+        'Shutter',
+        material,
+        sizeLabel,
+      ].filter(Boolean).join(' - '),
+      unit: 'EA',
+      qty: 1,
+      damaged: yn(fields, 'Damaged'),
+      note: baseNote || null,
+    }]
+  },
+  ev7: (fields, dir) => {
+    if (str(fields, 'Grade') === 'None' && str(fields, 'Action') === 'None') return []
+    const length = num(fields, 'Length (in)')
+    const width = num(fields, 'Width (in)')
+    const area = length != null && width != null ? length * width : null
+    return [{
+      trade: 'Doors', category: 'DOR',
+      description: [
+        'Door',
+        str(fields, 'Grade') || 'unspecified grade',
+        str(fields, 'Style') || 'unspecified style',
+        str(fields, 'Configuration') || null,
+        area != null ? `${area} sq in` : null,
+      ].filter(Boolean).join(' - '),
+      unit: 'EA',
+      qty: 1,
+      damaged: yn(fields, 'Damaged'),
+      note: [
+        `${dir} elevation`,
+        length != null && width != null ? `${length}" × ${width}"` : null,
+        yn(fields, 'Painted') ? 'Painted' : null,
+        str(fields, 'Action') && str(fields, 'Action') !== 'None' ? `Action: ${str(fields, 'Action')}` : null,
+      ].filter(Boolean).join('; '),
+    }]
+  },
+  ev8: (fields, dir) => {
+    const length = num(fields, 'Length (ft)') ?? num(fields, 'Length (in)')
+    const width = num(fields, 'Width (ft)') ?? num(fields, 'Width (in)')
+    const area = length != null && width != null ? length * width : null
+    return [{
+      trade: 'Doors', category: 'DOR',
+      description: [
+        'Garage door',
+        str(fields, 'Type') || null,
+        str(fields, 'Grade') || str(fields, 'Material') || 'unspecified grade',
+        area != null ? `${area} sq ft` : null,
+      ].filter(Boolean).join(' - '),
+      unit: 'EA',
+      qty: 1,
+      damaged: yn(fields, 'Damaged'),
+      note: [
+        `${dir} elevation`,
+        length != null && width != null ? `${length}' × ${width}'` : null,
+        yn(fields, 'Painted') ? 'Painted' : null,
+        yn(fields, 'Insulated') ? 'Insulated' : null,
+        yn(fields, 'Windows')
+          ? (num(fields, 'Window Qty') != null ? `Windows: ${num(fields, 'Window Qty')}` : 'Windows')
+          : null,
+      ].filter(Boolean).join('; '),
+    }]
+  },
 }
 
 // ---- Exterior (FEN / POL / EXT) ----------------------------------------
@@ -266,18 +436,29 @@ export const EXTERIOR_LINE_ITEMS = {
 }
 
 export function buildRoofLineItems(itemDef, itemData) {
-  if (!itemData || itemData.excluded) return []
+  if (!itemData || !isRoofItemActive(itemData)) return []
   const fixed = ROOF_LINE_ITEMS[itemDef.id]?.(itemData.fields || {}) || []
   const subBuilder = ROOF_SUBITEM_LINE_ITEMS[itemDef.id]
   const subs = subBuilder
     ? (itemData.subItems || []).map(sub => subBuilder(sub.fields || {}, itemData.fields || {}))
     : []
-  return [...fixed, ...subs]
+  const lines = [...fixed, ...subs]
+  if (itemData.status !== 'supplement') return lines
+  return lines.map(line => ({
+    ...line,
+    note: [line.note, 'Supplement'].filter(Boolean).join('; '),
+  }))
 }
 
 export function buildElevLineItems(itemDef, dir, cellData) {
   if (!cellData || cellData.excluded) return []
-  return ELEV_LINE_ITEMS[itemDef.id]?.(cellData.fields || {}, dir) || []
+  const builder = ELEV_LINE_ITEMS[itemDef.id]
+  if (!builder) return []
+  if (itemDef.addMore) {
+    const parentFields = cellData.fields || {}
+    return (cellData.subItems || []).flatMap(sub => builder(sub.fields || {}, dir, parentFields) || [])
+  }
+  return builder(cellData.fields || {}, dir) || []
 }
 
 export function buildExteriorLineItems(itemDef, itemData) {

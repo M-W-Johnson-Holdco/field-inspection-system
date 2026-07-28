@@ -1,21 +1,27 @@
 import { createContext, useContext, useState, useEffect, useRef } from 'react'
 import { idbSave, idbLoad } from '../lib/idb'
 import { ROOF_ITEMS } from '../data/roofItems'
-import { ELEV_ITEMS, DIRECTIONS } from '../data/elevItems'
+import { ELEV_ITEMS, DIRECTIONS, ELEV_ADDMORE_IDS } from '../data/elevItems'
 import { EXTERIOR_ITEMS } from '../data/exteriorItems'
 import { formatPitch, parsePitchNumerator } from '../utils/pitch'
 import { parseMeasurement } from '../utils/measurement'
 import { isFieldVisible } from '../utils/fieldGrid'
+import { getRoofItemStatus, isRoofItemActive, nextRoofItemStatus, withRoofItemStatus } from '../utils/roofItemStatus'
 
 const InspectionContext = createContext(null)
 
 const INITIAL_ROOF_DATA = Object.fromEntries(
-  ROOF_ITEMS.map(item => [item.id, { excluded: false, fields: {}, subItems: [], photos: [] }])
+  ROOF_ITEMS.map(item => [item.id, { excluded: false, status: 'present', fields: {}, subItems: [], photos: [] }])
 )
 
 const INITIAL_ELEV_DATA = Object.fromEntries(
   ELEV_ITEMS.flatMap(item =>
-    DIRECTIONS.map(dir => [`${item.id}_${dir}`, { excluded: false, fields: {}, photos: [] }]),
+    DIRECTIONS.map(dir => [`${item.id}_${dir}`, {
+      excluded: false,
+      fields: {},
+      subItems: [],
+      photos: [],
+    }]),
   ),
 )
 
@@ -107,7 +113,7 @@ function calculateCompletion(data) {
 
   ROOF_ITEMS.forEach(itemDef => {
     const item = data.roofData?.[itemDef.id]
-    if (!item || item.excluded) return
+    if (!item || !isRoofItemActive(item)) return
 
     ;(itemDef.fields || []).forEach(field => countValue(item.fields?.[field.l], totals))
     if (itemDef.flags?.includes('D')) countValue(item.fields?._damage, totals)
@@ -136,6 +142,18 @@ function calculateCompletion(data) {
       const cell = data.elevData?.[`${itemDef.id}_${dir}`]
       if (!cell || cell.excluded) return
 
+      if (itemDef.addMore) {
+        ;(itemDef.fields || []).forEach(field => countValue(cell.fields?.[field.l], totals))
+        ;(cell.subItems || []).forEach(sub => {
+          ;(itemDef.subFields || []).forEach(field => {
+            if (!isFieldVisible(field, sub.fields)) return
+            countSubFieldValue(field, sub.fields, totals)
+          })
+          if (sub.fields?.Damaged === 'Yes') countValue(sub.fields?._damage, totals)
+        })
+        return
+      }
+
       ;(itemDef.fields || []).forEach(field => countValue(cell.fields?.[field.l], totals))
       if (cell.fields?.Damaged === 'Yes') countValue(cell.fields?._damage, totals)
     })
@@ -163,12 +181,16 @@ const PIPE_JACK_SIZE_LABELS = [
   { field: 'Qty 4"', size: '4' },
 ]
 
-const EXHAUST_STACK_TYPES = ['Flange', 'Stack', 'Cap']
+const EXHAUST_STACK_TYPES = ['Cap', 'Stack', 'Flange']
 
 function normalizeGutterSizeValue(val) {
   if (val == null || val === '' || val === 'Select') return ''
+  if (val === '5"' || val === '6"') return val
   const match = String(val).match(/(\d+(?:\.\d+)?)/)
-  return match ? match[1] : String(val).trim()
+  if (!match) return ''
+  const inches = match[1]
+  if (inches === '5' || inches === '6') return `${inches}"`
+  return ''
 }
 
 function normalizeElevGutterCell(cell) {
@@ -188,17 +210,400 @@ function normalizeElevGutterCell(cell) {
   return { ...cell, fields }
 }
 
-function normalizeElevData(elevData = {}) {
-  const next = { ...elevData }
-  for (const key of Object.keys(next)) {
-    if (key.startsWith('ev3_')) next[key] = normalizeElevGutterCell(next[key])
+/** Parent-level fields on addMore elev items (not migrated into sub-cards). */
+const ELEV_ADDMORE_SHARED_FIELDS = {
+  ev3: new Set(['Style', 'Material', 'Size (Inches)', 'Painted']),
+  ev11: new Set(['Style', 'Material']),
+  ev4: new Set(['Style', 'Material', 'Width', 'Painted']),
+  ev12: new Set(['Grade', 'Type', 'Glaze', 'Painted']),
+  ev5: new Set(['Type', 'Grade']),
+  ev6: new Set(['Grade', 'Painted']),
+}
+
+function splitElevSharedFields(itemId, fields = {}) {
+  const sharedKeys = ELEV_ADDMORE_SHARED_FIELDS[itemId] || new Set()
+  const shared = {}
+  const rest = {}
+  for (const [key, value] of Object.entries(fields)) {
+    if (sharedKeys.has(key)) shared[key] = value
+    else rest[key] = value
   }
-  for (const dir of DIRECTIONS) {
-    const key = `ev3_${dir}`
-    if (!next[key]) {
-      next[key] = normalizeElevGutterCell({ excluded: false, fields: {}, photos: [] })
+  return { shared, rest }
+}
+
+function elevCellHasLegacyTopFields(fields = {}, itemId) {
+  const sharedKeys = ELEV_ADDMORE_SHARED_FIELDS[itemId] || new Set()
+  return Object.entries(fields).some(([key, value]) => {
+    if (key.startsWith('_')) return false
+    if (sharedKeys.has(key)) return false
+    if (value == null || value === '' || value === 'Select') return false
+    if (Array.isArray(value)) return value.length > 0
+    return true
+  })
+}
+
+function normalizeElevAddMoreSub(sub, itemId) {
+  const fields = { ...(sub?.fields || {}) }
+  if (itemId === 'ev3') {
+    if (fields.Size != null) {
+      const parsed = normalizeGutterSizeValue(fields.Size)
+      if (parsed && fields['Size (Inches)'] == null) fields['Size (Inches)'] = parsed
+      delete fields.Size
+    }
+    if (fields['Size (Inches)'] != null && fields['Size (Inches)'] !== '') {
+      fields['Size (Inches)'] = normalizeGutterSizeValue(fields['Size (Inches)'])
     }
   }
+  if (fields.Width === '3" Std' || fields.Width === '3" STD') {
+    fields.Width = '3" Standard'
+  }
+  return {
+    fields: itemId === 'ev7'
+      ? normalizeDoorSubFields(fields)
+      : itemId === 'ev8'
+        ? normalizeGarageDoorSubFields(fields)
+        : itemId === 'ev6'
+          ? normalizeShutterSubFields(fields)
+          : itemId === 'ev5'
+            ? normalizeScreenSubFields(fields)
+            : itemId === 'ev12'
+              ? normalizeWindowSubFields(fields)
+              : fields,
+    photos: Array.isArray(sub?.photos) ? sub.photos : [],
+  }
+}
+
+function normalizeDoorSubFields(fields = {}) {
+  const next = { ...fields }
+  const grades = ['Wood', 'Aluminum', 'Steel', 'Composite', 'Fiberglass', 'None']
+  if (next.Material != null && next.Material !== '' && (next.Grade == null || next.Grade === '' || next.Grade === 'Select')) {
+    const match = grades.find(g => g.toLowerCase() === String(next.Material).toLowerCase())
+    if (match) next.Grade = match
+  }
+  delete next.Material
+  if ((next['Storm Door'] === 'Yes' || next['Storm Door'] === true)
+    && (next.Style == null || next.Style === '' || next.Style === 'Select')) {
+    next.Style = 'Storm Door'
+  }
+  delete next['Storm Door']
+  delete next._damage
+  delete next.Qty
+  // Legacy S/M/L size buttons — drop; Size is now Length × Width
+  if (next.Size === 'S' || next.Size === 'M' || next.Size === 'L') delete next.Size
+  return next
+}
+
+function normalizeGarageDoorSubFields(fields = {}) {
+  const next = { ...fields }
+  if (next.Material != null && next.Material !== '' && (next.Grade == null || next.Grade === '' || next.Grade === 'Select')) {
+    const legacy = String(next.Material)
+    if (legacy === 'Aluminum') next.Grade = 'Aluminum'
+    else if (legacy === 'Wood') next.Grade = 'Wood Paint'
+    else if (legacy === 'Composite') next.Grade = 'Composite'
+  }
+  delete next.Material
+  delete next['Panel Style']
+  delete next.Qty
+  if (next.Windows !== 'Yes') delete next['Window Qty']
+  // Migrate early garage-door inch keys to feet
+  if (next['Length (in)'] != null && (next['Length (ft)'] == null || next['Length (ft)'] === '')) {
+    next['Length (ft)'] = next['Length (in)']
+  }
+  if (next['Width (in)'] != null && (next['Width (ft)'] == null || next['Width (ft)'] === '')) {
+    next['Width (ft)'] = next['Width (in)']
+  }
+  delete next['Length (in)']
+  delete next['Width (in)']
+  return next
+}
+
+function shutterLegacyQty(fields, keys) {
+  for (const key of keys) {
+    if (fields[key] == null || fields[key] === '') continue
+    const n = Math.floor(Number(fields[key]))
+    if (Number.isFinite(n) && n > 0) return n
+  }
+  return 0
+}
+
+function normalizeShutterSubFields(fields = {}) {
+  const next = { ...fields }
+  if (next.Material != null && next.Material !== '' && (next.Grade == null || next.Grade === '' || next.Grade === 'Select')) {
+    const match = ['Vinyl', 'Wood'].find(g => g.toLowerCase() === String(next.Material).toLowerCase())
+    if (match) next.Grade = match
+  }
+  delete next.Material
+  delete next.Qty
+  delete next['Qty (Small)']
+  delete next['Qty (Medium)']
+  delete next['Small (<770 sq in)']
+  delete next['Medium (770-1,120 sq in)']
+  delete next['Large (1,120+ sq in)']
+  delete next['Small (Height: 30-50")']
+  delete next['Medium (Height: 51-70")']
+  delete next['Large (Height: 71"+)']
+  return next
+}
+
+function expandShutterLegacySubs(rest = {}, topPhotos = []) {
+  const small = shutterLegacyQty(rest, [
+    'Small (<770 sq in)',
+    'Qty (Small)',
+    'Small (Height: 30-50")',
+    'Qty',
+  ])
+  const medium = shutterLegacyQty(rest, [
+    'Medium (770-1,120 sq in)',
+    'Qty (Medium)',
+    'Medium (Height: 51-70")',
+  ])
+  const large = shutterLegacyQty(rest, [
+    'Large (1,120+ sq in)',
+    'Large (Height: 71"+)',
+  ])
+  const total = small + medium + large
+  const base = normalizeShutterSubFields(rest)
+  if (total > 0) {
+    return Array.from({ length: total }, (_, i) => ({
+      fields: { ...base },
+      photos: i === 0 ? topPhotos : [],
+    }))
+  }
+  return null
+}
+
+function normalizeScreenSubFields(fields = {}) {
+  const next = { ...fields }
+  delete next.Qty
+  delete next['Small (1–9 sq ft)']
+  delete next['Medium (10–16 sq ft)']
+  return next
+}
+
+function expandScreenLegacySubs(rest = {}, topPhotos = []) {
+  const small = shutterLegacyQty(rest, ['Small (1–9 sq ft)', 'Qty'])
+  const medium = shutterLegacyQty(rest, ['Medium (10–16 sq ft)'])
+  const total = small + medium
+  const base = normalizeScreenSubFields(rest)
+  if (total > 0) {
+    return Array.from({ length: total }, (_, i) => ({
+      fields: { ...base },
+      photos: i === 0 ? topPhotos : [],
+    }))
+  }
+  return null
+}
+
+function normalizeWindowSubFields(fields = {}) {
+  const next = { ...fields }
+  delete next.Qty
+  delete next['Small (3–11 sq ft)']
+  delete next['Medium (12–19 sq ft)']
+  delete next['Large (19+ sq ft)']
+  return next
+}
+
+function expandWindowLegacySubs(rest = {}, topPhotos = []) {
+  const small = shutterLegacyQty(rest, ['Small (3–11 sq ft)', 'Qty'])
+  const medium = shutterLegacyQty(rest, ['Medium (12–19 sq ft)'])
+  const large = shutterLegacyQty(rest, ['Large (19+ sq ft)'])
+  const total = small + medium + large
+  const base = normalizeWindowSubFields(rest)
+  if (total > 0) {
+    return Array.from({ length: total }, (_, i) => ({
+      fields: { ...base },
+      photos: i === 0 ? topPhotos : [],
+    }))
+  }
+  return null
+}
+
+function stripElevSharedFromSubFields(itemId, fields = {}) {
+  const sharedKeys = ELEV_ADDMORE_SHARED_FIELDS[itemId] || new Set()
+  let next = { ...fields }
+  for (const key of sharedKeys) delete next[key]
+  // Downspout / gutter-guard cards are one-per-run; Qty lived on the old card layout
+  if (itemId === 'ev4' || itemId === 'ev11') delete next.Qty
+  if (itemId === 'ev7') next = normalizeDoorSubFields(next)
+  if (itemId === 'ev8') next = normalizeGarageDoorSubFields(next)
+  if (itemId === 'ev6') next = normalizeShutterSubFields(next)
+  if (itemId === 'ev5') next = normalizeScreenSubFields(next)
+  if (itemId === 'ev12') next = normalizeWindowSubFields(next)
+  return next
+}
+
+function normalizeElevSharedFields(itemId, fields = {}) {
+  const next = { ...fields }
+  if (itemId === 'ev4' && (next.Width === '3" Std' || next.Width === '3" STD')) {
+    next.Width = '3" Standard'
+  }
+  if (itemId === 'ev5' && next.Type !== 'Solar') {
+    delete next.Grade
+  }
+  if (itemId === 'ev3') {
+    if (next.Size != null) {
+      const parsed = normalizeGutterSizeValue(next.Size)
+      if (parsed && next['Size (Inches)'] == null) next['Size (Inches)'] = parsed
+      delete next.Size
+    }
+    if (next['Size (Inches)'] != null && next['Size (Inches)'] !== '') {
+      next['Size (Inches)'] = normalizeGutterSizeValue(next['Size (Inches)'])
+    }
+  }
+  return next
+}
+
+function promoteElevSharedFromSubs(itemId, shared, subs) {
+  const sharedKeys = ELEV_ADDMORE_SHARED_FIELDS[itemId] || new Set()
+  if (!sharedKeys.size) {
+    return {
+      shared: normalizeElevSharedFields(itemId, shared),
+      subs: subs.map(sub => ({
+        ...sub,
+        fields: stripElevSharedFromSubFields(itemId, sub.fields || {}),
+      })),
+    }
+  }
+
+  const nextShared = { ...shared }
+  const nextSubs = subs.map(sub => {
+    const fields = { ...(sub.fields || {}) }
+    for (const key of sharedKeys) {
+      const val = fields[key]
+      const cur = nextShared[key]
+      if ((cur == null || cur === '' || cur === 'Select') && val != null && val !== '' && val !== 'Select') {
+        nextShared[key] = val
+      }
+    }
+    return {
+      ...sub,
+      fields: stripElevSharedFromSubFields(itemId, fields),
+    }
+  })
+  return { shared: normalizeElevSharedFields(itemId, nextShared), subs: nextSubs }
+}
+
+function migrateElevAddMoreCell(cell, itemId) {
+  if (!cell) {
+    return { excluded: false, fields: {}, subItems: [], photos: [] }
+  }
+
+  const base = normalizeElevGutterCell(cell)
+  const existingSubs = Array.isArray(base.subItems)
+    ? base.subItems.map(sub => normalizeElevAddMoreSub(sub, itemId))
+    : []
+  const { shared, rest } = splitElevSharedFields(itemId, base.fields || {})
+
+  if (existingSubs.length) {
+    const promoted = promoteElevSharedFromSubs(itemId, shared, existingSubs)
+    return {
+      ...base,
+      fields: promoted.shared,
+      subItems: promoted.subs,
+      photos: [],
+    }
+  }
+
+  const topPhotos = Array.isArray(base.photos) ? base.photos : []
+  if (itemId === 'ev12') {
+    const expanded = expandWindowLegacySubs(rest, topPhotos)
+    if (expanded) {
+      const promoted = promoteElevSharedFromSubs(itemId, shared, expanded)
+      return {
+        ...base,
+        fields: promoted.shared,
+        subItems: promoted.subs,
+        photos: [],
+      }
+    }
+  }
+  if (itemId === 'ev5') {
+    const expanded = expandScreenLegacySubs(rest, topPhotos)
+    if (expanded) {
+      const promoted = promoteElevSharedFromSubs(itemId, shared, expanded)
+      return {
+        ...base,
+        fields: promoted.shared,
+        subItems: promoted.subs,
+        photos: [],
+      }
+    }
+  }
+  if (itemId === 'ev6') {
+    const expanded = expandShutterLegacySubs(rest, topPhotos)
+    if (expanded) {
+      const promoted = promoteElevSharedFromSubs(itemId, shared, expanded)
+      return {
+        ...base,
+        fields: promoted.shared,
+        subItems: promoted.subs,
+        photos: [],
+      }
+    }
+  }
+  if (elevCellHasLegacyTopFields(rest, itemId) || topPhotos.length) {
+    const cardFields = stripElevSharedFromSubFields(itemId, rest)
+    let count = 1
+    if (itemId === 'ev7' || itemId === 'ev8') {
+      const qty = Math.floor(Number(rest.Qty))
+      if (qty > 1) count = qty
+    }
+    return {
+      ...base,
+      fields: normalizeElevSharedFields(itemId, shared),
+      subItems: Array.from({ length: count }, (_, i) => ({
+        fields: { ...cardFields },
+        photos: i === 0 ? topPhotos : [],
+      })),
+      photos: [],
+    }
+  }
+
+  return {
+    ...base,
+    fields: normalizeElevSharedFields(itemId, shared),
+    subItems: [],
+    photos: [],
+  }
+}
+
+function normalizeElevData(elevData = {}) {
+  const next = { ...elevData }
+
+  for (const item of ELEV_ITEMS) {
+    for (const dir of DIRECTIONS) {
+      const key = `${item.id}_${dir}`
+      const cell = next[key] || { excluded: false, fields: {}, subItems: [], photos: [] }
+      if (ELEV_ADDMORE_IDS.has(item.id)) {
+        next[key] = migrateElevAddMoreCell(cell, item.id)
+      } else {
+        const fields = { ...(cell.fields || {}) }
+        next[key] = {
+          ...cell,
+          fields,
+          subItems: Array.isArray(cell.subItems) ? cell.subItems : [],
+          photos: Array.isArray(cell.photos) ? cell.photos : [],
+        }
+      }
+    }
+  }
+
+  // Normalize any leftover gutter cells not covered above (legacy keys)
+  for (const key of Object.keys(next)) {
+    if (
+      key.startsWith('ev3_')
+      || key.startsWith('ev11_')
+      || key.startsWith('ev4_')
+      || key.startsWith('ev5_')
+      || key.startsWith('ev6_')
+      || key.startsWith('ev7_')
+      || key.startsWith('ev8_')
+      || key.startsWith('ev12_')
+    ) {
+      next[key] = migrateElevAddMoreCell(next[key], key.split('_')[0])
+    }
+  }
+
   return next
 }
 
@@ -320,9 +725,15 @@ function normalizeRoofSubItem(sub) {
 
 function normalizeRoofData(roofData = {}) {
   let next = { ...roofData }
+  for (const itemDef of ROOF_ITEMS) {
+    const item = next[itemDef.id]
+    if (!item) continue
+    next[itemDef.id] = withRoofItemStatus(item, getRoofItemStatus(item))
+  }
   next = normalizeRi11(next)
   next = normalizeRi12(next)
   next = normalizeRi14(next)
+  next = normalizeRi15(next)
   next = normalizeRi17(next)
   next = normalizeFlashingItems(next)
   next = normalizeRi21(next)
@@ -360,6 +771,7 @@ function migrateChimneyFields(ri17) {
   const shared = {
     ...(fields['Size / Width'] ? { 'Size / Width': normalizeChimneySizeValue(fields['Size / Width']) } : {}),
     ...(fields['Counter Flashing'] ? { 'Counter Flashing': fields['Counter Flashing'] } : {}),
+    ...(fields['Cricket Present'] ? { 'Cricket Present': fields['Cricket Present'] } : {}),
     ...(fields.Painted ? { Painted: fields.Painted } : {}),
     ...(fields.Damaged ? { Damaged: fields.Damaged } : {}),
     ...(fields._damage ? { _damage: fields._damage } : {}),
@@ -410,38 +822,6 @@ function normalizeRi17(roofData) {
 
 const FLASHING_ITEM_IDS = ['ri18', 'ri19', 'ri20']
 
-function hasLegacyFlashingTopLevel(fields = {}) {
-  return fields.Painted != null
-    || fields.Damaged != null
-    || fields['Length (LF)'] != null
-    || fields._damage != null
-}
-
-function normalizeFlashingSubItem(sub) {
-  return {
-    fields: { ...(sub?.fields || {}) },
-    photos: Array.isArray(sub?.photos) ? sub.photos : [],
-  }
-}
-
-function migrateFlashingFields(item) {
-  const fields = item.fields || {}
-  const existing = (item.subItems || []).map(normalizeFlashingSubItem)
-  if (existing.length) return existing
-
-  if (!hasLegacyFlashingTopLevel(fields)) return []
-
-  return [{
-    fields: {
-      ...(fields['Length (LF)'] ? { 'Length (LF)': fields['Length (LF)'] } : {}),
-      ...(fields.Painted ? { Painted: fields.Painted } : {}),
-      ...(fields.Damaged ? { Damaged: fields.Damaged } : {}),
-      ...(fields._damage ? { _damage: fields._damage } : {}),
-    },
-    photos: item.photos || [],
-  }]
-}
-
 function normalizeFlashingItems(roofData) {
   let next = { ...roofData }
 
@@ -449,82 +829,38 @@ function normalizeFlashingItems(roofData) {
     const item = next[itemId]
     if (!item) continue
 
-    const fields = item.fields || {}
-    if (hasLegacyFlashingTopLevel(fields)) {
-      next[itemId] = {
-        ...item,
-        fields: {},
-        subItems: migrateFlashingFields(item),
-        photos: [],
-      }
-      continue
-    }
-
-    const normalizedSubItems = (item.subItems || []).map(normalizeFlashingSubItem)
-    const subItemsChanged = normalizedSubItems.some((sub, index) => {
-      const original = item.subItems?.[index]
-      return JSON.stringify(sub.fields) !== JSON.stringify(original?.fields || {})
-        || !Array.isArray(original?.photos)
+    const topFields = item.fields || {}
+    const subItems = item.subItems || []
+    const firstSub = subItems.find(sub => {
+      const fields = sub?.fields || {}
+      return fields.Painted || fields.Damaged || fields._damage
     })
+    const lifted = firstSub?.fields || {}
+    const photos = [
+      ...(Array.isArray(item.photos) ? item.photos : []),
+      ...subItems.flatMap(sub => sub.photos || []),
+    ]
 
-    if (subItemsChanged) {
-      next[itemId] = { ...item, subItems: normalizedSubItems }
+    next[itemId] = {
+      ...item,
+      fields: {
+        ...(lifted.Painted || topFields.Painted ? { Painted: lifted.Painted || topFields.Painted } : {}),
+        ...(lifted.Damaged || topFields.Damaged ? { Damaged: lifted.Damaged || topFields.Damaged } : {}),
+        ...(lifted._damage || topFields._damage ? { _damage: lifted._damage || topFields._damage } : {}),
+      },
+      subItems: [],
+      photos,
     }
   }
 
   return next
 }
 
-function hasLegacyCorniceTopLevel(fields = {}) {
-  return fields.Type != null
-    || fields.Qty != null
-    || fields.Story != null
-}
-
-function normalizeCorniceSubItem(sub) {
-  const fields = { ...(sub?.fields || {}) }
-  if (fields.Story != null && fields.Story !== '') {
-    fields.Story = String(fields.Story)
-  }
-  if (fields.Qty != null && fields.Qty !== '') {
-    fields.Qty = String(fields.Qty)
-  }
-  return {
-    fields,
-    photos: Array.isArray(sub?.photos) ? sub.photos : [],
-  }
-}
-
-function migrateCorniceFields(ri21) {
-  const fields = ri21.fields || {}
-  const existing = (ri21.subItems || []).map(normalizeCorniceSubItem)
-  if (existing.length) return existing
-
-  const type = fields.Type || ''
-  const story = fields.Story != null && fields.Story !== '' ? String(fields.Story) : ''
-  const qty = Math.max(0, Number(fields.Qty) || 0)
-  const hasData = type || story || fields.Qty != null
-
-  if (!hasData) return []
-
-  if (qty > 1) {
-    return Array.from({ length: qty }, (_, index) => ({
-      fields: {
-        ...(type ? { Type: type } : {}),
-        ...(story ? { Story: story } : {}),
-      },
-      photos: index === 0 ? (ri21.photos || []) : [],
-    }))
-  }
-
-  return [{
-    fields: {
-      ...(type ? { Type: type } : {}),
-      ...(story ? { Story: story } : {}),
-      ...(fields.Qty != null && fields.Qty !== '' ? { Qty: String(fields.Qty) } : {}),
-    },
-    photos: ri21.photos || [],
-  }]
+function normalizeCorniceFields(fields = {}) {
+  const next = { ...fields }
+  if (next.Story != null && next.Story !== '') next.Story = String(next.Story)
+  if (next.Qty != null && next.Qty !== '') next.Qty = String(next.Qty)
+  return next
 }
 
 function normalizeRi21(roofData) {
@@ -532,26 +868,27 @@ function normalizeRi21(roofData) {
   const ri21 = next.ri21
   if (!ri21) return next
 
-  const fields = ri21.fields || {}
-  if (hasLegacyCorniceTopLevel(fields)) {
-    next.ri21 = {
-      ...ri21,
-      fields: {},
-      subItems: migrateCorniceFields(ri21),
-      photos: [],
-    }
-    return next
-  }
-
-  const normalizedSubItems = (ri21.subItems || []).map(normalizeCorniceSubItem)
-  const subItemsChanged = normalizedSubItems.some((sub, index) => {
-    const original = ri21.subItems?.[index]
-    return JSON.stringify(sub.fields) !== JSON.stringify(original?.fields || {})
-      || !Array.isArray(original?.photos)
+  const topFields = normalizeCorniceFields(ri21.fields || {})
+  const subItems = ri21.subItems || []
+  const firstSub = subItems.find(sub => {
+    const fields = sub?.fields || {}
+    return fields.Type || fields.Story || fields.Qty
   })
+  const lifted = firstSub ? normalizeCorniceFields(firstSub.fields || {}) : {}
+  const photos = [
+    ...(Array.isArray(ri21.photos) ? ri21.photos : []),
+    ...subItems.flatMap(sub => sub.photos || []),
+  ]
 
-  if (subItemsChanged) {
-    next.ri21 = { ...ri21, subItems: normalizedSubItems }
+  next.ri21 = {
+    ...ri21,
+    fields: {
+      ...(lifted.Type || topFields.Type ? { Type: lifted.Type || topFields.Type } : {}),
+      ...(lifted.Story || topFields.Story ? { Story: lifted.Story || topFields.Story } : {}),
+      ...(lifted.Qty || topFields.Qty ? { Qty: lifted.Qty || topFields.Qty } : {}),
+    },
+    subItems: [],
+    photos,
   }
 
   return next
@@ -759,14 +1096,15 @@ function isLegacyExhaustStackSubItem(sub) {
 function normalizeExhaustStackSize(value) {
   if (value == null || value === '' || value === 'Select') return ''
   const text = String(value).trim()
-  if (['Small (4")', 'Medium (5-6")', 'Large (7-8")'].includes(text)) return text
-  if (text === 'Small' || text === '4"' || text.startsWith('Small')) return 'Small (4")'
-  if (text === 'Medium' || text === '5-6"' || text.startsWith('Medium')) return 'Medium (5-6")'
-  if (text === 'Large' || text === '7-8"' || text.startsWith('Large')) return 'Large (7-8")'
+  if (['Small (3-4")', 'Medium (5-7")', 'Large (8"+)'].includes(text)) return text
+  // Migrate previous labels
+  if (text === 'Small (4")' || text === 'Small' || text === '4"' || text.startsWith('Small')) return 'Small (3-4")'
+  if (text === 'Medium (5-6")' || text === 'Medium' || text === '5-6"' || text === '5-7"' || text.startsWith('Medium')) return 'Medium (5-7")'
+  if (text === 'Large (7-8")' || text === 'Large' || text === '7-8"' || text === '8"+' || text.startsWith('Large')) return 'Large (8"+)'
   const inches = Number(text.match(/\d+(?:\.\d+)?/)?.[0])
-  if (inches === 4) return 'Small (4")'
-  if (inches === 5 || inches === 6) return 'Medium (5-6")'
-  if (inches === 7 || inches === 8) return 'Large (7-8")'
+  if (inches === 3 || inches === 4) return 'Small (3-4")'
+  if (inches >= 5 && inches <= 7) return 'Medium (5-7")'
+  if (inches >= 8) return 'Large (8"+)'
   return ''
 }
 
@@ -777,7 +1115,7 @@ function exhaustStackDamageParts(fields = {}) {
       ? fields['Damage To']
       : (EXHAUST_STACK_TYPES.includes(fields['Damage To']) ? [fields['Damage To']] : []))
   const parts = raw.filter(part => EXHAUST_STACK_TYPES.includes(part))
-  if (parts.length) return [...new Set(parts)]
+  if (parts.length) return EXHAUST_STACK_TYPES.filter(part => parts.includes(part))
   if (fields.Damaged === 'Yes' && EXHAUST_STACK_TYPES.includes(fields.Type)) {
     return [fields.Type]
   }
@@ -859,11 +1197,20 @@ function normalizeRi12(roofData) {
   return next
 }
 
-function parseLegacySkylightSize(text) {
-  if (!text) return {}
-  const match = String(text).trim().match(/(\d+(?:\.\d+)?)\s*(?:in|"|''|″)?\s*[x×]\s*(\d+(?:\.\d+)?)/i)
-  if (!match) return {}
-  return { 'Length (in)': match[1], 'Width (in)': match[2] }
+const SKYLIGHT_SIZES = ['Small', 'Medium', 'Large', 'X-Large']
+
+function normalizeSkylightSize(value) {
+  if (value == null || value === '' || value === 'Select') return ''
+  const text = String(value).trim()
+  if (SKYLIGHT_SIZES.includes(text)) return text
+  const lower = text.toLowerCase()
+  if (lower === 'x-large' || lower === 'xlarge' || lower === 'xl' || lower.startsWith('x-large') || lower.startsWith('extra')) {
+    return 'X-Large'
+  }
+  if (lower.startsWith('small')) return 'Small'
+  if (lower.startsWith('medium')) return 'Medium'
+  if (lower.startsWith('large')) return 'Large'
+  return ''
 }
 
 function isLegacySkylightSubItem(sub) {
@@ -872,8 +1219,19 @@ function isLegacySkylightSubItem(sub) {
 }
 
 function normalizeSkylightSubItem(sub) {
+  const source = { ...(sub?.fields || {}) }
+  const size = normalizeSkylightSize(source.Size)
+  delete source['Size (L x W)']
+  delete source['Size (sq in)']
+  delete source['Size (sq. in)']
+  delete source['Length (in)']
+  delete source['Width (in)']
+  delete source.Size
   return {
-    fields: { ...(sub?.fields || {}) },
+    fields: {
+      ...source,
+      ...(size ? { Size: size } : {}),
+    },
     photos: Array.isArray(sub?.photos) ? sub.photos : [],
   }
 }
@@ -888,10 +1246,10 @@ function migrateSkylightFields(ri14) {
 
   ;(ri14.subItems || []).forEach(sub => {
     if (isLegacySkylightSubItem(sub)) {
-      const sizeParts = parseLegacySkylightSize(sub.fields?.['Size (L x W)'])
+      const size = normalizeSkylightSize(sub.fields?.Size)
       subItems.push({
         fields: {
-          ...sizeParts,
+          ...(size ? { Size: size } : {}),
           ...(sharedStyle ? { Style: sharedStyle } : {}),
           ...(sub.fields?.Style ? { Style: sub.fields.Style } : {}),
           ...(sharedMount ? { Mount: sharedMount } : {}),
@@ -934,13 +1292,88 @@ function normalizeRi14(roofData) {
     || fields.Damaged != null
     || fields._damage != null
   const hasLegacySubs = (ri14.subItems || []).some(isLegacySkylightSubItem)
+  const hasLengthWidthSubs = (ri14.subItems || []).some(sub =>
+    sub?.fields?.['Length (in)'] != null
+    || sub?.fields?.['Width (in)'] != null
+    || sub?.fields?.['Size (L x W)'] != null
+    || sub?.fields?.['Size (sq in)'] != null
+    || sub?.fields?.['Size (sq. in)'] != null,
+  )
 
-  if (hasLegacyTopLevel || hasLegacySubs) {
+  if (hasLegacyTopLevel || hasLegacySubs || hasLengthWidthSubs) {
     next.ri14 = {
       ...ri14,
       fields: {},
       subItems: migrateSkylightFields(ri14),
       photos: [],
+    }
+  } else if ((ri14.subItems || []).length) {
+    next.ri14 = {
+      ...ri14,
+      subItems: (ri14.subItems || []).map(normalizeSkylightSubItem),
+    }
+  }
+
+  return next
+}
+
+function hasLegacyRainDiverterTopLevel(fields = {}) {
+  return fields.Qty != null
+    || fields['Length (LF)'] != null
+}
+
+function migrateRainDiverterFields(ri15) {
+  const fields = ri15.fields || {}
+  const existing = (ri15.subItems || []).map(sub => ({
+    fields: { ...(sub?.fields || {}) },
+    photos: Array.isArray(sub?.photos) ? sub.photos : [],
+  }))
+  if (existing.length) return existing
+
+  const qty = Math.max(0, Number(fields.Qty) || 0)
+  const length = fields['Length (LF)']
+  const hasLength = length != null && length !== ''
+  const count = qty > 0 ? qty : (hasLength || (ri15.photos || []).length ? 1 : 0)
+  const subItems = []
+
+  for (let i = 0; i < count; i += 1) {
+    subItems.push({
+      fields: i === 0 && hasLength ? { 'Length (LF)': length } : {},
+      photos: i === 0 ? (ri15.photos || []) : [],
+    })
+  }
+
+  return subItems
+}
+
+function normalizeRi15(roofData) {
+  const next = { ...roofData }
+  const ri15 = next.ri15
+  if (!ri15) return next
+
+  const fields = ri15.fields || {}
+  if (hasLegacyRainDiverterTopLevel(fields)) {
+    const {
+      Qty: _qty,
+      'Length (LF)': _length,
+      ...keptFields
+    } = fields
+    next.ri15 = {
+      ...ri15,
+      fields: keptFields,
+      subItems: migrateRainDiverterFields(ri15),
+      photos: [],
+    }
+    return next
+  }
+
+  if ((ri15.subItems || []).length) {
+    next.ri15 = {
+      ...ri15,
+      subItems: (ri15.subItems || []).map(sub => ({
+        fields: { ...(sub?.fields || {}) },
+        photos: Array.isArray(sub?.photos) ? sub.photos : [],
+      })),
     }
   }
 
@@ -1049,6 +1482,7 @@ function buildChimneySubItemsFromParsed(roof = {}) {
       fields: {
         ...(ch?.size ? { 'Size / Width': normalizeChimneySizeValue(ch.size) } : {}),
         ...(ch?.counterFlashing ? { 'Counter Flashing': ch.counterFlashing } : {}),
+        ...(ch?.cricketPresent ? { 'Cricket Present': ch.cricketPresent } : {}),
         ...(ch?.painted ? { Painted: ch.painted } : {}),
         ...(ch?.damaged ? { Damaged: ch.damaged } : {}),
         ...(ch?.damaged === 'Yes' && ch?.damageDescription ? { _damage: ch.damageDescription } : {}),
@@ -1083,9 +1517,30 @@ function buildChimneySubItemsFromParsed(roof = {}) {
 }
 
 const FLASHING_IMPORT_CONFIG = [
-  { itemId: 'ri18', listKey: 'stepFlashing', painted: 'stepFlashingPainted', damaged: 'stepFlashingDamaged', present: 'stepFlashingPresent' },
-  { itemId: 'ri19', listKey: 'counterFlashing', painted: 'counterFlashingPainted', damaged: 'counterFlashingDamaged', present: 'counterFlashingPresent' },
-  { itemId: 'ri20', listKey: 'lFlashing', painted: 'lFlashingPainted', damaged: 'lFlashingDamaged', present: 'lFlashingPresent' },
+  {
+    itemId: 'ri18',
+    listKey: 'stepFlashing',
+    painted: 'stepFlashingPainted',
+    damaged: 'stepFlashingDamaged',
+    damageDescription: 'stepFlashingDamageDescription',
+    present: 'stepFlashingPresent',
+  },
+  {
+    itemId: 'ri19',
+    listKey: 'counterFlashing',
+    painted: 'counterFlashingPainted',
+    damaged: 'counterFlashingDamaged',
+    damageDescription: 'counterFlashingDamageDescription',
+    present: 'counterFlashingPresent',
+  },
+  {
+    itemId: 'ri20',
+    listKey: 'lFlashing',
+    painted: 'lFlashingPainted',
+    damaged: 'lFlashingDamaged',
+    damageDescription: 'lFlashingDamageDescription',
+    present: 'lFlashingPresent',
+  },
 ]
 
 function isPresentValue(value) {
@@ -1096,37 +1551,29 @@ function isPresentValue(value) {
   return null
 }
 
-function buildFlashingSubItemsFromParsed(roof = {}, config) {
+function buildFlashingFieldsFromParsed(roof = {}, config) {
   const list = Array.isArray(roof[config.listKey]) ? roof[config.listKey] : []
-  if (list.length) {
-    return list.map(fl => ({
-      fields: {
-        ...(fl?.lengthLF ? { 'Length (LF)': String(fl.lengthLF) } : {}),
-        ...(fl?.painted ? { Painted: fl.painted } : {}),
-        ...(fl?.damaged ? { Damaged: fl.damaged } : {}),
-        ...(fl?.damaged === 'Yes' && fl?.damageDescription ? { _damage: fl.damageDescription } : {}),
-      },
-      photos: [],
-    }))
-  }
+  const first = list.find(fl => fl?.painted || fl?.damaged || fl?.damageDescription) || list[0]
 
-  // Legacy fallback: single shared flashing run.
-  const painted = roof[config.painted] || ''
-  const damaged = roof[config.damaged] || ''
+  const painted = first?.painted || roof[config.painted] || ''
+  const damaged = first?.damaged || roof[config.damaged] || ''
+  const damageDescription = (
+    (first?.damaged === 'Yes' && first?.damageDescription)
+    || roof[config.damageDescription]
+    || ''
+  )
   const present = isPresentValue(config.present ? roof[config.present] : null)
 
-  if (present === false) return []
+  if (present === false) return null
 
-  const hasData = painted || damaged || present === true
-  if (!hasData) return []
+  const hasData = painted || damaged || damageDescription || present === true
+  if (!hasData) return null
 
-  return [{
-    fields: {
-      ...(painted ? { Painted: painted } : {}),
-      ...(damaged ? { Damaged: damaged } : {}),
-    },
-    photos: [],
-  }]
+  return {
+    ...(painted ? { Painted: painted } : {}),
+    ...(damaged ? { Damaged: damaged } : {}),
+    ...(damaged === 'Yes' && damageDescription ? { _damage: damageDescription } : {}),
+  }
 }
 
 function buildLowSlopeSubItemsFromParsed(roof = {}) {
@@ -1169,29 +1616,45 @@ function buildLowSlopeSubItemsFromParsed(roof = {}) {
 
 function buildSkylightSubItemsFromParsed(roof = {}) {
   const list = Array.isArray(roof.skylights) ? roof.skylights : []
-  return list.map(sk => ({
-    fields: {
-      ...(sk?.style ? { Style: sk.style } : {}),
-      ...(sk?.mount ? { Mount: sk.mount } : {}),
-      ...(sk?.length ? { 'Length (in)': String(sk.length) } : {}),
-      ...(sk?.width ? { 'Width (in)': String(sk.width) } : {}),
-      ...(sk?.damaged ? { Damaged: sk.damaged } : {}),
-      ...(sk?.damaged === 'Yes' && sk?.damageDescription ? { _damage: sk.damageDescription } : {}),
-    },
-    photos: [],
-  }))
+  return list.map(sk => {
+    const size = normalizeSkylightSize(sk?.size)
+    return {
+      fields: {
+        ...(sk?.style ? { Style: sk.style } : {}),
+        ...(sk?.mount ? { Mount: sk.mount } : {}),
+        ...(size ? { Size: size } : {}),
+        ...(sk?.damaged ? { Damaged: sk.damaged } : {}),
+        ...(sk?.damaged === 'Yes' && sk?.damageDescription ? { _damage: sk.damageDescription } : {}),
+      },
+      photos: [],
+    }
+  })
 }
 
-function buildCorniceGableSubItemsFromParsed(roof = {}) {
-  const list = Array.isArray(roof.corniceGables) ? roof.corniceGables : []
-  return list.map(cg => ({
-    fields: {
-      ...(cg?.type ? { Type: cg.type } : {}),
-      ...(cg?.story ? { Story: String(cg.story) } : {}),
-      ...(cg?.qty ? { Qty: String(cg.qty) } : {}),
-    },
-    photos: [],
-  }))
+function buildRainDiverterSubItemsFromParsed(roof = {}) {
+  const list = Array.isArray(roof.rainDiverters) ? roof.rainDiverters : []
+  if (list.length) {
+    return list.map(rd => ({
+      fields: {
+        ...(rd?.lengthLF != null && rd.lengthLF !== '' ? { 'Length (LF)': String(rd.lengthLF) } : {}),
+      },
+      photos: [],
+    }))
+  }
+
+  // Legacy fallback: qty + shared LF
+  const qty = Math.max(0, Number(roof.rainDiverterQty) || 0)
+  const length = roof.rainDiverterLF
+  const hasLength = length != null && length !== ''
+  const count = qty > 0 ? qty : (hasLength ? 1 : 0)
+  const subItems = []
+  for (let i = 0; i < count; i += 1) {
+    subItems.push({
+      fields: i === 0 && hasLength ? { 'Length (LF)': String(length) } : {},
+      photos: [],
+    })
+  }
+  return subItems
 }
 
 function buildOtherStructureSubItemsFromParsed(roof = {}) {
@@ -1319,13 +1782,25 @@ export function InspectionProvider({ children }) {
 
   // ── Roof ──────────────────────────────────────────────────────────
 
-  function toggleRoofExclude(itemId) {
+  function cycleRoofStatus(itemId) {
     setData(prev => {
       const item = prev.roofData[itemId]
-      const next = { ...prev, roofData: { ...prev.roofData, [itemId]: { ...item, excluded: !item.excluded } } }
+      const status = nextRoofItemStatus(getRoofItemStatus(item))
+      const next = {
+        ...prev,
+        roofData: {
+          ...prev.roofData,
+          [itemId]: withRoofItemStatus(item, status),
+        },
+      }
       scheduleSave(next)
       return next
     })
+  }
+
+  /** @deprecated Prefer cycleRoofStatus — kept as alias for older call sites. */
+  function toggleRoofExclude(itemId) {
+    cycleRoofStatus(itemId)
   }
 
   function updateRoofField(itemId, label, value) {
@@ -1536,8 +2011,7 @@ export function InspectionProvider({ children }) {
         roofData: {
           ...prev.roofData,
           ri11: {
-            ...item,
-            excluded: false,
+            ...withRoofItemStatus(item, 'present'),
             fields: {
               ...(sharedType ? { Type: sharedType } : {}),
               ...(sharedPainted ? { Painted: sharedPainted } : {}),
@@ -1574,12 +2048,36 @@ export function InspectionProvider({ children }) {
         roofData: {
           ...prev.roofData,
           ri12: {
-            ...item,
-            excluded: false,
+            ...withRoofItemStatus(item, 'present'),
             fields: {
               ...(sharedPainted ? { Painted: sharedPainted } : {}),
             },
             subItems: syncedSubItems,
+          },
+        },
+      }
+      scheduleSave(next)
+      return next
+    })
+  }
+
+  function importRoofRainDiverters(roof = {}) {
+    const subItems = buildRainDiverterSubItemsFromParsed(roof)
+    const painted = roof.rainDiverterPainted || ''
+    if (!subItems.length && !painted) return
+
+    setData(prev => {
+      const item = prev.roofData.ri15
+      const next = {
+        ...prev,
+        roofData: {
+          ...prev.roofData,
+          ri15: {
+            ...withRoofItemStatus(item, 'present'),
+            fields: {
+              ...(painted ? { Painted: painted } : {}),
+            },
+            subItems: subItems.length ? subItems : (item.subItems || []),
           },
         },
       }
@@ -1599,8 +2097,7 @@ export function InspectionProvider({ children }) {
         roofData: {
           ...prev.roofData,
           ri17: {
-            ...item,
-            excluded: false,
+            ...withRoofItemStatus(item, 'present'),
             fields: {},
             subItems,
           },
@@ -1615,22 +2112,24 @@ export function InspectionProvider({ children }) {
     const updates = FLASHING_IMPORT_CONFIG
       .map(config => ({
         itemId: config.itemId,
-        subItems: buildFlashingSubItemsFromParsed(roof, config),
+        fields: buildFlashingFieldsFromParsed(roof, config),
       }))
-      .filter(entry => entry.subItems.length)
+      .filter(entry => entry.fields)
 
     if (!updates.length) return
 
     setData(prev => {
       let roofData = { ...prev.roofData }
-      for (const { itemId, subItems } of updates) {
+      for (const { itemId, fields } of updates) {
         roofData = {
           ...roofData,
           [itemId]: {
-            ...roofData[itemId],
-            excluded: false,
-            fields: {},
-            subItems,
+            ...withRoofItemStatus(roofData[itemId], 'present'),
+            fields: {
+              ...(roofData[itemId]?.fields || {}),
+              ...fields,
+            },
+            subItems: [],
           },
         }
       }
@@ -1651,8 +2150,7 @@ export function InspectionProvider({ children }) {
         roofData: {
           ...prev.roofData,
           ri22: {
-            ...item,
-            excluded: false,
+            ...withRoofItemStatus(item, 'present'),
             fields: {},
             subItems,
           },
@@ -1674,31 +2172,7 @@ export function InspectionProvider({ children }) {
         roofData: {
           ...prev.roofData,
           ri14: {
-            ...item,
-            excluded: false,
-            fields: {},
-            subItems,
-          },
-        },
-      }
-      scheduleSave(next)
-      return next
-    })
-  }
-
-  function importRoofCorniceGables(roof = {}) {
-    const subItems = buildCorniceGableSubItemsFromParsed(roof)
-    if (!subItems.length) return
-
-    setData(prev => {
-      const item = prev.roofData.ri21
-      const next = {
-        ...prev,
-        roofData: {
-          ...prev.roofData,
-          ri21: {
-            ...item,
-            excluded: false,
+            ...withRoofItemStatus(item, 'present'),
             fields: {},
             subItems,
           },
@@ -1720,8 +2194,7 @@ export function InspectionProvider({ children }) {
         roofData: {
           ...prev.roofData,
           ri23: {
-            ...item,
-            excluded: false,
+            ...withRoofItemStatus(item, 'present'),
             fields: {},
             subItems,
           },
@@ -1770,25 +2243,159 @@ export function InspectionProvider({ children }) {
   function updateElevField(cellKey, label, value) {
     setData(prev => {
       const cell = prev.elevData[cellKey]
-      const next = { ...prev, elevData: { ...prev.elevData, [cellKey]: { ...cell, fields: { ...cell.fields, [label]: value } } } }
+      const fields = { ...cell.fields, [label]: value }
+      // Siding Style "Other" mirrors Low Slope Location: store custom text as "Other - …"
+      if (cellKey.startsWith('ev0_') && label === 'Style') {
+        delete fields['(Other)']
+        if (value === 'Other') fields.Style = 'Other'
+      }
+      if (cellKey.startsWith('ev0_') && label === '(Other)') {
+        fields.Style = value ? `Other - ${value}` : 'Other'
+        delete fields['(Other)']
+      }
+      // Window Screens: Grade only applies to Solar type
+      if (cellKey.startsWith('ev5_') && label === 'Type' && value !== 'Solar') {
+        delete fields.Grade
+      }
+      // Garage Doors: Window Qty only when Windows is Yes
+      if (cellKey.startsWith('ev8_') && label === 'Windows' && value !== 'Yes') {
+        delete fields['Window Qty']
+      }
+      const next = { ...prev, elevData: { ...prev.elevData, [cellKey]: { ...cell, fields } } }
       scheduleSave(next)
       return next
     })
   }
 
-  function addElevPhoto(cellKey, dataUrl) {
+  function addElevSubItem(cellKey) {
     setData(prev => {
-      const cell = prev.elevData[cellKey]
-      const next = { ...prev, elevData: { ...prev.elevData, [cellKey]: { ...cell, photos: [...cell.photos, dataUrl] } } }
+      const cell = prev.elevData[cellKey] || { excluded: false, fields: {}, subItems: [], photos: [] }
+      const next = {
+        ...prev,
+        elevData: {
+          ...prev.elevData,
+          [cellKey]: {
+            ...cell,
+            subItems: [...(cell.subItems || []), { fields: {}, photos: [] }],
+          },
+        },
+      }
       scheduleSave(next)
       return next
     })
   }
 
-  function removeElevPhoto(cellKey, index) {
+  function removeElevSubItem(cellKey, index) {
     setData(prev => {
       const cell = prev.elevData[cellKey]
-      const next = { ...prev, elevData: { ...prev.elevData, [cellKey]: { ...cell, photos: cell.photos.filter((_, i) => i !== index) } } }
+      const next = {
+        ...prev,
+        elevData: {
+          ...prev.elevData,
+          [cellKey]: {
+            ...cell,
+            subItems: (cell.subItems || []).filter((_, i) => i !== index),
+          },
+        },
+      }
+      scheduleSave(next)
+      return next
+    })
+  }
+
+  function updateElevSubField(cellKey, index, label, value) {
+    setData(prev => {
+      const cell = prev.elevData[cellKey]
+      const subItems = (cell.subItems || []).map((sub, i) => {
+        if (i !== index) return sub
+        const fields = { ...sub.fields, [label]: value }
+        if (label === 'Damaged') {
+          if (value === 'No' || value === 'N/A') fields._damage = 'n/a'
+          else if (value !== 'Yes') delete fields._damage
+        }
+        if (cellKey.startsWith('ev8_') && label === 'Windows' && value !== 'Yes') {
+          delete fields['Window Qty']
+        }
+        return { ...sub, fields }
+      })
+      const next = { ...prev, elevData: { ...prev.elevData, [cellKey]: { ...cell, subItems } } }
+      scheduleSave(next)
+      return next
+    })
+  }
+
+  function replaceElevSubItems(cellKey, subItems) {
+    setData(prev => {
+      const cell = prev.elevData[cellKey] || { excluded: false, fields: {}, subItems: [], photos: [] }
+      const itemId = cellKey.split('_')[0]
+      const { shared } = splitElevSharedFields(itemId, cell.fields || {})
+      const next = {
+        ...prev,
+        elevData: {
+          ...prev.elevData,
+          [cellKey]: {
+            ...cell,
+            fields: shared,
+            photos: [],
+            subItems: (subItems || []).map(sub => ({
+              fields: stripElevSharedFromSubFields(itemId, sub.fields || {}),
+              photos: Array.isArray(sub.photos) ? sub.photos : [],
+            })),
+          },
+        },
+      }
+      scheduleSave(next)
+      return next
+    })
+  }
+
+  function addElevPhoto(target, dataUrl) {
+    const { itemId: cellKey, subIndex } = parseRoofPhotoTarget(target)
+    setData(prev => {
+      const cell = prev.elevData[cellKey]
+      if (!cell) return prev
+
+      if (subIndex != null) {
+        const subItems = (cell.subItems || []).map((sub, i) => (
+          i === subIndex
+            ? { ...sub, photos: [...(sub.photos || []), dataUrl] }
+            : sub
+        ))
+        const next = { ...prev, elevData: { ...prev.elevData, [cellKey]: { ...cell, subItems } } }
+        scheduleSave(next)
+        return next
+      }
+
+      const next = { ...prev, elevData: { ...prev.elevData, [cellKey]: { ...cell, photos: [...(cell.photos || []), dataUrl] } } }
+      scheduleSave(next)
+      return next
+    })
+  }
+
+  function removeElevPhoto(target, index) {
+    const { itemId: cellKey, subIndex } = parseRoofPhotoTarget(target)
+    setData(prev => {
+      const cell = prev.elevData[cellKey]
+      if (!cell) return prev
+
+      if (subIndex != null) {
+        const subItems = (cell.subItems || []).map((sub, i) => (
+          i === subIndex
+            ? { ...sub, photos: (sub.photos || []).filter((_, photoIndex) => photoIndex !== index) }
+            : sub
+        ))
+        const next = { ...prev, elevData: { ...prev.elevData, [cellKey]: { ...cell, subItems } } }
+        scheduleSave(next)
+        return next
+      }
+
+      const next = {
+        ...prev,
+        elevData: {
+          ...prev.elevData,
+          [cellKey]: { ...cell, photos: (cell.photos || []).filter((_, i) => i !== index) },
+        },
+      }
       scheduleSave(next)
       return next
     })
@@ -1962,7 +2569,7 @@ export function InspectionProvider({ children }) {
 
       if (parsed.valleyPresent) {
         const ri5 = roofData.ri5
-        roofData.ri5 = { ...ri5, excluded: false }
+        roofData.ri5 = withRoofItemStatus(ri5, 'present')
       }
 
       if (parsed.lineLengths?.RIDGE > 0) {
@@ -2044,11 +2651,12 @@ export function InspectionProvider({ children }) {
       expandedSections, setSectionExpanded,
       saveStatus, driveSaveStatus, setDriveSaveStatus, driveFolderId, setDriveFolderId, completion, updateJobInfo, manualSave, resetAll, startNewInspection, loadInspection, applyXmlImport,
       aiParseState, setAiParseState,
-      toggleRoofExclude, updateRoofField,
-      addRoofSubItem, removeRoofSubItem, updateRoofSubField, adjustRoofSubItemSizeCount, importRoofPipeJacks, importRoofExhaustStacks, importRoofChimneys, importRoofFlashingItems, importRoofLowSlopeItems,
-      importRoofSkylights, importRoofCorniceGables, importRoofOtherStructures,
+      toggleRoofExclude, cycleRoofStatus, updateRoofField,
+      addRoofSubItem, removeRoofSubItem, updateRoofSubField, adjustRoofSubItemSizeCount, importRoofPipeJacks, importRoofExhaustStacks, importRoofRainDiverters, importRoofChimneys, importRoofFlashingItems, importRoofLowSlopeItems,
+      importRoofSkylights, importRoofOtherStructures,
       addRoofPhoto, removeRoofPhoto,
       toggleElevExclude, updateElevField,
+      addElevSubItem, removeElevSubItem, updateElevSubField, replaceElevSubItems,
       addElevPhoto, removeElevPhoto,
       addInteriorRoom, removeInteriorRoom, updateInteriorRoom, importInteriorRooms,
       addInteriorPhoto, removeInteriorPhoto,

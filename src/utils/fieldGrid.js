@@ -38,18 +38,19 @@ function isFlashingSubFieldsPattern(fields) {
 }
 
 function isChimneySubFieldsPattern(fields) {
-  return fields.length === 4
+  return fields.length === 5
     && fields[0].t === 'select' && fields[0].l === 'Size / Width'
     && isOptionSelectField(fields[1]) && fields[1].l === 'Counter Flashing'
-    && fields[2].t === 'yn' && fields[2].l === 'Painted'
-    && fields[3].t === 'yn' && fields[3].l === 'Damaged'
+    && fields[2].t === 'yn' && fields[2].l === 'Cricket Present'
+    && fields[3].t === 'yn' && fields[3].l === 'Painted'
+    && fields[4].t === 'yn' && fields[4].l === 'Damaged'
 }
 
 function isSkylightSubFieldsPattern(fields) {
   return fields.length === 4
     && fields[0].t === 'select' && fields[0].l === 'Style'
     && fields[1].t === 'select' && fields[1].l === 'Mount'
-    && fields[2].t === 'lwxw'
+    && fields[2].t === 'select' && fields[2].l === 'Size'
     && fields[3].t === 'yn' && fields[3].l === 'Damaged'
 }
 
@@ -78,7 +79,7 @@ export function shouldStackUnderPrevious(previousField, currentField, fields, in
 
   // A full-row field (e.g. long option lists) must span the whole grid, so it
   // can't share a stacked half-width column with the following field.
-  if (previousField.fullRow) return false
+  if (previousField.fullRow || previousField.full || currentField.full) return false
 
   const prevPrev = index > 0 ? fields[index - 1] : null
   if (prevPrev && (prevPrev.t === 'radio' || prevPrev.t === 'select')) {
@@ -105,39 +106,11 @@ function isShingleStyleFieldsPattern(fields) {
 
 export function groupFieldsForGrid(fields) {
   if (isEdgeFlashingFieldsPattern(fields)) {
-    return [
-      {
-        type: 'row',
-        pairRow: true,
-        groups: [
-          { type: 'single', field: fields[0] },
-          { type: 'single', field: fields[1] },
-        ],
-      },
-      {
-        type: 'row',
-        ynPairRow: true,
-        groups: [
-          { type: 'single', field: fields[2] },
-          { type: 'single', field: fields[3] },
-        ],
-      },
-    ]
+    return fields.map(field => ({ type: 'single', field }))
   }
 
   if (isShingleStyleFieldsPattern(fields)) {
-    return [
-      { type: 'single', field: fields[0] },
-      {
-        type: 'row',
-        qtyRow: true,
-        groups: [
-          { type: 'single', field: fields[1] },
-          { type: 'single', field: fields[2] },
-        ],
-      },
-      { type: 'single', field: fields[3] },
-    ]
+    return fields.map(field => ({ type: 'single', field }))
   }
 
   if (isLengthTypePaintedPattern(fields)) {
@@ -149,59 +122,19 @@ export function groupFieldsForGrid(fields) {
   }
 
   if (isSkylightSubFieldsPattern(fields)) {
-    return [
-      {
-        type: 'row',
-        pairRow: true,
-        pairRowCompact: true,
-        groups: [
-          { type: 'single', field: fields[0] },
-          { type: 'single', field: fields[1] },
-        ],
-      },
-      { type: 'single', field: fields[2] },
-      { type: 'single', field: fields[3] },
-    ]
+    return fields.map(field => ({ type: 'single', field }))
   }
 
   if (isDualYnPairPattern(fields)) {
-    return [{
-      type: 'row',
-      ynPairRow: true,
-      groups: [
-        { type: 'single', field: fields[0] },
-        { type: 'single', field: fields[1] },
-      ],
-    }]
+    return fields.map(field => ({ type: 'single', field }))
   }
 
   if (isFlashingSubFieldsPattern(fields)) {
-    return [
-      { type: 'single', field: fields[0] },
-      {
-        type: 'row',
-        ynPairRow: true,
-        groups: [
-          { type: 'single', field: fields[1] },
-          { type: 'single', field: fields[2] },
-        ],
-      },
-    ]
+    return fields.map(field => ({ type: 'single', field }))
   }
 
   if (isChimneySubFieldsPattern(fields)) {
-    return [
-      { type: 'single', field: fields[0] },
-      { type: 'single', field: fields[1] },
-      {
-        type: 'row',
-        ynPairRow: true,
-        groups: [
-          { type: 'single', field: fields[2] },
-          { type: 'single', field: fields[3] },
-        ],
-      },
-    ]
+    return fields.map(field => ({ type: 'single', field }))
   }
 
   if (isPipeJackSubFieldsPattern(fields)) {
@@ -216,15 +149,8 @@ export function groupFieldsForGrid(fields) {
       },
     ]
 
-    const ynFields = fields.slice(2).filter(field => field.t === 'yn')
-    if (ynFields.length > 1) {
-      groups.push({
-        type: 'row',
-        ynPairRow: true,
-        groups: ynFields.map(field => ({ type: 'single', field })),
-      })
-    } else if (ynFields.length === 1) {
-      groups.push({ type: 'single', field: ynFields[0] })
+    for (const field of fields.slice(2).filter(f => f.t === 'yn')) {
+      groups.push({ type: 'single', field })
     }
 
     return groups
@@ -238,12 +164,64 @@ export function groupFieldsForGrid(fields) {
     const next = fields[i + 1]
 
     if (
-      field.t === 'yn'
-      && next?.t === 'yn' && next.l === 'Damaged'
+      field.t === 'num' && field.l === 'Qty'
+      && next?.t === 'num' && /\bLF\b/i.test(next.l)
+      && !field.full && !next.full
     ) {
       groups.push({
         type: 'row',
-        ynPairRow: true,
+        qtyRow: true,
+        groups: [
+          { type: 'single', field },
+          { type: 'single', field: next },
+        ],
+      })
+      i += 2
+      continue
+    }
+
+    if (
+      field.t === 'num' && field.l === 'Story'
+      && next?.t === 'num' && next.l === 'Qty'
+      && !field.full && !next.full
+    ) {
+      groups.push({
+        type: 'row',
+        qtyRow: true,
+        groups: [
+          { type: 'single', field },
+          { type: 'single', field: next },
+        ],
+      })
+      i += 2
+      continue
+    }
+
+    if (
+      field.t === 'num' && /^Small\b/i.test(field.l)
+      && next?.t === 'num' && /^Medium\b/i.test(next.l)
+      && fields[i + 2]?.t === 'num' && /^Large\b/i.test(fields[i + 2].l)
+    ) {
+      groups.push({
+        type: 'row',
+        qtyTripleRow: true,
+        groups: [
+          { type: 'single', field },
+          { type: 'single', field: next },
+          { type: 'single', field: fields[i + 2] },
+        ],
+      })
+      i += 3
+      continue
+    }
+
+    if (
+      field.t === 'num' && /Size/i.test(field.l)
+      && next?.t === 'num' && /\bLF\b/i.test(next.l)
+    ) {
+      groups.push({
+        type: 'row',
+        qtyRow: true,
         groups: [
           { type: 'single', field },
           { type: 'single', field: next },
@@ -310,7 +288,7 @@ export function clusterGroupsForGrid(groups) {
   }
 
   for (const group of groups) {
-    if (group.type === 'single' && isOptionSelectField(group.field)) {
+    if (group.type === 'single' && isOptionSelectField(group.field) && !group.field.full) {
       optionBuffer.push(group)
       if (optionBuffer.length === 2) flushOptions()
       continue
@@ -331,31 +309,53 @@ function compactSelectClass(field) {
 }
 
 export function fieldSelectClass(field) {
-  if (field.t === 'yn' || field.t === 'radio') return compactSelectClass(field)
+  if (field.t === 'yn' || field.t === 'radio' || field.t === 'select') return compactSelectClass(field)
   return 'field-select'
 }
 
-/** Yes/No options; Damaged, Painted, and site-access yn fields also include N/A. */
-export function ynOptionsForField(field) {
+/** Fields that should never offer an N/A choice in the dropdown. */
+function omitsNAOption(field) {
+  if (field?.allowNA === false) return true
+  if (field?.allowNA === true) return false
   const label = String(field?.l || '')
-  if (field?.allowNA === false) return ['Yes', 'No']
-  if (
+  return (
     label === 'Damaged'
     || label === 'Painted'
-    || label === 'OK Saturday Build'
+    || label === 'Type'
+    || label === 'Material'
+    || label === 'Style'
+    || label === 'Mount'
+    || label === 'Location'
+    || label === 'Width'
+    ||     label === 'Grade'
+    || label === 'Glaze'
+    || label === 'Action'
+    || /^Size\b/i.test(label)
+    || /damage/i.test(label)
+  )
+}
+
+/** Yes/No options; some site-access yn fields also include N/A. */
+export function ynOptionsForField(field) {
+  const label = String(field?.l || '')
+  if (omitsNAOption(field)) return ['Yes', 'No']
+  if (
+    label === 'OK Saturday Build'
     || label === 'Pest Control Flashing'
     || label === 'Overhead Clearance Issue'
-    || /damage/i.test(label)
   ) {
     return ['Yes', 'No', 'N/A']
   }
   return ['Yes', 'No']
 }
 
-/** Option-list fields (radio/select) always include N/A, so an AI-parsed "N/A" (item explicitly absent) has a matching option to select instead of rendering blank. */
+/** Option-list fields (radio/select). Type/Material/Size/Damaged/Painted never get N/A. */
 export function optionsForField(field) {
   const opts = Array.isArray(field?.o) ? [...field.o] : []
-  if (field?.allowNA !== false && !opts.includes('N/A')) {
+  if (omitsNAOption(field)) {
+    return opts.filter(opt => opt !== 'N/A')
+  }
+  if (!opts.includes('N/A')) {
     opts.push('N/A')
   }
   return opts

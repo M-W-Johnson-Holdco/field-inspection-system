@@ -14,7 +14,9 @@ export default function FieldsGrid({ fields, renderField, children, gridStyle: g
             group.pairRow && 'field-row--pair-row',
             group.pairRow && (compactOptionPairRow || group.pairRowCompact) && 'field-row--pair-row-compact',
             group.ynPairRow && 'field-row--yn-pair',
+            group.chimneyControlsRow && 'field-row--chimney-controls',
             group.qtyRow && 'field-row--qty-row',
+            group.qtyTripleRow && 'field-row--qty-triple',
           ].filter(Boolean).join(' ')
           return (
             <div key={group.groups.map(item => item.field.l).join('-')} className={rowClass}>

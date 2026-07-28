@@ -37,7 +37,6 @@ function DamageField({ label, yesNoValue, notesValue, onYesNo, onNotes }) {
           <option value="">Select</option>
           <option value="Yes">Yes</option>
           <option value="No">No</option>
-          <option value="N/A">N/A</option>
         </select>
       </div>
       {yesNoValue === 'Yes' && (
@@ -57,6 +56,9 @@ function RoomCard({ room, trigPhoto }) {
   const [open, setOpen] = useExpandedSection(`interior:room:${room.id}`, true)
   const f = room.fields
   const set = (field, val) => updateInteriorRoom(room.id, field, val)
+  const roomName = room.name?.startsWith('Other - ') && room.customName
+    ? room.customName
+    : (room.name || 'Unnamed Room')
 
   const damageTags = [
     f.ceilingDamage === 'Yes' && 'Ceiling Damage',
@@ -78,7 +80,7 @@ function RoomCard({ room, trigPhoto }) {
           onClick={() => setOpen(o => !o)}
         >
           <span className="int-room-title">
-            {room.name?.startsWith('Other - ') && room.customName ? room.customName : (room.name || 'Unnamed Room')}
+            {roomName}
           </span>
           <span className="int-room-pills">
             {f.story ? <span className="int-room-story">{f.story}</span> : null}
@@ -92,7 +94,8 @@ function RoomCard({ room, trigPhoto }) {
           type="button"
           className="int-btn-delete"
           onClick={() => {
-            if (confirm(`Remove "${room.name || 'this room'}"?`)) removeInteriorRoom(room.id)
+            if (!window.confirm(`Are you sure you want to delete "${roomName}"?`)) return
+            removeInteriorRoom(room.id)
           }}
           aria-label="Delete room"
           title="Delete room"

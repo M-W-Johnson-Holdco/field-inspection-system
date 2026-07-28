@@ -11,26 +11,25 @@ export const ROOF_ITEMS = [
   {
     id: 'ri0', lbl: 'Shingle Style / Grade', flags: ['P'],
     fields: [
-      { t: 'multiRadio', l: 'Style', o: ['3-Tab', 'Architectural', 'Designer', 'Disco', 'Impact Resistant'] },
-      { t: 'num', l: 'Stories' },
-      { t: 'num', l: 'Layers' },
-      { t: 'pitch', l: 'Predominant Pitch', p: '4/12' },
+      { t: 'multiRadio', l: 'Style', o: ['3-Tab', 'Architectural', 'Designer', 'Disco', 'Impact Resistant'], allowNA: false, nativeMenu: true },
+      { t: 'num', l: 'Stories', full: true },
+      { t: 'num', l: 'Layers', full: true },
+      { t: 'pitch', l: 'Predominant Pitch', p: '4/12', full: true },
     ],
   },
   {
     id: 'ri1', lbl: 'Edge Flashings', flags: ['P', 'D'],
-    compactOptionPairRow: true,
     fields: [
-      { t: 'radio', l: 'Type', o: ['Critter Guard', 'Drip Edge'] },
-      { t: 'radio', l: 'Material', o: ['Aluminum', 'Galvanized'] },
-      { t: 'yn', l: 'Painted' },
-      { t: 'yn', l: 'Damaged' },
+      { t: 'radio', l: 'Type', o: ['Critter Guard', 'Drip Edge'], full: true },
+      { t: 'radio', l: 'Material', o: ['Aluminum', 'Galvanized'], full: true },
+      { t: 'yn', l: 'Painted', full: true },
+      { t: 'yn', l: 'Damaged', full: true },
     ],
   },
   {
     id: 'ri2', lbl: 'Underlayment', flags: ['P', 'D'],
     fields: [
-      { t: 'radio', l: 'Grade', o: ['Felt', 'Synthetic', 'Unknown'] },
+      { t: 'radio', l: 'Grade', o: ['Felt - 15lbs', 'Felt - 30lbs', 'Synthetic', 'Premium Synthetic', 'Unknown'] },
       { t: 'num', l: 'Layers' },
     ],
   },
@@ -63,43 +62,43 @@ export const ROOF_ITEMS = [
   {
     id: 'ri6', lbl: 'Ridge Vent', flags: ['P', 'M', 'D'],
     fields: [
-      { t: 'num', l: 'Length (LF)', lfFeetOnly: true },
       { t: 'radio', l: 'Type', o: ['Metal', 'Shingle Over'] },
       { t: 'yn', l: 'Painted' },
+      { t: 'num', l: 'Length (LF)', lfFeetOnly: true },
       { t: 'yn', l: 'Damaged' },
     ],
   },
   {
     id: 'ri7', lbl: 'Box Vents', flags: ['P', 'M', 'D'],
     fields: [
-      { t: 'num', l: 'Qty' },
       { t: 'radio', l: 'Material', o: ['Metal', 'Plastic'] },
       { t: 'yn', l: 'Painted' },
+      { t: 'num', l: 'Qty' },
       { t: 'yn', l: 'Damaged' },
     ],
   },
   {
     id: 'ri8', lbl: 'Turbines', flags: ['P', 'M', 'D'],
     fields: [
-      { t: 'num', l: 'Qty' },
       { t: 'radio', l: 'Material', o: ['Metal', 'Plastic'] },
       { t: 'yn', l: 'Painted' },
+      { t: 'num', l: 'Qty' },
       { t: 'yn', l: 'Damaged' },
     ],
   },
   {
     id: 'ri9', lbl: 'Power Vents', flags: ['P', 'M', 'D'],
     fields: [
-      { t: 'num', l: 'Qty' },
       { t: 'yn', l: 'Painted' },
+      { t: 'num', l: 'Qty' },
       { t: 'yn', l: 'Damaged' },
     ],
   },
   {
     id: 'ri10', lbl: 'Solar Vents', flags: ['P', 'M', 'D'],
     fields: [
-      { t: 'num', l: 'Qty' },
       { t: 'yn', l: 'Painted' },
+      { t: 'num', l: 'Qty' },
       { t: 'yn', l: 'Damaged' },
     ],
   },
@@ -126,13 +125,14 @@ export const ROOF_ITEMS = [
       { t: 'yn', l: 'Painted', allowNA: false },
     ],
     subFields: [
-      { t: 'select', l: 'Size', o: ['Select', 'Small (4")', 'Medium (5-6")', 'Large (7-8")'], fullRow: true },
-      { t: 'multi', l: 'Damaged', o: ['Cap', 'Stack', 'Flange'], allowNA: false, halfWidthDesktop: true },
+      { t: 'select', l: 'Size', o: ['Select', 'Small (3-4")', 'Medium (5-7")', 'Large (8"+)'], fullRow: true },
+      { t: 'multi', l: 'Damaged', o: ['Cap', 'Stack', 'Flange'], allowNA: false, halfWidthDesktop: true, nativeMenu: true },
     ],
   },
   {
     id: 'ri13', lbl: 'Kickouts', flags: ['P'],
     fields: [
+      { t: 'yn', l: 'Existing' },
       { t: 'yn', l: 'Needed' },
       { t: 'yn', l: 'Painted' },
     ],
@@ -143,21 +143,25 @@ export const ROOF_ITEMS = [
     addMoreLabel: 'Add Skylight',
     subItemPhotos: true,
     subItemDamaged: true,
-    subItemSizeCounters: { field: 'Style', sizes: ['Fixed', 'Venting', 'Tubular'], labelSuffix: '', counterLabel: 'style', compact: true },
+    subItemSizeCounters: { field: 'Style', sizes: ['Fixed', 'Venting', 'Tubular'], labelSuffix: '', counterLabel: 'style', equalWidth: true },
     fields: [],
     subFields: [
-      { t: 'select', l: 'Style', o: ['Select', 'Fixed', 'Tubular', 'Venting'] },
-      { t: 'select', l: 'Mount', o: ['Select', 'Flush Mount', 'Curb Mount'] },
-      { t: 'lwxw', l: 'Size (L x W – Inches)', lengthKey: 'Length (in)', widthKey: 'Width (in)' },
+      { t: 'select', l: 'Style', o: ['Select', 'Fixed', 'Tubular', 'Venting'], full: true },
+      { t: 'select', l: 'Mount', o: ['Select', 'Flush Mount', 'Curb Mount'], full: true },
+      { t: 'select', l: 'Size', fullRow: true, o: ['Select', 'Small', 'Medium', 'Large', 'X-Large'] },
       { t: 'yn', l: 'Damaged' },
     ],
   },
   {
     id: 'ri15', lbl: 'Rain Diverter', flags: ['P', 'M'],
+    addMore: true,
+    addMoreLabel: 'Add Rain Diverter',
+    subItemPhotos: true,
     fields: [
-      { t: 'num', l: 'Qty' },
-      { t: 'num', l: 'Length (LF)', lfFeetOnly: true },
-      { t: 'yn', l: 'Painted' },
+      { t: 'yn', l: 'Painted', full: true },
+    ],
+    subFields: [
+      { t: 'num', l: 'Length (LF)', lfFeetOnly: true, full: true },
     ],
   },
   {
@@ -172,68 +176,43 @@ export const ROOF_ITEMS = [
     addMoreLabel: 'Add Chimney',
     subItemPhotos: true,
     subItemDamaged: true,
-    subItemSizeCounters: { field: 'Size / Width', sizes: ['Small', 'Medium', 'Large'], labelSuffix: '', counterLabel: 'size', matchPrefix: true, compact: true },
+    subItemSizeCounters: { field: 'Size / Width', sizes: ['Small', 'Medium', 'Large'], labelSuffix: '', counterLabel: 'size', matchPrefix: true, equalWidth: true },
     fields: [],
     subFields: [
       { t: 'select', l: 'Size / Width', fullRow: true, o: ['Select', 'Small (width < 24")', 'Medium (width 24"–36")', 'Large (width > 36")'] },
-      { t: 'radio', l: 'Counter Flashing', o: ['Replace', 'Reuse'] },
-      { t: 'yn', l: 'Painted' },
-      { t: 'yn', l: 'Damaged' },
+      { t: 'radio', l: 'Counter Flashing', o: ['Replace', 'Reuse'], full: true },
+      { t: 'yn', l: 'Cricket Present', full: true },
+      { t: 'yn', l: 'Painted', full: true },
+      { t: 'yn', l: 'Damaged', full: true },
     ],
   },
   {
     id: 'ri18', lbl: 'Step Flashing', flags: ['P', 'M'],
-    addMore: true,
-    addMoreLabel: 'Add Step Flashing',
-    subItemPhotos: true,
-    subItemDamaged: true,
-    subItemTotalCounter: { label: 'Flashes' },
-    fields: [],
-    subFields: [
-      { t: 'num', l: 'Length (LF)', lfFeetOnly: true },
+    fields: [
       { t: 'yn', l: 'Painted' },
       { t: 'yn', l: 'Damaged' },
     ],
   },
   {
     id: 'ri19', lbl: 'Counter Flashing', flags: ['P', 'M'],
-    addMore: true,
-    addMoreLabel: 'Add Counter Flashing',
-    subItemPhotos: true,
-    subItemDamaged: true,
-    subItemTotalCounter: { label: 'Flashes' },
-    fields: [],
-    subFields: [
-      { t: 'num', l: 'Length (LF)', lfFeetOnly: true },
+    fields: [
       { t: 'yn', l: 'Painted' },
       { t: 'yn', l: 'Damaged' },
     ],
   },
   {
     id: 'ri20', lbl: 'L Flashing', flags: ['P', 'M'],
-    addMore: true,
-    addMoreLabel: 'Add L Flashing',
-    subItemPhotos: true,
-    subItemDamaged: true,
-    subItemTotalCounter: { label: 'Flashes' },
-    fields: [],
-    subFields: [
-      { t: 'num', l: 'Length (LF)', lfFeetOnly: true },
+    fields: [
       { t: 'yn', l: 'Painted' },
       { t: 'yn', l: 'Damaged' },
     ],
   },
   {
     id: 'ri21', lbl: 'Cornice Gables', flags: ['P', 'M'],
-    addMore: true,
-    addMoreLabel: 'Add Cornice Gable',
-    subItemPhotos: true,
-    subItemSizeCounters: { field: 'Type', sizes: ['Shingles', 'Metal'], labelSuffix: '', counterLabel: 'type', compact: true },
-    fields: [],
-    subFields: [
-      { t: 'select', l: 'Type', o: ['Select', 'Metal', 'Shingles'] },
-      { t: 'num', l: 'Story', p: '1' },
-      { t: 'num', l: 'Qty' },
+    fields: [
+      { t: 'select', l: 'Type', o: ['Select', 'Metal', 'Shingles'], full: true },
+      { t: 'num', l: 'Story', p: '1', full: true },
+      { t: 'num', l: 'Qty', full: true },
     ],
   },
   {
@@ -256,7 +235,7 @@ export const ROOF_ITEMS = [
   {
     id: 'ri23', lbl: 'Other Structures', flags: ['P', 'M'],
     addMore: true,
-    addMoreLabel: 'Add Structure',
+    addMoreLabel: 'Add Other Structure',
     subItemPhotos: true,
     subItemDamaged: true,
     subItemTotalCounter: { label: 'Structures' },

@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { ChevronDown, Trash2 } from 'lucide-react'
+import { ChevronDown, Plus, Trash2 } from 'lucide-react'
 import { useInspection } from '../../context/InspectionContext'
 import PhotoZone from '../PhotoZone'
 import FieldsGrid from '../FieldsGrid'
@@ -11,6 +11,7 @@ import { fieldGroupProps } from '../../utils/fieldLayout'
 import { fieldSelectClass, materialOptionColumnStyle, withSelectPlaceholderClass, visibleFieldsForValues, ynOptionsForField, optionsForField } from '../../utils/fieldGrid'
 import { formatPitch, parsePitchNumerator } from '../../utils/pitch'
 import useExpandedSection from '../../hooks/useExpandedSection'
+import { getRoofItemStatus, isRoofItemActive } from '../../utils/roofItemStatus'
 
 // ── Field Renderer ─────────────────────────────────────────────────
 function PitchInput({ field, value, onChange }) {
@@ -107,6 +108,44 @@ function FieldRenderer({ field, value, onChange, subFields, onSubFieldChange }) 
   if (t === 'multiRadio' || t === 'multi') {
     const arr = Array.isArray(value) ? value : []
     const opts = optionsForField(field)
+
+    // Native device picker (same control as Yes/No): pick options one at a time.
+    if (field.nativeMenu) {
+      const ordered = opts.filter(opt => arr.includes(opt))
+      const displayValue = ordered.length ? '__selected__' : ''
+      const displayLabel = ordered.length ? ordered.join(', ') : 'Select'
+      return (
+        <div {...fieldGroupProps(field)}>
+          {lbl}
+          <select
+            className={withSelectPlaceholderClass(
+              fieldSelectClass(
+                field.halfWidthDesktop ? { ...field, t: 'radio' } : field,
+              ),
+              displayValue,
+            )}
+            value={displayValue}
+            onChange={e => {
+              const next = e.target.value
+              if (!next || next === '__selected__') return
+              const nextArr = arr.includes(next)
+                ? arr.filter(v => v !== next)
+                : [...arr, next]
+              onChange(opts.filter(opt => nextArr.includes(opt)))
+            }}
+            aria-label={l}
+          >
+            <option value={displayValue} hidden>{displayLabel}</option>
+            {opts.map(opt => (
+              <option key={opt} value={opt}>
+                {ordered.includes(opt) ? `✓ ${opt}` : opt}
+              </option>
+            ))}
+          </select>
+        </div>
+      )
+    }
+
     return (
       <div {...fieldGroupProps(field)}>
         {lbl}
@@ -145,12 +184,13 @@ function FieldRenderer({ field, value, onChange, subFields, onSubFieldChange }) 
   }
 
   if (t === 'select') {
+    const selectValue = value || o[0]
     return (
       <div {...fieldGroupProps(field)}>
         {lbl}
         <select
-          className="field-select"
-          value={value || o[0]}
+          className={withSelectPlaceholderClass(fieldSelectClass(field), selectValue)}
+          value={selectValue}
           onChange={e => onChange(e.target.value)}
         >
           {optionsForField(field).map(opt => (
@@ -244,46 +284,110 @@ function FieldRenderer({ field, value, onChange, subFields, onSubFieldChange }) 
   )
 }
 
-function ExhaustStackCard({
+function selectValue(value) {
+  if (value == null || value === '' || value === 'Select') return ''
+  return String(value)
+}
+
+function collapsibleSubPills(itemId, fields = {}) {
+  const grey = []
+  const red = []
+
+  if (itemId === 'ri12') {
+    const size = String(fields.Size || '').match(/^(Small|Medium|Large)/)?.[1]
+    if (size) grey.push(size)
+    if (Array.isArray(fields.Damaged)) {
+      ;['Cap', 'Stack', 'Flange'].forEach(part => {
+        if (fields.Damaged.includes(part)) red.push(part)
+      })
+    }
+  } else if (itemId === 'ri14') {
+    const style = selectValue(fields.Style)
+    const size = selectValue(fields.Size)
+    if (style) grey.push(style)
+    if (size) grey.push(size)
+    if (fields.Damaged === 'Yes') red.push('Damaged')
+  } else if (itemId === 'ri15') {
+    const length = selectValue(fields['Length (LF)'])
+    if (length) grey.push(`${length} LF`)
+  } else if (itemId === 'ri17') {
+    const size = String(fields['Size / Width'] || '').match(/^(Small|Medium|Large)/)?.[1]
+    const counter = selectValue(fields['Counter Flashing'])
+    if (size) grey.push(size)
+    if (counter) grey.push(counter)
+    if (fields['Cricket Present'] === 'Yes') grey.push('Cricket')
+    if (fields.Damaged === 'Yes') red.push('Damaged')
+  } else if (itemId === 'ri22') {
+    const location = selectValue(fields.Location)
+    const style = selectValue(fields['Style / Grade'])
+    if (location) grey.push(location.startsWith('Other') ? 'Other' : location)
+    if (style) grey.push(style)
+    if (fields.Damaged === 'Yes') red.push('Damaged')
+  } else if (itemId === 'ri23') {
+    const type = selectValue(fields.Type)
+    const style = selectValue(fields['Style / Grade'])
+    if (type) grey.push(type)
+    if (style) grey.push(style)
+    if (fields.Damaged === 'Yes') red.push('Damaged')
+  }
+
+  return { grey, red }
+}
+
+function showSubItemDamageDescription(fields = {}) {
+  return fields.Damaged === 'Yes'
+    || (Array.isArray(fields.Damaged) && fields.Damaged.length > 0)
+}
+
+function CollapsibleRoofSubCard({
+  itemId,
+  title,
   sub,
   index,
   subFields,
+  gridStyle,
   trigPhoto,
   onUpdateField,
   onRemove,
   onRemovePhoto,
 }) {
-  const [open, setOpen] = useExpandedSection(`roof:ri12:sub:${index}`, true)
-  const damagedParts = Array.isArray(sub.fields?.Damaged) ? sub.fields.Damaged : []
-  const sizePill = String(sub.fields?.Size || '').match(/^(Small|Medium|Large)/)?.[1] || ''
+  const [open, setOpen] = useExpandedSection(`roof:${itemId}:sub:${index}`, true)
+  const { grey, red } = collapsibleSubPills(itemId, sub.fields || {})
+  const showDamage = showSubItemDamageDescription(sub.fields || {})
+  const itemLabel = `${title} #${index + 1}`
 
   return (
-    <div className={`ri-sub-card${damagedParts.length ? ' ri-sub-card--damage' : ''}`}>
+    <div className={`ri-sub-card${red.length ? ' ri-sub-card--damage' : ''}`}>
       <div className="int-room-header">
         <button
           type="button"
-          className="int-room-toggle ri-exhaust-stack-toggle"
+          className="int-room-toggle ri-collapsible-sub-toggle"
           aria-expanded={open}
           onClick={() => setOpen(value => !value)}
         >
-          <span className="ri-sub-card__title">Exhaust Stack #{index + 1}</span>
-          <span className="ri-exhaust-stack-pills">
-            {sizePill && <span className="int-room-story">{sizePill}</span>}
-            {damagedParts.map(part => (
-              <span key={part} className="int-damage-badge">{part}</span>
-            ))}
-          </span>
+          <span className="ri-sub-card__title">{itemLabel}</span>
           <ChevronDown
             className={`int-room-chevron${open ? ' int-room-chevron--open' : ''}`}
             aria-hidden="true"
           />
+          <span className="ri-collapsible-sub-pills">
+            {grey.map(pill => (
+              <span key={`grey-${pill}`} className="int-room-story">{pill}</span>
+            ))}
+            {red.map(pill => (
+              <span key={`red-${pill}`} className="int-damage-badge">{pill}</span>
+            ))}
+          </span>
         </button>
         <button
           type="button"
           className="int-btn-delete"
-          onClick={onRemove}
-          aria-label={`Delete exhaust stack ${index + 1}`}
-          title="Delete exhaust stack"
+          onClick={() => {
+            if (!window.confirm(`Are you sure you want to delete ${itemLabel}?`)) return
+            onRemove()
+          }}
+          aria-label={`Delete ${itemLabel}`}
+          title={`Delete ${itemLabel}`}
         >
           <Trash2 size={15} />
         </button>
@@ -291,22 +395,32 @@ function ExhaustStackCard({
 
       <div className={`collapse-panel ${open ? 'collapse-panel--open' : ''}`} aria-hidden={!open}>
         <div className="collapse-panel__inner">
-          <div className="ri-exhaust-stack-body">
-            <FieldsGrid
-              fields={visibleFieldsForValues(subFields, sub.fields || {})}
-              renderField={field => (
-                <FieldRenderer
-                  key={field.l}
-                  field={field}
-                  value={sub.fields?.[field.l]}
-                  subFields={sub.fields}
-                  onChange={value => onUpdateField(field.l, value)}
-                  onSubFieldChange={onUpdateField}
-                />
-              )}
-            />
+          <div className="ri-collapsible-sub-body">
+            {subFields && subFields.length > 0 && (
+              <FieldsGrid
+                fields={visibleFieldsForValues(subFields, sub.fields || {})}
+                gridStyle={gridStyle}
+                renderField={field => {
+                  let fieldValue = sub.fields?.[field.l]
+                  if (field.l === '(Other)') {
+                    const loc = sub.fields?.Location || ''
+                    fieldValue = loc.startsWith('Other - ') ? loc.slice(8) : ''
+                  }
+                  return (
+                    <FieldRenderer
+                      key={field.l}
+                      field={field}
+                      value={fieldValue}
+                      subFields={sub.fields}
+                      onChange={value => onUpdateField(field.l, value)}
+                      onSubFieldChange={onUpdateField}
+                    />
+                  )
+                }}
+              />
+            )}
 
-            {damagedParts.length > 0 && (
+            {showDamage && (
               <div className="ri-damage-row">
                 <label className="form-label">Damage Description</label>
                 <DamageDescriptionInput
@@ -318,7 +432,7 @@ function ExhaustStackCard({
             )}
 
             <PhotoZone
-              entityId={`ri12__sub_${index}`}
+              entityId={`${itemId}__sub_${index}`}
               photos={sub.photos || []}
               trigPhoto={trigPhoto}
               onRemove={onRemovePhoto}
@@ -333,21 +447,47 @@ function ExhaustStackCard({
 // ── Check Item ────────────────────────────────────────────────────
 function CheckItem({ itemDef, trigPhoto }) {
   const {
-    updateRoofField, toggleRoofExclude,
+    updateRoofField, cycleRoofStatus,
     addRoofSubItem, removeRoofSubItem, updateRoofSubField,
     adjustRoofSubItemSizeCount,
     removeRoofPhoto, data,
   } = useInspection()
 
-  const { id, lbl, flags, fields = [], addMore, addMoreLabel, subFields, addMoreAtTop, subItemPhotos, subItemDamaged, subFieldsUseMaterialColumnWidth, subItemSizeCounters, subItemTotalCounter, compactOptionPairRow } = itemDef
+  const { id, lbl, flags, fields = [], addMore, addMoreLabel, subFields, addMoreAtTop, subItemPhotos, subFieldsUseMaterialColumnWidth, subItemSizeCounters, subItemTotalCounter, compactOptionPairRow } = itemDef
   const item = data.roofData[id]
-  const { excluded, subItems, photos } = item
+  const { subItems, photos } = item
+  const status = getRoofItemStatus(item)
+  const active = isRoofItemActive(item)
 
   const hasP = flags.includes('P')
   const hasD = flags.includes('D')
   const hasInlineDamaged = fields.some(f => f.l === 'Damaged')
   const subItemLabel = (addMoreLabel || 'Item').replace('Add ', '')
   const showItemPhotos = hasP && !subItemPhotos
+  const typeAboveSizeQty = Boolean(subItemSizeCounters?.editable)
+  const leadingFields = typeAboveSizeQty
+    ? fields.filter(f => f.l === 'Type' || f.l === 'Painted')
+    : []
+  const mainFields = typeAboveSizeQty
+    ? fields.filter(f => f.l !== 'Type' && f.l !== 'Painted')
+    : fields
+
+  function renderFieldControl(f) {
+    return (
+      <FieldRenderer
+        key={f.l}
+        field={f}
+        value={item.fields[f.l]}
+        onChange={val => {
+          updateRoofField(id, f.l, val)
+          if (f.l === 'Damaged') {
+            if (val === 'No' || val === 'N/A') updateRoofField(id, '_damage', 'n/a')
+            else if (val !== 'Yes') updateRoofField(id, '_damage', '')
+          }
+        }}
+      />
+    )
+  }
 
   const sizeCounts = subItemSizeCounters
     ? Object.fromEntries(
@@ -374,10 +514,13 @@ function CheckItem({ itemDef, trigPhoto }) {
 
   function renderSizeCounters() {
     if (!subItemSizeCounters || !sizeCounts) return null
+    // Editable counters already show qty in the steppers — skip the summary row.
+    if (subItemSizeCounters.editable) return null
 
     const counterClass = [
       'ri-size-counters',
       subItemSizeCounters.compact && 'ri-size-counters--compact',
+      subItemSizeCounters.equalWidth && 'ri-size-counters--equal',
     ].filter(Boolean).join(' ')
 
     return (
@@ -421,7 +564,6 @@ function CheckItem({ itemDef, trigPhoto }) {
                 </button>
                 <input
                   className="field-input number-stepper__input"
-                  style={{ '--field-ch': 2 }}
                   type="number"
                   inputMode="numeric"
                   min="0"
@@ -480,77 +622,19 @@ function CheckItem({ itemDef, trigPhoto }) {
     return (
       <div className="ri-sub-items">
         {subItems.map((sub, idx) => (
-          id === 'ri12' ? (
-            <ExhaustStackCard
-              key={idx}
-              sub={sub}
-              index={idx}
-              subFields={subFields}
-              trigPhoto={trigPhoto}
-              onUpdateField={(label, value) => updateRoofSubField(id, idx, label, value)}
-              onRemove={() => removeRoofSubItem(id, idx)}
-              onRemovePhoto={removeRoofPhoto}
-            />
-          ) : (
-          <div key={idx} className="ri-sub-card">
-            <div className="ri-sub-card__top">
-              <span className="ri-sub-card__title">
-                {subItemLabel} #{idx + 1}
-              </span>
-              <button
-                type="button"
-                className="ri-btn-remove"
-                onClick={() => removeRoofSubItem(id, idx)}
-              >
-                Remove
-              </button>
-            </div>
-            {subFields && subFields.length > 0 && (
-              <FieldsGrid
-                fields={visibleFieldsForValues(subFields, sub.fields || {})}
-                gridStyle={subFieldsUseMaterialColumnWidth ? materialOptionColumnStyle() : undefined}
-                renderField={f => {
-                  let fieldValue = sub.fields[f.l]
-                  if (f.l === '(Other)') {
-                    const loc = sub.fields['Location'] || ''
-                    fieldValue = loc.startsWith('Other - ') ? loc.slice(8) : ''
-                  }
-                  return (
-                    <FieldRenderer
-                      key={f.l}
-                      field={f}
-                      value={fieldValue}
-                      subFields={sub.fields}
-                      onChange={val => updateRoofSubField(id, idx, f.l, val)}
-                      onSubFieldChange={(label, val) => updateRoofSubField(id, idx, label, val)}
-                    />
-                  )
-                }}
-              />
-            )}
-            {subItemDamaged && (
-              sub.fields['Damaged'] === 'Yes'
-              || (Array.isArray(sub.fields['Damaged']) && sub.fields['Damaged'].length > 0)
-            ) && (
-              <div className="ri-damage-row">
-                <label className="form-label">Damage Description</label>
-                <DamageDescriptionInput
-                  placeholder="Describe damage..."
-                  value={sub.fields['_damage'] || ''}
-                  onChange={val => updateRoofSubField(id, idx, '_damage', val)}
-                />
-              </div>
-            )}
-            {hasP && subItemPhotos && (
-              <PhotoZone
-                entityId={`${id}__sub_${idx}`}
-                photos={sub.photos || []}
-                trigPhoto={trigPhoto}
-                onRemove={removeRoofPhoto}
-              />
-            )}
-          </div>
-          )
+          <CollapsibleRoofSubCard
+            key={idx}
+            itemId={id}
+            title={subItemLabel}
+            sub={sub}
+            index={idx}
+            subFields={subFields}
+            gridStyle={subFieldsUseMaterialColumnWidth ? materialOptionColumnStyle() : undefined}
+            trigPhoto={trigPhoto}
+            onUpdateField={(label, value) => updateRoofSubField(id, idx, label, value)}
+            onRemove={() => removeRoofSubItem(id, idx)}
+            onRemovePhoto={removeRoofPhoto}
+          />
         ))}
         {!addMoreAtTop && (
           <button
@@ -566,25 +650,54 @@ function CheckItem({ itemDef, trigPhoto }) {
   }
 
   return (
-    <div className={`ri-item${excluded ? ' ri-item--excluded' : ''}`}>
+    <div className={`ri-item${status === 'na' ? ' ri-item--excluded' : ''}${status === 'supplement' ? ' ri-item--supplement' : ''}`}>
       <div className="ri-item__top">
         <button
           type="button"
-          className={`ri-item__toggle${excluded ? ' ri-item__toggle--excl' : ''}`}
-          onClick={() => toggleRoofExclude(id)}
-          title={excluded ? 'Click to include' : 'Click to mark as N/A'}
+          className={`ri-item__toggle ri-item__toggle--${status}`}
+          onClick={() => cycleRoofStatus(id)}
+          title={
+            status === 'present'
+              ? 'Present — click for Supplement'
+              : status === 'supplement'
+                ? 'Supplement — click for N/A'
+                : 'N/A — click for Present'
+          }
+          aria-label={
+            status === 'present'
+              ? `${lbl}: Present`
+              : status === 'supplement'
+                ? `${lbl}: Supplement`
+                : `${lbl}: N/A`
+          }
         >
-          {excluded ? 'N/A' : '✓'}
+          {status === 'na' ? 'N/A' : status === 'supplement' ? (
+            <Plus size={18} strokeWidth={3} aria-hidden="true" />
+          ) : (
+            '✓'
+          )}
         </button>
-        <span className={`ri-item__name${excluded ? ' ri-item__name--excl' : ''}`}>
+        <span className={`ri-item__name${status === 'na' ? ' ri-item__name--excl' : ''}${status === 'supplement' ? ' ri-item__name--supplement' : ''}`}>
           {lbl}
+          {status === 'supplement' && (
+            <span className="ri-item__status-pill ri-item__status-pill--supplement">Supplement</span>
+          )}
         </span>
       </div>
 
-      {!excluded && (
+      {active && (
         <div className="ri-item__body">
 
           {renderSizeCounters()}
+
+          {leadingFields.length > 0 && (
+            <FieldsGrid
+              fields={leadingFields}
+              compactOptionPairRow={compactOptionPairRow}
+              renderField={renderFieldControl}
+            />
+          )}
+
           {renderSizeAdjusters()}
           {renderTotalCounter()}
 
@@ -598,24 +711,11 @@ function CheckItem({ itemDef, trigPhoto }) {
             </button>
           )}
 
-          {fields.length > 0 && (
+          {(mainFields.length > 0 || showItemPhotos || (hasD && !hasInlineDamaged)) && (
             <FieldsGrid
-              fields={fields}
+              fields={mainFields}
               compactOptionPairRow={compactOptionPairRow}
-              renderField={f => (
-                <FieldRenderer
-                  key={f.l}
-                  field={f}
-                  value={item.fields[f.l]}
-                  onChange={val => {
-                    updateRoofField(id, f.l, val)
-                    if (f.l === 'Damaged') {
-                      if (val === 'No' || val === 'N/A') updateRoofField(id, '_damage', 'n/a')
-                      else if (val !== 'Yes') updateRoofField(id, '_damage', '')
-                    }
-                  }}
-                />
-              )}
+              renderField={renderFieldControl}
             >
               {hasD && !hasInlineDamaged && (
                 <FieldRenderer

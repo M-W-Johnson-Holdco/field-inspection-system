@@ -1,6 +1,7 @@
 import { ROOF_ITEMS, SUBSECTIONS } from '../data/roofItems'
 import { DIRECTIONS, ELEV_ITEMS } from '../data/elevItems'
 import { EXTERIOR_ITEMS, EXTERIOR_SUBSECTIONS } from '../data/exteriorItems'
+import { isRoofItemActive } from '../utils/roofItemStatus'
 
 function groupBySubsection(items, subsectionMap) {
   const keys = Object.keys(subsectionMap)
@@ -29,7 +30,7 @@ function subItemLabel(itemDef, index) {
 
 function buildRoofLeaves(itemDef, roofData) {
   const item = roofData?.[itemDef.id]
-  if (!item || item.excluded) return []
+  if (!item || !isRoofItemActive(item)) return []
   if (!itemDef.flags?.includes('P')) return []
 
   if (itemDef.subItemPhotos) {
@@ -65,7 +66,7 @@ function buildRoofBranch(roofData) {
       group.items.forEach(itemDef => {
         if (!itemDef.flags?.includes('P')) return
         const item = roofData?.[itemDef.id]
-        if (item?.excluded) return
+        if (!isRoofItemActive(item)) return
 
         if (itemDef.subItemPhotos) {
           const leaves = buildRoofLeaves(itemDef, roofData)
@@ -103,6 +104,27 @@ function buildElevationsBranch(elevData) {
         const cellKey = `${itemDef.id}_${direction}`
         const cell = elevData?.[cellKey]
         if (cell?.excluded) return []
+
+        if (itemDef.subItemPhotos) {
+          const subItems = Array.isArray(cell?.subItems) ? cell.subItems : []
+          const leaves = subItems.map((sub, index) => ({
+            id: `${cellKey}__sub_${index}`,
+            label: subItemLabel(itemDef, index),
+            kind: 'elev',
+            target: `${cellKey}__sub_${index}`,
+            photoCount: Array.isArray(sub.photos) ? sub.photos.length : 0,
+            leaf: true,
+          }))
+          return [{
+            id: cellKey,
+            label: itemDef.lbl,
+            children: leaves,
+            emptyHint: leaves.length === 0
+              ? `No ${itemDef.lbl.toLowerCase()} yet — add them in Elevations first.`
+              : null,
+          }]
+        }
+
         return [{
           id: cellKey,
           label: itemDef.lbl,
@@ -199,6 +221,12 @@ export function getLeafPhotos(data = {}, leaf) {
   }
 
   if (leaf.kind === 'elev') {
+    const match = String(leaf.target).match(/^(.+)__sub_(\d+)$/)
+    if (match) {
+      const cell = data.elevData?.[match[1]]
+      const sub = cell?.subItems?.[Number(match[2])]
+      return Array.isArray(sub?.photos) ? sub.photos : []
+    }
     return Array.isArray(data.elevData?.[leaf.target]?.photos)
       ? data.elevData[leaf.target].photos
       : []

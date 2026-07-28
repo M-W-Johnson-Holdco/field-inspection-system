@@ -57,15 +57,15 @@ const ROOF_ITEM_PATH = {
 const ELEV_ITEM_FOLDER = {
   ev0:  'siding',
   ev1:  'fascia',
-  ev2:  'soffit',
   ev3:  'gutters',
+  ev11: 'gutter_guards',
   ev4:  'downspouts',
+  ev12: 'windows',
   ev5:  'window_screens',
+  ev13: 'gable_vents',
   ev6:  'shutters',
-  ev7:  'entry_doors',
+  ev7:  'doors',
   ev8:  'garage_doors',
-  ev9:  'ac_condenser',
-  ev10: 'other_notes',
 }
 
 // Maps exterior item IDs → [section folder, item folder]
@@ -127,6 +127,19 @@ export function collectInspectionPhotos(inspectionData) {
         url,
       })
     })
+    ;(cell.subItems || []).forEach((sub, subIndex) => {
+      ;(sub.photos || []).forEach((url, i) => {
+        if (!url) return
+        const subFolder = sanitizePathSegment(
+          `${subIndex + 1}-${slugify(itemFolder.replace(/s$/, ''))}`,
+        )
+        photos.push({
+          path: ['photos', '2-elevations', dirSlug, itemFolder, subFolder],
+          name: photoFileName(subFolder, i),
+          url,
+        })
+      })
+    })
   }
 
   for (const [itemId, item] of Object.entries(inspectionData?.exteriorData || {})) {
@@ -172,6 +185,9 @@ export function stripPhotosFromInspection(clean) {
   }
   for (const cell of Object.values(clean.elevData || {})) {
     cell.photos = []
+    ;(cell.subItems || []).forEach(sub => {
+      sub.photos = []
+    })
   }
   for (const item of Object.values(clean.exteriorData || {})) {
     if (item.photos) item.photos = []
