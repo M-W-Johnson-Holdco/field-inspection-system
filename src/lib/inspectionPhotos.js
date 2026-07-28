@@ -62,11 +62,10 @@ const ELEV_ITEM_FOLDER = {
   ev4:  'downspouts',
   ev12: 'windows',
   ev5:  'window_screens',
+  ev13: 'gable_vents',
   ev6:  'shutters',
-  ev7:  'entry_doors',
+  ev7:  'doors',
   ev8:  'garage_doors',
-  ev9:  'ac_condenser',
-  ev10: 'other_notes',
 }
 
 // Maps exterior item IDs → [section folder, item folder]

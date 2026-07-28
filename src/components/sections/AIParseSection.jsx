@@ -106,36 +106,66 @@ const ELEV_MAP = [
   { key: 'windowGrade',          itemId: 'ev12', label: 'Grade' },
   { key: 'windowType',           itemId: 'ev12', label: 'Type' },
   { key: 'windowGlaze',          itemId: 'ev12', label: 'Glaze' },
-  { key: 'windowSmallQty',       itemId: 'ev12', label: 'Small (3–11 sq ft)' },
-  { key: 'windowMediumQty',      itemId: 'ev12', label: 'Medium (12–19 sq ft)' },
-  { key: 'windowLargeQty',       itemId: 'ev12', label: 'Large (19+ sq ft)' },
   { key: 'windowPainted',        itemId: 'ev12', label: 'Painted' },
+  { key: 'windowLength',         itemId: 'ev12', label: 'Length (ft)' },
+  { key: 'windowWidth',          itemId: 'ev12', label: 'Width (ft)' },
   { key: 'windowDamage',         itemId: 'ev12', label: 'Damaged' },
   { key: 'windowDamageDescription', itemId: 'ev12', label: '_damage' },
+  { key: 'windowQty',            itemId: 'ev12', label: 'Qty' },
+  { key: 'windowSmallQty',       itemId: 'ev12', label: '_smallQty' },
+  { key: 'windowMediumQty',      itemId: 'ev12', label: '_mediumQty' },
+  { key: 'windowLargeQty',       itemId: 'ev12', label: '_largeQty' },
   { key: 'screenType',           itemId: 'ev5',  label: 'Type' },
   { key: 'screenGrade',          itemId: 'ev5',  label: 'Grade' },
-  { key: 'screenQty',            itemId: 'ev5',  label: 'Small (1–9 sq ft)' },
-  { key: 'screenSmallQty',       itemId: 'ev5',  label: 'Small (1–9 sq ft)' },
-  { key: 'screenMediumQty',      itemId: 'ev5',  label: 'Medium (10–16 sq ft)' },
+  { key: 'screenLength',         itemId: 'ev5',  label: 'Length (ft)' },
+  { key: 'screenWidth',          itemId: 'ev5',  label: 'Width (ft)' },
   { key: 'screenDamage',         itemId: 'ev5',  label: 'Damaged' },
   { key: 'screenDamageDescription', itemId: 'ev5', label: '_damage' },
-  { key: 'shutterMaterial',      itemId: 'ev6',  label: 'Material' },
-  { key: 'shutterQty',           itemId: 'ev6',  label: 'Qty' },
+  { key: 'screenQty',            itemId: 'ev5',  label: 'Qty' },
+  { key: 'screenSmallQty',       itemId: 'ev5',  label: '_smallQty' },
+  { key: 'screenMediumQty',      itemId: 'ev5',  label: '_mediumQty' },
+  { key: 'gableVentQty',         itemId: 'ev13', label: 'Qty' },
+  { key: 'gableVentMaterial',    itemId: 'ev13', label: 'Material' },
+  { key: 'gableVentDamage',      itemId: 'ev13', label: 'Damaged' },
+  { key: 'gableVentDamageDescription', itemId: 'ev13', label: '_damage' },
+  { key: 'shutterMaterial',      itemId: 'ev6',  label: 'Grade' },
+  { key: 'shutterGrade',         itemId: 'ev6',  label: 'Grade' },
+  { key: 'shutterLength',        itemId: 'ev6',  label: 'Length (in)' },
+  { key: 'shutterWidth',         itemId: 'ev6',  label: 'Width (in)' },
+  { key: 'shutterPainted',       itemId: 'ev6',  label: 'Painted' },
   { key: 'shutterDamage',        itemId: 'ev6',  label: 'Damaged' },
   { key: 'shutterDamageDescription', itemId: 'ev6', label: '_damage' },
-  { key: 'doorQty',              itemId: 'ev7',  label: 'Qty' },
-  { key: 'doorMaterial',         itemId: 'ev7',  label: 'Material' },
-  { key: 'stormDoor',            itemId: 'ev7',  label: 'Storm Door' },
+  { key: 'shutterQty',           itemId: 'ev6',  label: 'Qty' },
+  // Legacy size-qty keys → used only to expand card count
+  { key: 'shutterSmallQty',      itemId: 'ev6',  label: '_smallQty' },
+  { key: 'shutterMediumQty',     itemId: 'ev6',  label: '_mediumQty' },
+  { key: 'shutterLargeQty',      itemId: 'ev6',  label: '_largeQty' },
+  { key: 'doorGrade',            itemId: 'ev7',  label: 'Grade' },
+  { key: 'doorStyle',            itemId: 'ev7',  label: 'Style' },
+  { key: 'doorConfiguration',    itemId: 'ev7',  label: 'Configuration' },
+  { key: 'doorPainted',          itemId: 'ev7',  label: 'Painted' },
+  { key: 'doorLength',           itemId: 'ev7',  label: 'Length (in)' },
+  { key: 'doorWidth',            itemId: 'ev7',  label: 'Width (in)' },
+  { key: 'doorAction',           itemId: 'ev7',  label: 'Action' },
   { key: 'doorDamage',           itemId: 'ev7',  label: 'Damaged' },
   { key: 'doorDamageDescription', itemId: 'ev7', label: '_damage' },
-  { key: 'garageDoorQty',        itemId: 'ev8',  label: 'Qty' },
-  { key: 'garageDoorMaterial',   itemId: 'ev8',  label: 'Material' },
-  { key: 'garageDoorPanelStyle', itemId: 'ev8',  label: 'Panel Style' },
+  { key: 'doorQty',              itemId: 'ev7',  label: 'Qty' },
+  // Legacy flat fields
+  { key: 'doorSize',             itemId: 'ev7',  label: 'Size' },
+  { key: 'doorMaterial',         itemId: 'ev7',  label: 'Material' },
+  { key: 'stormDoor',            itemId: 'ev7',  label: 'Storm Door' },
+  { key: 'garageDoorType',       itemId: 'ev8',  label: 'Type' },
+  { key: 'garageDoorMaterial',   itemId: 'ev8',  label: 'Grade' },
+  { key: 'garageDoorGrade',      itemId: 'ev8',  label: 'Grade' },
+  { key: 'garageDoorInsulated',  itemId: 'ev8',  label: 'Insulated' },
+  { key: 'garageDoorWindows',    itemId: 'ev8',  label: 'Windows' },
+  { key: 'garageDoorWindowQty',  itemId: 'ev8',  label: 'Window Qty' },
+  { key: 'garageDoorPainted',    itemId: 'ev8',  label: 'Painted' },
+  { key: 'garageDoorLength',     itemId: 'ev8',  label: 'Length (ft)' },
+  { key: 'garageDoorWidth',      itemId: 'ev8',  label: 'Width (ft)' },
   { key: 'garageDoorDamage',     itemId: 'ev8',  label: 'Damaged' },
   { key: 'garageDoorDamageDescription', itemId: 'ev8', label: '_damage' },
-  { key: 'acDamage',             itemId: 'ev9',  label: 'Damaged' },
-  { key: 'acDamageDescription',  itemId: 'ev9',  label: '_damage' },
-  { key: 'notes',                itemId: 'ev10', label: 'Notes' },
+  { key: 'garageDoorQty',        itemId: 'ev8',  label: 'Qty' },
 ]
 
 // Maps AI JSON exterior keys → { itemId, fieldLabel }
@@ -181,6 +211,68 @@ function normalizeDownspoutWidth(val) {
   if (/^3"?\s*(std|standard)$/i.test(raw)) return '3" Standard'
   if (/^4"?\s*oversized$/i.test(raw)) return '4" Oversized'
   return raw
+}
+
+function normalizeDoorParseFields(fields = {}) {
+  const next = { ...fields }
+  const grades = ['Wood', 'Aluminum', 'Steel', 'Composite', 'Fiberglass', 'None']
+  if (next.Material != null && next.Material !== '' && (next.Grade == null || next.Grade === '' || next.Grade === 'Select')) {
+    const match = grades.find(g => g.toLowerCase() === String(next.Material).toLowerCase())
+    if (match) next.Grade = match
+  }
+  delete next.Material
+  if ((next['Storm Door'] === 'Yes' || next['Storm Door'] === true)
+    && (next.Style == null || next.Style === '' || next.Style === 'Select')) {
+    next.Style = 'Storm Door'
+  }
+  delete next['Storm Door']
+  if (next.Size === 'S' || next.Size === 'M' || next.Size === 'L') delete next.Size
+  return next
+}
+
+function normalizeGarageDoorParseFields(fields = {}) {
+  const next = { ...fields }
+  if (next.Material != null && next.Material !== '' && (next.Grade == null || next.Grade === '' || next.Grade === 'Select')) {
+    const legacy = String(next.Material)
+    if (legacy === 'Aluminum') next.Grade = 'Aluminum'
+    else if (legacy === 'Wood') next.Grade = 'Wood Paint'
+    else if (legacy === 'Composite') next.Grade = 'Composite'
+  }
+  delete next.Material
+  delete next['Panel Style']
+  if (next.Windows !== 'Yes') delete next['Window Qty']
+  return next
+}
+
+function normalizeShutterParseFields(fields = {}) {
+  const next = { ...fields }
+  if (next.Material != null && next.Material !== '' && (next.Grade == null || next.Grade === '' || next.Grade === 'Select')) {
+    const match = ['Vinyl', 'Wood'].find(g => g.toLowerCase() === String(next.Material).toLowerCase())
+    if (match) next.Grade = match
+  }
+  delete next.Material
+  delete next.Qty
+  delete next._smallQty
+  delete next._mediumQty
+  delete next._largeQty
+  return next
+}
+
+function normalizeScreenParseFields(fields = {}) {
+  const next = { ...fields }
+  delete next.Qty
+  delete next._smallQty
+  delete next._mediumQty
+  return next
+}
+
+function normalizeWindowParseFields(fields = {}) {
+  const next = { ...fields }
+  delete next.Qty
+  delete next._smallQty
+  delete next._mediumQty
+  delete next._largeQty
+  return next
 }
 
 const SIDING_STYLES = new Set(['Flat', 'Double Dutch', 'Textured', 'Other', 'N/A', 'Select'])
@@ -294,11 +386,14 @@ function applyParsed(parsed, ctx) {
   // Elevations
   const elevations = parsed.elevations || {}
   const DIRS = ['Front', 'Right', 'Rear', 'Left']
-  const ADDMORE_ELEV_IDS = new Set(['ev3', 'ev11', 'ev4'])
+  const ADDMORE_ELEV_IDS = new Set(['ev3', 'ev11', 'ev4', 'ev12', 'ev5', 'ev6', 'ev7', 'ev8'])
   const ADDMORE_PARENT_FIELDS_BY_ID = {
     ev3: new Set(['Style', 'Material', 'Size (Inches)', 'Painted']),
     ev11: new Set(['Style', 'Material']),
     ev4: new Set(['Style', 'Material', 'Width', 'Painted']),
+    ev12: new Set(['Grade', 'Type', 'Glaze', 'Painted']),
+    ev5: new Set(['Type', 'Grade']),
+    ev6: new Set(['Grade', 'Painted']),
   }
   DIRS.forEach(dir => {
     const dirData = elevations[dir] || {}
@@ -330,13 +425,48 @@ function applyParsed(parsed, ctx) {
       if (fields.Damaged === 'No' || fields.Damaged === 'N/A') fields._damage = 'n/a'
       const qtyRaw = fields.Qty
       delete fields.Qty
-      // Downspouts / gutter guards: qty becomes N cards; shared specs live on the parent
-      if (cellKey.startsWith('ev4_') || cellKey.startsWith('ev11_')) {
-        const count = Math.max(1, Math.floor(Number(qtyRaw)) || 1)
-        const cardFields = {
-          ...(fields['Length (LF)'] != null ? { 'Length (LF)': fields['Length (LF)'] } : {}),
-          ...(fields.Damaged != null ? { Damaged: fields.Damaged } : {}),
-          ...(fields._damage != null ? { _damage: fields._damage } : {}),
+      // Downspouts / gutter guards / doors / garage doors / shutters: qty becomes N cards
+      if (
+        cellKey.startsWith('ev4_')
+        || cellKey.startsWith('ev11_')
+        || cellKey.startsWith('ev12_')
+        || cellKey.startsWith('ev5_')
+        || cellKey.startsWith('ev6_')
+        || cellKey.startsWith('ev7_')
+        || cellKey.startsWith('ev8_')
+      ) {
+        let count = Math.max(1, Math.floor(Number(qtyRaw)) || 1)
+        let cardFields = { ...fields }
+        if (cellKey.startsWith('ev12_')) {
+          const small = Math.floor(Number(fields._smallQty)) || 0
+          const medium = Math.floor(Number(fields._mediumQty)) || 0
+          const large = Math.floor(Number(fields._largeQty)) || 0
+          const sizeTotal = small + medium + large
+          if (sizeTotal > 0) count = sizeTotal
+          cardFields = normalizeWindowParseFields(cardFields)
+        } else if (cellKey.startsWith('ev5_')) {
+          const small = Math.floor(Number(fields._smallQty)) || 0
+          const medium = Math.floor(Number(fields._mediumQty)) || 0
+          const sizeTotal = small + medium
+          if (sizeTotal > 0) count = sizeTotal
+          cardFields = normalizeScreenParseFields(cardFields)
+        } else if (cellKey.startsWith('ev6_')) {
+          const small = Math.floor(Number(fields._smallQty)) || 0
+          const medium = Math.floor(Number(fields._mediumQty)) || 0
+          const large = Math.floor(Number(fields._largeQty)) || 0
+          const sizeTotal = small + medium + large
+          if (sizeTotal > 0) count = sizeTotal
+          cardFields = normalizeShutterParseFields(cardFields)
+        } else if (cellKey.startsWith('ev7_')) {
+          cardFields = normalizeDoorParseFields(cardFields)
+        } else if (cellKey.startsWith('ev8_')) {
+          cardFields = normalizeGarageDoorParseFields(cardFields)
+        } else {
+          cardFields = {
+            ...(fields['Length (LF)'] != null ? { 'Length (LF)': fields['Length (LF)'] } : {}),
+            ...(fields.Damaged != null ? { Damaged: fields.Damaged } : {}),
+            ...(fields._damage != null ? { _damage: fields._damage } : {}),
+          }
         }
         replaceElevSubItems(
           cellKey,
@@ -487,7 +617,7 @@ export default function AIParseSection() {
       <div className="ai-card app-card">
         <label className="ai-card__label">ℹ️ How It Works</label>
         <div className="ai-card__info">
-          <p><strong>What populates automatically:</strong> Customer name, address, insurance info, roof specs, stories, pitch, layers, all vent types and quantities, pipe jacks, flashings, chimney, valley, underlayment — plus per-elevation details (siding, fascia, gutters, downspouts, screens, shutters, entry doors, garage doors, A/C) for all four sides. Also exterior items and all notes fields.</p>
+          <p><strong>What populates automatically:</strong> Customer name, address, insurance info, roof specs, stories, pitch, layers, all vent types and quantities, pipe jacks, flashings, chimney, valley, underlayment — plus per-elevation details (siding, fascia, gutters, downspouts, screens, shutters, doors, garage doors) for all four sides. Also exterior items and all notes fields.</p>
           <p><strong>What requires manual entry:</strong> Photos (always manual) and any fields flagged for review below the Parse button.</p>
           <p><strong>Review before saving:</strong> Flagged fields are ones the AI was uncertain about. Always verify them before hitting Save.</p>
           <p><strong>Plaud tip:</strong> Walk through each section out loud by name. For example: "Roof — architectural shingles, two stories, four-twelve pitch, one layer. Ridge vent — twenty linear feet, metal, not painted. Front elevation — five-inch aluminum gutters, damaged. Two downspouts, aluminum, not damaged." The more structured your dictation, the fewer flags you'll see.</p>

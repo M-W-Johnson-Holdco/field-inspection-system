@@ -327,8 +327,9 @@ function omitsNAOption(field) {
     || label === 'Mount'
     || label === 'Location'
     || label === 'Width'
-    || label === 'Grade'
+    ||     label === 'Grade'
     || label === 'Glaze'
+    || label === 'Action'
     || /^Size\b/i.test(label)
     || /damage/i.test(label)
   )

@@ -10,7 +10,7 @@ function usesStepperRow(field) {
 }
 
 function buildFieldGroupClass(field, extra = '') {
-  const layout = ['multiRadio', 'multi', 'toggleMulti', 'textarea'].includes(field.t)
+  const layout = ['multiRadio', 'multi', 'toggleMulti', 'textarea', 'lwxw'].includes(field.t)
     || field.full
     ? 'field-group--full'
     : 'field-group--compact'

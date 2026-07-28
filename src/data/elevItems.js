@@ -1,6 +1,6 @@
 export const DIRECTIONS = ['Front', 'Right', 'Rear', 'Left']
 
-export const ELEV_ADDMORE_IDS = new Set(['ev3', 'ev11', 'ev4'])
+export const ELEV_ADDMORE_IDS = new Set(['ev3', 'ev11', 'ev4', 'ev12', 'ev5', 'ev6', 'ev7', 'ev8'])
 
 export const ELEV_ITEMS = [
   {
@@ -70,64 +70,139 @@ export const ELEV_ITEMS = [
   },
   {
     id: 'ev12', lbl: 'Windows',
+    addMore: true,
+    addMoreLabel: 'Add Window',
+    subItemPhotos: true,
+    windowSizeCounters: true,
     fields: [
       { t: 'select', l: 'Grade', o: ['Select', 'Vinyl', 'Wood', 'Composite', 'Aluminum'], allowNA: false, full: true },
       { t: 'select', l: 'Type', o: ['Select', 'Single Hung', 'Double Hung', 'Casement', 'Fixed'], allowNA: false, full: true },
       { t: 'select', l: 'Glaze', o: ['Select', 'Single', 'Double', 'Triple'], allowNA: false, full: true },
-      { t: 'num', l: 'Small (3–11 sq ft)' },
-      { t: 'num', l: 'Medium (12–19 sq ft)' },
-      { t: 'num', l: 'Large (19+ sq ft)' },
       { t: 'yn', l: 'Painted', full: true },
+    ],
+    subFields: [
+      {
+        t: 'lwxw',
+        l: 'Size',
+        full: true,
+        lengthKey: 'Length (ft)',
+        widthKey: 'Width (ft)',
+        lengthLabel: 'Length (Feet)',
+        widthLabel: 'Width (Feet)',
+        showArea: true,
+        areaUnit: 'sq ft',
+      },
       { t: 'yn', l: 'Damaged', full: true },
     ],
   },
   {
     id: 'ev5', lbl: 'Window Screens',
+    addMore: true,
+    addMoreLabel: 'Add Window Screen',
+    subItemPhotos: true,
+    screenSizeCounters: true,
     fields: [
       { t: 'select', l: 'Type', o: ['Select', 'Standard', 'Solar'], full: true, allowNA: false },
-      { t: 'select', l: 'Grade', o: ['Select', 'Medium', 'High'], full: true, allowNA: false, showWhen: { field: 'Type', equals: 'Solar' } },
-      { t: 'num', l: 'Small (1–9 sq ft)' },
-      { t: 'num', l: 'Medium (10–16 sq ft)' },
+      { t: 'select', l: 'Grade', o: ['Select', 'Medium', 'High'], full: true, allowNA: true, showWhen: { field: 'Type', equals: 'Solar' } },
+    ],
+    subFields: [
+      {
+        t: 'lwxw',
+        l: 'Size',
+        full: true,
+        lengthKey: 'Length (ft)',
+        widthKey: 'Width (ft)',
+        lengthLabel: 'Length (Feet)',
+        widthLabel: 'Width (Feet)',
+        showArea: true,
+        areaUnit: 'sq ft',
+      },
       { t: 'yn', l: 'Damaged', full: true },
     ],
   },
   {
     id: 'ev6', lbl: 'Shutters',
+    addMore: true,
+    addMoreLabel: 'Add Shutter',
+    subItemPhotos: true,
+    shutterSizeCounters: true,
     fields: [
-      { t: 'num', l: 'Qty' },
-      { t: 'select', l: 'Material', o: ['Select', 'Aluminum', 'Composite', 'Vinyl', 'Wood'], full: true },
+      { t: 'select', l: 'Grade', o: ['Select', 'Vinyl', 'Wood'], full: true },
+      { t: 'yn', l: 'Painted', full: true },
+    ],
+    subFields: [
+      {
+        t: 'lwxw',
+        l: 'Size',
+        full: true,
+        lengthKey: 'Length (in)',
+        widthKey: 'Width (in)',
+        lengthLabel: 'Length (Inches)',
+        widthLabel: 'Width (Inches)',
+        showAreaSqIn: true,
+        areaUnit: 'sq in',
+      },
       { t: 'yn', l: 'Damaged', full: true },
     ],
   },
   {
-    id: 'ev7', lbl: 'Entry Doors',
+    id: 'ev13', lbl: 'Gable Vents',
     fields: [
       { t: 'num', l: 'Qty' },
-      { t: 'select', l: 'Material', o: ['Select', 'Aluminum', 'Fiberglass', 'Steel', 'Wood'], full: true },
-      { t: 'yn', l: 'Storm Door', full: true },
+      { t: 'select', l: 'Material', o: ['Select', 'Metal', 'Wood', 'Vinyl'], full: true },
+      { t: 'yn', l: 'Damaged', full: true },
+    ],
+  },
+  {
+    id: 'ev7', lbl: 'Doors',
+    addMore: true,
+    addMoreLabel: 'Add Door',
+    subItemPhotos: true,
+    fields: [],
+    subFields: [
+      { t: 'select', l: 'Grade', o: ['Select', 'Wood', 'Aluminum', 'Steel', 'Composite', 'Fiberglass', 'None'], full: true, allowNA: false },
+      { t: 'select', l: 'Style', o: ['Select', 'Hinge', 'French', 'Sliding', 'Storm Door'], full: true, allowNA: false },
+      { t: 'select', l: 'Configuration', o: ['Select', 'Single', 'Double'], full: true, allowNA: false },
+      { t: 'yn', l: 'Painted', full: true, allowNA: false },
+      {
+        t: 'lwxw',
+        l: 'Size',
+        full: true,
+        lengthKey: 'Length (in)',
+        widthKey: 'Width (in)',
+        lengthLabel: 'Length (Inches)',
+        widthLabel: 'Width (Inches)',
+        showAreaSqIn: true,
+      },
+      { t: 'select', l: 'Action', o: ['Select', 'Replace', 'Repair', 'None'], full: true, allowNA: false },
       { t: 'yn', l: 'Damaged', full: true },
     ],
   },
   {
     id: 'ev8', lbl: 'Garage Doors',
-    compactOptionPairRow: true,
-    fields: [
-      { t: 'num', l: 'Qty' },
-      { t: 'select', l: 'Material', o: ['Select', 'Aluminum', 'Fiberglass', 'Steel', 'Wood'], full: true },
-      { t: 'select', l: 'Panel Style', o: ['Select', 'Carriage Style', 'Flush Panel', 'Raised Panel'], full: true },
+    addMore: true,
+    addMoreLabel: 'Add Garage Door',
+    subItemPhotos: true,
+    fields: [],
+    subFields: [
+      { t: 'select', l: 'Type', o: ['Select', 'Single', 'Double'], full: true, allowNA: false },
+      { t: 'select', l: 'Grade', o: ['Select', 'Aluminum', 'Wood Paint', 'Stain Grade', 'Composite'], full: true, allowNA: false },
+      { t: 'yn', l: 'Insulated', full: true, allowNA: false },
+      { t: 'yn', l: 'Windows', full: true, allowNA: false },
+      { t: 'num', l: 'Window Qty', showWhen: { field: 'Windows', equals: 'Yes' } },
+      {
+        t: 'lwxw',
+        l: 'Size',
+        full: true,
+        lengthKey: 'Length (ft)',
+        widthKey: 'Width (ft)',
+        lengthLabel: 'Length (Feet)',
+        widthLabel: 'Width (Feet)',
+        showArea: true,
+        areaUnit: 'sq ft',
+      },
+      { t: 'yn', l: 'Painted', full: true },
       { t: 'yn', l: 'Damaged', full: true },
-    ],
-  },
-  {
-    id: 'ev9', lbl: 'A/C Condenser',
-    fields: [
-      { t: 'yn', l: 'Damaged', full: true },
-    ],
-  },
-  {
-    id: 'ev10', lbl: 'Other / Notes',
-    fields: [
-      { t: 'textarea', l: 'Notes', p: 'Other items or observations on this elevation…' },
     ],
   },
 ]

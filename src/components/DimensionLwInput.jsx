@@ -46,6 +46,14 @@ function NumberStepperPart({ label, value, onChange, placeholder = '0' }) {
   )
 }
 
+function formatArea(lengthValue, widthValue) {
+  const length = Number(lengthValue)
+  const width = Number(widthValue)
+  if (!Number.isFinite(length) || !Number.isFinite(width) || length <= 0 || width <= 0) return null
+  const area = length * width
+  return Number.isInteger(area) ? String(area) : area.toFixed(1)
+}
+
 export default function DimensionLwInput({
   field,
   lengthValue,
@@ -55,10 +63,18 @@ export default function DimensionLwInput({
 }) {
   const lengthLabel = field.lengthLabel || 'Length'
   const widthLabel = field.widthLabel || 'Width'
+  const showArea = Boolean(field.showAreaSqIn || field.showArea)
+  const areaUnit = field.areaUnit || 'sq in'
+  const areaValue = showArea ? formatArea(lengthValue, widthValue) : null
 
   return (
     <div {...fieldGroupProps(field)}>
-      <label className="form-label">{field.l}</label>
+      <div className="dimension-lw-input__title-row">
+        <label className="form-label">{field.l}</label>
+        {field.areaLegend && (
+          <span className="dimension-lw-input__legend">{field.areaLegend}</span>
+        )}
+      </div>
       <div className="measurement-input dimension-lw-input">
         <NumberStepperPart
           label={lengthLabel}
@@ -71,6 +87,14 @@ export default function DimensionLwInput({
           onChange={onWidthChange}
         />
       </div>
+      {showArea && (
+        <div className="dimension-lw-input__area" aria-live="polite">
+          <span className="dimension-lw-input__area-label">Total Area</span>
+          <output className="dimension-lw-input__area-value">
+            {areaValue != null ? `${areaValue} ${areaUnit}` : '—'}
+          </output>
+        </div>
+      )}
     </div>
   )
 }

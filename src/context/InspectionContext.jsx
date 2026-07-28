@@ -147,7 +147,7 @@ function calculateCompletion(data) {
         ;(cell.subItems || []).forEach(sub => {
           ;(itemDef.subFields || []).forEach(field => {
             if (!isFieldVisible(field, sub.fields)) return
-            countValue(sub.fields?.[field.l], totals)
+            countSubFieldValue(field, sub.fields, totals)
           })
           if (sub.fields?.Damaged === 'Yes') countValue(sub.fields?._damage, totals)
         })
@@ -215,6 +215,9 @@ const ELEV_ADDMORE_SHARED_FIELDS = {
   ev3: new Set(['Style', 'Material', 'Size (Inches)', 'Painted']),
   ev11: new Set(['Style', 'Material']),
   ev4: new Set(['Style', 'Material', 'Width', 'Painted']),
+  ev12: new Set(['Grade', 'Type', 'Glaze', 'Painted']),
+  ev5: new Set(['Type', 'Grade']),
+  ev6: new Set(['Grade', 'Painted']),
 }
 
 function splitElevSharedFields(itemId, fields = {}) {
@@ -239,31 +242,193 @@ function elevCellHasLegacyTopFields(fields = {}, itemId) {
   })
 }
 
-function normalizeElevAddMoreSub(sub) {
+function normalizeElevAddMoreSub(sub, itemId) {
   const fields = { ...(sub?.fields || {}) }
-  if (fields.Size != null) {
-    const parsed = normalizeGutterSizeValue(fields.Size)
-    if (parsed && fields['Size (Inches)'] == null) fields['Size (Inches)'] = parsed
-    delete fields.Size
-  }
-  if (fields['Size (Inches)'] != null && fields['Size (Inches)'] !== '') {
-    fields['Size (Inches)'] = normalizeGutterSizeValue(fields['Size (Inches)'])
+  if (itemId === 'ev3') {
+    if (fields.Size != null) {
+      const parsed = normalizeGutterSizeValue(fields.Size)
+      if (parsed && fields['Size (Inches)'] == null) fields['Size (Inches)'] = parsed
+      delete fields.Size
+    }
+    if (fields['Size (Inches)'] != null && fields['Size (Inches)'] !== '') {
+      fields['Size (Inches)'] = normalizeGutterSizeValue(fields['Size (Inches)'])
+    }
   }
   if (fields.Width === '3" Std' || fields.Width === '3" STD') {
     fields.Width = '3" Standard'
   }
   return {
-    fields,
+    fields: itemId === 'ev7'
+      ? normalizeDoorSubFields(fields)
+      : itemId === 'ev8'
+        ? normalizeGarageDoorSubFields(fields)
+        : itemId === 'ev6'
+          ? normalizeShutterSubFields(fields)
+          : itemId === 'ev5'
+            ? normalizeScreenSubFields(fields)
+            : itemId === 'ev12'
+              ? normalizeWindowSubFields(fields)
+              : fields,
     photos: Array.isArray(sub?.photos) ? sub.photos : [],
   }
 }
 
+function normalizeDoorSubFields(fields = {}) {
+  const next = { ...fields }
+  const grades = ['Wood', 'Aluminum', 'Steel', 'Composite', 'Fiberglass', 'None']
+  if (next.Material != null && next.Material !== '' && (next.Grade == null || next.Grade === '' || next.Grade === 'Select')) {
+    const match = grades.find(g => g.toLowerCase() === String(next.Material).toLowerCase())
+    if (match) next.Grade = match
+  }
+  delete next.Material
+  if ((next['Storm Door'] === 'Yes' || next['Storm Door'] === true)
+    && (next.Style == null || next.Style === '' || next.Style === 'Select')) {
+    next.Style = 'Storm Door'
+  }
+  delete next['Storm Door']
+  delete next._damage
+  delete next.Qty
+  // Legacy S/M/L size buttons — drop; Size is now Length × Width
+  if (next.Size === 'S' || next.Size === 'M' || next.Size === 'L') delete next.Size
+  return next
+}
+
+function normalizeGarageDoorSubFields(fields = {}) {
+  const next = { ...fields }
+  if (next.Material != null && next.Material !== '' && (next.Grade == null || next.Grade === '' || next.Grade === 'Select')) {
+    const legacy = String(next.Material)
+    if (legacy === 'Aluminum') next.Grade = 'Aluminum'
+    else if (legacy === 'Wood') next.Grade = 'Wood Paint'
+    else if (legacy === 'Composite') next.Grade = 'Composite'
+  }
+  delete next.Material
+  delete next['Panel Style']
+  delete next.Qty
+  if (next.Windows !== 'Yes') delete next['Window Qty']
+  // Migrate early garage-door inch keys to feet
+  if (next['Length (in)'] != null && (next['Length (ft)'] == null || next['Length (ft)'] === '')) {
+    next['Length (ft)'] = next['Length (in)']
+  }
+  if (next['Width (in)'] != null && (next['Width (ft)'] == null || next['Width (ft)'] === '')) {
+    next['Width (ft)'] = next['Width (in)']
+  }
+  delete next['Length (in)']
+  delete next['Width (in)']
+  return next
+}
+
+function shutterLegacyQty(fields, keys) {
+  for (const key of keys) {
+    if (fields[key] == null || fields[key] === '') continue
+    const n = Math.floor(Number(fields[key]))
+    if (Number.isFinite(n) && n > 0) return n
+  }
+  return 0
+}
+
+function normalizeShutterSubFields(fields = {}) {
+  const next = { ...fields }
+  if (next.Material != null && next.Material !== '' && (next.Grade == null || next.Grade === '' || next.Grade === 'Select')) {
+    const match = ['Vinyl', 'Wood'].find(g => g.toLowerCase() === String(next.Material).toLowerCase())
+    if (match) next.Grade = match
+  }
+  delete next.Material
+  delete next.Qty
+  delete next['Qty (Small)']
+  delete next['Qty (Medium)']
+  delete next['Small (<770 sq in)']
+  delete next['Medium (770-1,120 sq in)']
+  delete next['Large (1,120+ sq in)']
+  delete next['Small (Height: 30-50")']
+  delete next['Medium (Height: 51-70")']
+  delete next['Large (Height: 71"+)']
+  return next
+}
+
+function expandShutterLegacySubs(rest = {}, topPhotos = []) {
+  const small = shutterLegacyQty(rest, [
+    'Small (<770 sq in)',
+    'Qty (Small)',
+    'Small (Height: 30-50")',
+    'Qty',
+  ])
+  const medium = shutterLegacyQty(rest, [
+    'Medium (770-1,120 sq in)',
+    'Qty (Medium)',
+    'Medium (Height: 51-70")',
+  ])
+  const large = shutterLegacyQty(rest, [
+    'Large (1,120+ sq in)',
+    'Large (Height: 71"+)',
+  ])
+  const total = small + medium + large
+  const base = normalizeShutterSubFields(rest)
+  if (total > 0) {
+    return Array.from({ length: total }, (_, i) => ({
+      fields: { ...base },
+      photos: i === 0 ? topPhotos : [],
+    }))
+  }
+  return null
+}
+
+function normalizeScreenSubFields(fields = {}) {
+  const next = { ...fields }
+  delete next.Qty
+  delete next['Small (1–9 sq ft)']
+  delete next['Medium (10–16 sq ft)']
+  return next
+}
+
+function expandScreenLegacySubs(rest = {}, topPhotos = []) {
+  const small = shutterLegacyQty(rest, ['Small (1–9 sq ft)', 'Qty'])
+  const medium = shutterLegacyQty(rest, ['Medium (10–16 sq ft)'])
+  const total = small + medium
+  const base = normalizeScreenSubFields(rest)
+  if (total > 0) {
+    return Array.from({ length: total }, (_, i) => ({
+      fields: { ...base },
+      photos: i === 0 ? topPhotos : [],
+    }))
+  }
+  return null
+}
+
+function normalizeWindowSubFields(fields = {}) {
+  const next = { ...fields }
+  delete next.Qty
+  delete next['Small (3–11 sq ft)']
+  delete next['Medium (12–19 sq ft)']
+  delete next['Large (19+ sq ft)']
+  return next
+}
+
+function expandWindowLegacySubs(rest = {}, topPhotos = []) {
+  const small = shutterLegacyQty(rest, ['Small (3–11 sq ft)', 'Qty'])
+  const medium = shutterLegacyQty(rest, ['Medium (12–19 sq ft)'])
+  const large = shutterLegacyQty(rest, ['Large (19+ sq ft)'])
+  const total = small + medium + large
+  const base = normalizeWindowSubFields(rest)
+  if (total > 0) {
+    return Array.from({ length: total }, (_, i) => ({
+      fields: { ...base },
+      photos: i === 0 ? topPhotos : [],
+    }))
+  }
+  return null
+}
+
 function stripElevSharedFromSubFields(itemId, fields = {}) {
   const sharedKeys = ELEV_ADDMORE_SHARED_FIELDS[itemId] || new Set()
-  const next = { ...fields }
+  let next = { ...fields }
   for (const key of sharedKeys) delete next[key]
   // Downspout / gutter-guard cards are one-per-run; Qty lived on the old card layout
   if (itemId === 'ev4' || itemId === 'ev11') delete next.Qty
+  if (itemId === 'ev7') next = normalizeDoorSubFields(next)
+  if (itemId === 'ev8') next = normalizeGarageDoorSubFields(next)
+  if (itemId === 'ev6') next = normalizeShutterSubFields(next)
+  if (itemId === 'ev5') next = normalizeScreenSubFields(next)
+  if (itemId === 'ev12') next = normalizeWindowSubFields(next)
   return next
 }
 
@@ -271,6 +436,9 @@ function normalizeElevSharedFields(itemId, fields = {}) {
   const next = { ...fields }
   if (itemId === 'ev4' && (next.Width === '3" Std' || next.Width === '3" STD')) {
     next.Width = '3" Standard'
+  }
+  if (itemId === 'ev5' && next.Type !== 'Solar') {
+    delete next.Grade
   }
   if (itemId === 'ev3') {
     if (next.Size != null) {
@@ -321,7 +489,9 @@ function migrateElevAddMoreCell(cell, itemId) {
   }
 
   const base = normalizeElevGutterCell(cell)
-  const existingSubs = Array.isArray(base.subItems) ? base.subItems.map(normalizeElevAddMoreSub) : []
+  const existingSubs = Array.isArray(base.subItems)
+    ? base.subItems.map(sub => normalizeElevAddMoreSub(sub, itemId))
+    : []
   const { shared, rest } = splitElevSharedFields(itemId, base.fields || {})
 
   if (existingSubs.length) {
@@ -335,14 +505,56 @@ function migrateElevAddMoreCell(cell, itemId) {
   }
 
   const topPhotos = Array.isArray(base.photos) ? base.photos : []
+  if (itemId === 'ev12') {
+    const expanded = expandWindowLegacySubs(rest, topPhotos)
+    if (expanded) {
+      const promoted = promoteElevSharedFromSubs(itemId, shared, expanded)
+      return {
+        ...base,
+        fields: promoted.shared,
+        subItems: promoted.subs,
+        photos: [],
+      }
+    }
+  }
+  if (itemId === 'ev5') {
+    const expanded = expandScreenLegacySubs(rest, topPhotos)
+    if (expanded) {
+      const promoted = promoteElevSharedFromSubs(itemId, shared, expanded)
+      return {
+        ...base,
+        fields: promoted.shared,
+        subItems: promoted.subs,
+        photos: [],
+      }
+    }
+  }
+  if (itemId === 'ev6') {
+    const expanded = expandShutterLegacySubs(rest, topPhotos)
+    if (expanded) {
+      const promoted = promoteElevSharedFromSubs(itemId, shared, expanded)
+      return {
+        ...base,
+        fields: promoted.shared,
+        subItems: promoted.subs,
+        photos: [],
+      }
+    }
+  }
   if (elevCellHasLegacyTopFields(rest, itemId) || topPhotos.length) {
+    const cardFields = stripElevSharedFromSubFields(itemId, rest)
+    let count = 1
+    if (itemId === 'ev7' || itemId === 'ev8') {
+      const qty = Math.floor(Number(rest.Qty))
+      if (qty > 1) count = qty
+    }
     return {
       ...base,
       fields: normalizeElevSharedFields(itemId, shared),
-      subItems: [{
-        fields: stripElevSharedFromSubFields(itemId, rest),
-        photos: topPhotos,
-      }],
+      subItems: Array.from({ length: count }, (_, i) => ({
+        fields: { ...cardFields },
+        photos: i === 0 ? topPhotos : [],
+      })),
       photos: [],
     }
   }
@@ -366,13 +578,6 @@ function normalizeElevData(elevData = {}) {
         next[key] = migrateElevAddMoreCell(cell, item.id)
       } else {
         const fields = { ...(cell.fields || {}) }
-        // Legacy Window Screens used a single Qty — map into Small when size qtys are empty
-        if (item.id === 'ev5' && fields.Qty != null && fields.Qty !== '') {
-          if (fields['Small (1–9 sq ft)'] == null || fields['Small (1–9 sq ft)'] === '') {
-            fields['Small (1–9 sq ft)'] = String(fields.Qty)
-          }
-          delete fields.Qty
-        }
         next[key] = {
           ...cell,
           fields,
@@ -385,8 +590,17 @@ function normalizeElevData(elevData = {}) {
 
   // Normalize any leftover gutter cells not covered above (legacy keys)
   for (const key of Object.keys(next)) {
-    if (key.startsWith('ev3_') || key.startsWith('ev11_') || key.startsWith('ev4_')) {
-      next[key] = migrateElevAddMoreCell(next[key])
+    if (
+      key.startsWith('ev3_')
+      || key.startsWith('ev11_')
+      || key.startsWith('ev4_')
+      || key.startsWith('ev5_')
+      || key.startsWith('ev6_')
+      || key.startsWith('ev7_')
+      || key.startsWith('ev8_')
+      || key.startsWith('ev12_')
+    ) {
+      next[key] = migrateElevAddMoreCell(next[key], key.split('_')[0])
     }
   }
 
@@ -2043,6 +2257,10 @@ export function InspectionProvider({ children }) {
       if (cellKey.startsWith('ev5_') && label === 'Type' && value !== 'Solar') {
         delete fields.Grade
       }
+      // Garage Doors: Window Qty only when Windows is Yes
+      if (cellKey.startsWith('ev8_') && label === 'Windows' && value !== 'Yes') {
+        delete fields['Window Qty']
+      }
       const next = { ...prev, elevData: { ...prev.elevData, [cellKey]: { ...cell, fields } } }
       scheduleSave(next)
       return next
@@ -2094,6 +2312,9 @@ export function InspectionProvider({ children }) {
         if (label === 'Damaged') {
           if (value === 'No' || value === 'N/A') fields._damage = 'n/a'
           else if (value !== 'Yes') delete fields._damage
+        }
+        if (cellKey.startsWith('ev8_') && label === 'Windows' && value !== 'Yes') {
+          delete fields['Window Qty']
         }
         return { ...sub, fields }
       })

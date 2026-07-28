@@ -252,76 +252,161 @@ export const ELEV_LINE_ITEMS = {
       yn(parentFields, 'Painted') || yn(fields, 'Painted') ? 'Painted' : null,
     ].filter(Boolean).join('; '),
   }],
-  ev12: (fields, dir) => {
-    const sizes = [
-      'Small (3–11 sq ft)',
-      'Medium (12–19 sq ft)',
-      'Large (19+ sq ft)',
-    ]
+  ev12: (fields, dir, parentFields = {}) => {
+    const length = num(fields, 'Length (ft)')
+    const width = num(fields, 'Width (ft)')
+    const area = length != null && width != null ? length * width : null
+    let sizeLabel = null
+    if (area != null) {
+      if (area < 12) sizeLabel = 'Small (<12 sq ft)'
+      else if (area < 19) sizeLabel = 'Medium (12–19 sq ft)'
+      else sizeLabel = 'Large (19+ sq ft)'
+    }
+    const grade = str(fields, 'Grade') || str(parentFields, 'Grade') || 'unspecified'
+    const type = str(fields, 'Type') || str(parentFields, 'Type') || 'unspecified type'
+    const glaze = str(fields, 'Glaze') || str(parentFields, 'Glaze') || '?'
+    const painted = yn(fields, 'Painted') || yn(parentFields, 'Painted')
     const baseNote = [
       `${dir} elevation`,
-      yn(fields, 'Painted') ? 'Painted' : null,
+      painted ? 'Painted' : null,
+      area != null ? `${Number.isInteger(area) ? area : area.toFixed(1)} sq ft` : null,
     ].filter(Boolean).join('; ')
-    const desc = `Window - ${str(fields, 'Grade') || 'unspecified'}, ${str(fields, 'Type') || 'unspecified type'}, ${str(fields, 'Glaze') || '?'} glaze`
-
-    return sizes.flatMap(size => {
-      const qty = num(fields, size)
-      if (!qty) return []
-      return [{
-        trade: 'Siding', category: 'WDW',
-        description: `${desc}; ${size}`,
-        unit: 'EA', qty,
-        damaged: yn(fields, 'Damaged'),
-        note: baseNote || null,
-      }]
-    })
+    return [{
+      trade: 'Siding', category: 'WDW',
+      description: [
+        'Window',
+        grade,
+        type,
+        `${glaze} glaze`,
+        sizeLabel,
+      ].filter(Boolean).join(' - '),
+      unit: 'EA',
+      qty: 1,
+      damaged: yn(fields, 'Damaged'),
+      note: baseNote || null,
+    }]
   },
-  ev5: (fields, dir) => {
-    const sizes = [
-      'Small (1–9 sq ft)',
-      'Medium (10–16 sq ft)',
-    ]
-    const type = str(fields, 'Type') || 'unspecified'
-    const grade = type === 'Solar' ? str(fields, 'Grade') : ''
+  ev5: (fields, dir, parentFields = {}) => {
+    const length = num(fields, 'Length (ft)')
+    const width = num(fields, 'Width (ft)')
+    const area = length != null && width != null ? length * width : null
+    let sizeLabel = null
+    if (area != null) {
+      sizeLabel = area < 10 ? 'Small (<10 sq ft)' : 'Medium (10+ sq ft)'
+    }
+    const type = str(fields, 'Type') || str(parentFields, 'Type') || 'unspecified'
+    const grade = type === 'Solar'
+      ? (str(fields, 'Grade') || str(parentFields, 'Grade'))
+      : null
     const desc = [
       'Window screen',
       type,
       grade || null,
+      sizeLabel,
     ].filter(Boolean).join(' - ')
-    const baseNote = `${dir} elevation`
-
-    return sizes.flatMap(size => {
-      const qty = num(fields, size)
-      if (!qty) return []
-      return [{
-        trade: 'Siding', category: 'WDW',
-        description: `${desc}; ${size}`,
-        unit: 'EA', qty,
-        damaged: yn(fields, 'Damaged'),
-        note: baseNote,
-      }]
-    })
+    const baseNote = [
+      `${dir} elevation`,
+      area != null ? `${Number.isInteger(area) ? area : area.toFixed(1)} sq ft` : null,
+    ].filter(Boolean).join('; ')
+    return [{
+      trade: 'Siding', category: 'WDW',
+      description: desc,
+      unit: 'EA',
+      qty: 1,
+      damaged: yn(fields, 'Damaged'),
+      note: baseNote || null,
+    }]
   },
-  ev6: (fields, dir) => [{
-    trade: 'Siding', category: 'WDW',
-    description: `Shutter - ${str(fields, 'Material') || 'unspecified'}`,
+  ev13: (fields, dir) => [{
+    trade: 'Siding', category: 'SDG',
+    description: `Gable vent - ${str(fields, 'Material') || 'unspecified'}`,
     unit: 'EA', qty: num(fields, 'Qty'), damaged: yn(fields, 'Damaged'), note: `${dir} elevation`,
   }],
-  ev7: (fields, dir) => [{
-    trade: 'Doors', category: 'DOR',
-    description: `Entry door - ${str(fields, 'Material') || 'unspecified'}${yn(fields, 'Storm Door') ? ' + storm door' : ''}`,
-    unit: 'EA', qty: num(fields, 'Qty'), damaged: yn(fields, 'Damaged'), note: `${dir} elevation`,
-  }],
-  ev8: (fields, dir) => [{
-    trade: 'Doors', category: 'DOR',
-    description: `Garage door - ${str(fields, 'Material') || 'unspecified'} (${str(fields, 'Panel Style') || 'unspecified'})`,
-    unit: 'EA', qty: num(fields, 'Qty'), damaged: yn(fields, 'Damaged'), note: `${dir} elevation`,
-  }],
-  ev9: (fields, dir) => [{
-    trade: 'HVAC', category: 'HVC',
-    description: 'A/C condenser',
-    unit: 'EA', qty: null, damaged: yn(fields, 'Damaged'), note: `${dir} elevation`,
-  }],
+  ev6: (fields, dir, parentFields = {}) => {
+    const length = num(fields, 'Length (in)')
+    const width = num(fields, 'Width (in)')
+    const area = length != null && width != null ? length * width : null
+    let sizeLabel = null
+    if (area != null) {
+      if (area < 770) sizeLabel = 'Small (<770 sq in)'
+      else if (area < 1120) sizeLabel = 'Medium (770-1,120 sq in)'
+      else sizeLabel = 'Large (1,120+ sq in)'
+    }
+    const material = str(fields, 'Grade')
+      || str(parentFields, 'Grade')
+      || str(fields, 'Material')
+      || str(parentFields, 'Material')
+      || 'unspecified'
+    const painted = yn(fields, 'Painted') || yn(parentFields, 'Painted')
+    const baseNote = [
+      `${dir} elevation`,
+      painted ? 'Painted' : null,
+      area != null ? `${area} sq in` : null,
+    ].filter(Boolean).join('; ')
+    return [{
+      trade: 'Siding', category: 'WDW',
+      description: [
+        'Shutter',
+        material,
+        sizeLabel,
+      ].filter(Boolean).join(' - '),
+      unit: 'EA',
+      qty: 1,
+      damaged: yn(fields, 'Damaged'),
+      note: baseNote || null,
+    }]
+  },
+  ev7: (fields, dir) => {
+    if (str(fields, 'Grade') === 'None' && str(fields, 'Action') === 'None') return []
+    const length = num(fields, 'Length (in)')
+    const width = num(fields, 'Width (in)')
+    const area = length != null && width != null ? length * width : null
+    return [{
+      trade: 'Doors', category: 'DOR',
+      description: [
+        'Door',
+        str(fields, 'Grade') || 'unspecified grade',
+        str(fields, 'Style') || 'unspecified style',
+        str(fields, 'Configuration') || null,
+        area != null ? `${area} sq in` : null,
+      ].filter(Boolean).join(' - '),
+      unit: 'EA',
+      qty: 1,
+      damaged: yn(fields, 'Damaged'),
+      note: [
+        `${dir} elevation`,
+        length != null && width != null ? `${length}" × ${width}"` : null,
+        yn(fields, 'Painted') ? 'Painted' : null,
+        str(fields, 'Action') && str(fields, 'Action') !== 'None' ? `Action: ${str(fields, 'Action')}` : null,
+      ].filter(Boolean).join('; '),
+    }]
+  },
+  ev8: (fields, dir) => {
+    const length = num(fields, 'Length (ft)') ?? num(fields, 'Length (in)')
+    const width = num(fields, 'Width (ft)') ?? num(fields, 'Width (in)')
+    const area = length != null && width != null ? length * width : null
+    return [{
+      trade: 'Doors', category: 'DOR',
+      description: [
+        'Garage door',
+        str(fields, 'Type') || null,
+        str(fields, 'Grade') || str(fields, 'Material') || 'unspecified grade',
+        area != null ? `${area} sq ft` : null,
+      ].filter(Boolean).join(' - '),
+      unit: 'EA',
+      qty: 1,
+      damaged: yn(fields, 'Damaged'),
+      note: [
+        `${dir} elevation`,
+        length != null && width != null ? `${length}' × ${width}'` : null,
+        yn(fields, 'Painted') ? 'Painted' : null,
+        yn(fields, 'Insulated') ? 'Insulated' : null,
+        yn(fields, 'Windows')
+          ? (num(fields, 'Window Qty') != null ? `Windows: ${num(fields, 'Window Qty')}` : 'Windows')
+          : null,
+      ].filter(Boolean).join('; '),
+    }]
+  },
 }
 
 // ---- Exterior (FEN / POL / EXT) ----------------------------------------

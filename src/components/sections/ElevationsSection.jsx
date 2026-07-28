@@ -8,7 +8,42 @@ import { ELEV_ITEMS, DIRECTIONS } from '../../data/elevItems'
 import { fieldGroupProps } from '../../utils/fieldLayout'
 import { fieldSelectClass, withSelectPlaceholderClass, ynOptionsForField, optionsForField, visibleFieldsForValues } from '../../utils/fieldGrid'
 import MeasurementInput, { isLinearMeasurementField } from '../MeasurementInput'
+import DimensionLwInput from '../DimensionLwInput'
 import useExpandedSection from '../../hooks/useExpandedSection'
+import { countShutterSizeBuckets, shutterAreaSqIn, shutterSizeBucket } from '../../utils/shutterSize'
+import { countScreenSizeBuckets, screenAreaSqFt, screenSizeBucket } from '../../utils/screenSize'
+import { countWindowSizeBuckets, windowAreaSqFt, windowSizeBucket } from '../../utils/windowSize'
+
+function elevSizeCounterConfig(itemDef, subItems) {
+  if (itemDef.shutterSizeCounters) {
+    return {
+      sizes: ['Small', 'Medium', 'Large'],
+      counts: countShutterSizeBuckets(subItems),
+      legend: 'Small <770 · Medium 770–1,120 · Large 1,120+ sq in',
+      gridClass: 'ri-size-counters--equal',
+      ariaLabel: 'Shutter counts by size',
+    }
+  }
+  if (itemDef.windowSizeCounters) {
+    return {
+      sizes: ['Small', 'Medium', 'Large'],
+      counts: countWindowSizeBuckets(subItems),
+      legend: 'Small <12 · Medium 12–19 · Large 19+ sq ft',
+      gridClass: 'ri-size-counters--equal',
+      ariaLabel: 'Window counts by size',
+    }
+  }
+  if (itemDef.screenSizeCounters) {
+    return {
+      sizes: ['Small', 'Medium'],
+      counts: countScreenSizeBuckets(subItems),
+      legend: 'Small <10 · Medium 10+ sq ft',
+      gridClass: 'ri-size-counters--equal-2',
+      ariaLabel: 'Window screen counts by size',
+    }
+  }
+  return null
+}
 
 function orderElevFields(fields = []) {
   const qty = []
@@ -22,8 +57,12 @@ function orderElevFields(fields = []) {
 
   for (const field of fields) {
     if (field.l === 'Damaged') damaged.push(field)
-    else if (field.l === 'Painted') painted.push(field)
-    else if (field.t === 'num' && field.l === 'Qty') qty.push(field)
+    else if (field.l === 'Painted') {
+      // Doors keep Painted between Style and Size/Action
+      if (fields.some(f => f.l === 'Action')) rest.push(field)
+      else painted.push(field)
+    }
+    else if (field.t === 'num' && (field.l === 'Qty' || /^Qty \(/i.test(field.l))) qty.push(field)
     else if (field.t === 'num' && field.l === 'Story') story.push(field)
     else if (field.t === 'num' && /\bLF\b/i.test(field.l)) lf.push(field)
     else if (field.t === 'num') otherNums.push(field)
@@ -39,12 +78,46 @@ function orderElevFields(fields = []) {
 }
 
 // ── Field Renderer — mirrors Cursor's RoofSection pattern ─────────
-function FieldRenderer({ field, value, onChange }) {
+function FieldRenderer({ field, value, onChange, subFields, onSubFieldChange }) {
   const { t, l, o, p } = field
   const lbl = <label className="form-label">{l}</label>
 
+  if (t === 'lwxw') {
+    const lengthKey = field.lengthKey || 'Length (in)'
+    const widthKey = field.widthKey || 'Width (in)'
+    return (
+      <DimensionLwInput
+        field={field}
+        lengthValue={subFields?.[lengthKey] ?? ''}
+        widthValue={subFields?.[widthKey] ?? ''}
+        onLengthChange={val => onSubFieldChange?.(lengthKey, val)}
+        onWidthChange={val => onSubFieldChange?.(widthKey, val)}
+      />
+    )
+  }
+
   if (t === 'yn' || t === 'radio') {
     const opts = t === 'yn' ? ynOptionsForField(field) : optionsForField(field)
+    if (field.buttons) {
+      return (
+        <div {...fieldGroupProps(field)}>
+          {lbl}
+          <div className="field-button-group" role="group" aria-label={l}>
+            {opts.filter(opt => opt !== 'Select' && opt !== 'N/A').map(opt => (
+              <button
+                type="button"
+                key={opt}
+                className={`field-button-group__btn${value === opt ? ' field-button-group__btn--active' : ''}`}
+                aria-pressed={value === opt}
+                onClick={() => onChange(opt)}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+        </div>
+      )
+    }
     return (
       <div {...fieldGroupProps(field)}>
         {lbl}
@@ -228,9 +301,51 @@ function ElevSubCard({
   const lengthPill = lengthRaw != null && String(lengthRaw).trim() !== ''
     ? `${String(lengthRaw).trim()} LF`
     : null
+  const isDoor = cellKey.startsWith('ev7_')
+  const doorStyle = sub.fields?.Style
+  const doorLength = Number(sub.fields?.['Length (in)'])
+  const doorWidth = Number(sub.fields?.['Width (in)'])
+  const doorArea = Number.isFinite(doorLength) && Number.isFinite(doorWidth) && doorLength > 0 && doorWidth > 0
+    ? `${doorLength * doorWidth} sq in`
+    : null
+  const doorPill = isDoor
+    ? [doorStyle, doorArea].filter(Boolean).join(' · ') || null
+    : null
+  const isShutter = cellKey.startsWith('ev6_')
+  const shutterArea = isShutter ? shutterAreaSqIn(sub.fields || {}) : null
+  const shutterBucket = isShutter ? shutterSizeBucket(shutterArea) : null
+  const shutterPill = shutterBucket
+    ? (shutterArea != null ? `${shutterBucket} · ${shutterArea} sq in` : shutterBucket)
+    : null
+  const isScreen = cellKey.startsWith('ev5_')
+  const screenArea = isScreen ? screenAreaSqFt(sub.fields || {}) : null
+  const screenBucket = isScreen ? screenSizeBucket(screenArea) : null
+  const screenPill = screenBucket
+    ? (screenArea != null ? `${screenBucket} · ${screenArea} sq ft` : screenBucket)
+    : null
+  const isWindow = cellKey.startsWith('ev12_')
+  const windowArea = isWindow ? windowAreaSqFt(sub.fields || {}) : null
+  const windowBucket = isWindow ? windowSizeBucket(windowArea) : null
+  const windowPill = windowBucket
+    ? (windowArea != null ? `${windowBucket} · ${windowArea} sq ft` : windowBucket)
+    : null
+  const isGarageDoor = cellKey.startsWith('ev8_')
+  const garageType = sub.fields?.Type
+  const garageTypePill = isGarageDoor && garageType && garageType !== 'Select' ? garageType : null
+  const damagePill = (isGarageDoor || isShutter || isScreen || isWindow) && sub.fields?.Damaged === 'Yes' ? 'Damaged' : null
+  const greyPills = [
+    !isGarageDoor && !isShutter && !isScreen && !isWindow && !isDoor && lengthPill ? lengthPill : null,
+    doorPill,
+    shutterPill,
+    screenPill,
+    windowPill,
+    garageTypePill,
+  ].filter(Boolean)
+  const redPills = [damagePill].filter(Boolean)
+  const hasPills = greyPills.length > 0 || redPills.length > 0
 
   return (
-    <div className="ri-sub-card">
+    <div className={`ri-sub-card${redPills.length ? ' ri-sub-card--damage' : ''}`}>
       <div className="int-room-header">
         <button
           type="button"
@@ -243,9 +358,14 @@ function ElevSubCard({
             className={`int-room-chevron${open ? ' int-room-chevron--open' : ''}`}
             aria-hidden="true"
           />
-          {lengthPill && (
+          {hasPills && (
             <span className="ri-collapsible-sub-pills">
-              <span className="int-room-story">{lengthPill}</span>
+              {greyPills.map(pill => (
+                <span key={`grey-${pill}`} className="int-room-story">{pill}</span>
+              ))}
+              {redPills.map(pill => (
+                <span key={`red-${pill}`} className="int-damage-badge">{pill}</span>
+              ))}
             </span>
           )}
         </button>
@@ -274,6 +394,8 @@ function ElevSubCard({
                   field={field}
                   value={sub.fields?.[field.l]}
                   onChange={value => onUpdateField(field.l, value)}
+                  subFields={sub.fields || {}}
+                  onSubFieldChange={onUpdateField}
                 />
               )}
             >
@@ -312,11 +434,18 @@ function ElevItem({ itemDef, direction, trigPhoto }) {
     updateElevSubField,
     data,
   } = useInspection()
-  const { compactOptionPairRow, addMore, addMoreLabel, subFields = [], fields = [] } = itemDef
+  const {
+    compactOptionPairRow,
+    addMore,
+    addMoreLabel,
+    subFields = [],
+    fields = [],
+  } = itemDef
   const cellKey = `${itemDef.id}_${direction}`
   const cell = data.elevData[cellKey] || { excluded: false, fields: {}, subItems: [], photos: [] }
   const { excluded, photos, subItems = [] } = cell
   const subItemTitle = (addMoreLabel || 'Item').replace(/^Add\s+/, '')
+  const sizeCounters = elevSizeCounterConfig(itemDef, subItems)
 
   return (
     <div className={`ri-item${excluded ? ' ri-item--excluded' : ''}`}>
@@ -338,6 +467,22 @@ function ElevItem({ itemDef, direction, trigPhoto }) {
         <div className="ri-item__body">
           {addMore ? (
             <>
+              {sizeCounters && (
+                <div className="elev-size-counters">
+                  <div
+                    className={`ri-size-counters ${sizeCounters.gridClass}`}
+                    aria-label={sizeCounters.ariaLabel}
+                  >
+                    {sizeCounters.sizes.map(size => (
+                      <div key={size} className="ri-size-counter" aria-label={`${size}: ${sizeCounters.counts[size]}`}>
+                        <span className="ri-size-counter__label">{size}</span>
+                        <span className="ri-size-counter__value">{sizeCounters.counts[size]}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="elev-size-counters__legend">{sizeCounters.legend}</p>
+                </div>
+              )}
               {fields.length > 0 && (
                 <FieldsGrid
                   fields={orderElevFields(visibleFieldsForValues(fields, cell.fields))}
