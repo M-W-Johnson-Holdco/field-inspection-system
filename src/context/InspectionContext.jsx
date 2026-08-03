@@ -268,7 +268,9 @@ function normalizeElevAddMoreSub(sub, itemId) {
             ? normalizeScreenSubFields(fields)
             : itemId === 'ev12'
               ? normalizeWindowSubFields(fields)
-              : fields,
+              : itemId === 'ev14'
+                ? normalizeDeckSubFields(fields)
+                : fields,
     photos: Array.isArray(sub?.photos) ? sub.photos : [],
   }
 }
@@ -337,8 +339,12 @@ function normalizeShutterSubFields(fields = {}) {
   delete next['Qty (Small)']
   delete next['Qty (Medium)']
   delete next['Small (<770 sq in)']
+  delete next['Small (<771 sq in)']
+  delete next['Small (≤770 sq in)']
   delete next['Medium (770-1,120 sq in)']
+  delete next['Medium (771-1,120 sq in)']
   delete next['Large (1,120+ sq in)']
+  delete next['Large (1,121+ sq in)']
   delete next['Small (Height: 30-50")']
   delete next['Medium (Height: 51-70")']
   delete next['Large (Height: 71"+)']
@@ -347,17 +353,21 @@ function normalizeShutterSubFields(fields = {}) {
 
 function expandShutterLegacySubs(rest = {}, topPhotos = []) {
   const small = shutterLegacyQty(rest, [
+    'Small (≤770 sq in)',
     'Small (<770 sq in)',
+    'Small (<771 sq in)',
     'Qty (Small)',
     'Small (Height: 30-50")',
     'Qty',
   ])
   const medium = shutterLegacyQty(rest, [
+    'Medium (771-1,120 sq in)',
     'Medium (770-1,120 sq in)',
     'Qty (Medium)',
     'Medium (Height: 51-70")',
   ])
   const large = shutterLegacyQty(rest, [
+    'Large (1,121+ sq in)',
     'Large (1,120+ sq in)',
     'Large (Height: 71"+)',
   ])
@@ -377,13 +387,18 @@ function normalizeScreenSubFields(fields = {}) {
   delete next.Qty
   delete next['Small (1–9 sq ft)']
   delete next['Medium (10–16 sq ft)']
+  delete next['Large (17+ sq ft)']
+  delete next['Small (1–9 ft²)']
+  delete next['Medium (10–16 ft²)']
+  delete next['Large (17+ ft²)']
   return next
 }
 
 function expandScreenLegacySubs(rest = {}, topPhotos = []) {
-  const small = shutterLegacyQty(rest, ['Small (1–9 sq ft)', 'Qty'])
-  const medium = shutterLegacyQty(rest, ['Medium (10–16 sq ft)'])
-  const total = small + medium
+  const small = shutterLegacyQty(rest, ['Small (1–9 sq ft)', 'Small (1–9 ft²)', 'Qty'])
+  const medium = shutterLegacyQty(rest, ['Medium (10–16 sq ft)', 'Medium (10–16 ft²)'])
+  const large = shutterLegacyQty(rest, ['Large (17+ sq ft)', 'Large (17+ ft²)'])
+  const total = small + medium + large
   const base = normalizeScreenSubFields(rest)
   if (total > 0) {
     return Array.from({ length: total }, (_, i) => ({
@@ -400,13 +415,44 @@ function normalizeWindowSubFields(fields = {}) {
   delete next['Small (3–11 sq ft)']
   delete next['Medium (12–19 sq ft)']
   delete next['Large (19+ sq ft)']
+  delete next['Small (3–11 ft²)']
+  delete next['Medium (12–19 ft²)']
+  delete next['Large (19+ ft²)']
+  delete next['Small (≤11 sq ft)']
+  delete next['Large (20+ sq ft)']
+  delete next['Small (≤11 ft²)']
+  delete next['Large (20+ ft²)']
+  return next
+}
+
+function normalizeDeckSubFields(fields = {}) {
+  const next = { ...fields }
+  delete next.Qty
+  const material = String(next.Material || '')
+  if (material === 'Cedar' || material === 'Pine' || material === 'Redwood') {
+    next.Material = 'Wood'
+  }
   return next
 }
 
 function expandWindowLegacySubs(rest = {}, topPhotos = []) {
-  const small = shutterLegacyQty(rest, ['Small (3–11 sq ft)', 'Qty'])
-  const medium = shutterLegacyQty(rest, ['Medium (12–19 sq ft)'])
-  const large = shutterLegacyQty(rest, ['Large (19+ sq ft)'])
+  const small = shutterLegacyQty(rest, [
+    'Small (3–11 sq ft)',
+    'Small (3–11 ft²)',
+    'Small (≤11 sq ft)',
+    'Small (≤11 ft²)',
+    'Qty',
+  ])
+  const medium = shutterLegacyQty(rest, [
+    'Medium (12–19 sq ft)',
+    'Medium (12–19 ft²)',
+  ])
+  const large = shutterLegacyQty(rest, [
+    'Large (19+ sq ft)',
+    'Large (19+ ft²)',
+    'Large (20+ sq ft)',
+    'Large (20+ ft²)',
+  ])
   const total = small + medium + large
   const base = normalizeWindowSubFields(rest)
   if (total > 0) {
@@ -429,6 +475,7 @@ function stripElevSharedFromSubFields(itemId, fields = {}) {
   if (itemId === 'ev6') next = normalizeShutterSubFields(next)
   if (itemId === 'ev5') next = normalizeScreenSubFields(next)
   if (itemId === 'ev12') next = normalizeWindowSubFields(next)
+  if (itemId === 'ev14') next = normalizeDeckSubFields(next)
   return next
 }
 
@@ -544,7 +591,7 @@ function migrateElevAddMoreCell(cell, itemId) {
   if (elevCellHasLegacyTopFields(rest, itemId) || topPhotos.length) {
     const cardFields = stripElevSharedFromSubFields(itemId, rest)
     let count = 1
-    if (itemId === 'ev7' || itemId === 'ev8') {
+    if (itemId === 'ev7' || itemId === 'ev8' || itemId === 'ev14') {
       const qty = Math.floor(Number(rest.Qty))
       if (qty > 1) count = qty
     }
@@ -599,6 +646,7 @@ function normalizeElevData(elevData = {}) {
       || key.startsWith('ev7_')
       || key.startsWith('ev8_')
       || key.startsWith('ev12_')
+      || key.startsWith('ev14_')
     ) {
       next[key] = migrateElevAddMoreCell(next[key], key.split('_')[0])
     }
@@ -624,6 +672,11 @@ function normalizeFenceFields(fields = {}) {
   if (next['Post Spacing (LF)'] != null && next['Post Spacing (LF)'] !== '') {
     const { feet } = parseMeasurement(next['Post Spacing (LF)'])
     next['Post Spacing (LF)'] = feet !== '' ? feet : String(next['Post Spacing (LF)']).replace(/[^\d.]/g, '')
+  }
+
+  // Legacy multi-select Material → single value
+  if (Array.isArray(next.Material)) {
+    next.Material = next.Material.find(v => v != null && String(v).trim() !== '') || ''
   }
 
   return next
@@ -661,9 +714,9 @@ function normalizeExteriorData(exteriorData = {}) {
 function normalizeChimneySizeValue(val) {
   if (!val) return ''
   const v = String(val).trim()
-  if (v === 'Small' || v.startsWith('Small')) return 'Small (width < 24")'
+  if (v === 'Small' || v.startsWith('Small')) return 'Small (width ≤23")'
   if (v === 'Medium' || v.startsWith('Medium')) return 'Medium (width 24"–36")'
-  if (v === 'Large' || v.startsWith('Large')) return 'Large (width > 36")'
+  if (v === 'Large' || v.startsWith('Large')) return 'Large (width 37+")'
   return v
 }
 
@@ -730,6 +783,7 @@ function normalizeRoofData(roofData = {}) {
     if (!item) continue
     next[itemDef.id] = withRoofItemStatus(item, getRoofItemStatus(item))
   }
+  next = normalizeRi0(next)
   next = normalizeRi11(next)
   next = normalizeRi12(next)
   next = normalizeRi14(next)
@@ -739,6 +793,29 @@ function normalizeRoofData(roofData = {}) {
   next = normalizeRi21(next)
   next = normalizeRi22(next)
   next = normalizeRi23(next)
+  return next
+}
+
+const PREDOMINANT_PITCH_KEY = 'Predominant Pitch (x/12)'
+const LEGACY_PREDOMINANT_PITCH_KEY = 'Predominant Pitch'
+
+function normalizeRi0(roofData) {
+  const next = { ...roofData }
+  const ri0 = next.ri0
+  if (!ri0) return next
+
+  const fields = { ...(ri0.fields || {}) }
+  const legacy = fields[LEGACY_PREDOMINANT_PITCH_KEY]
+  if (legacy != null && legacy !== '' && (fields[PREDOMINANT_PITCH_KEY] == null || fields[PREDOMINANT_PITCH_KEY] === '')) {
+    fields[PREDOMINANT_PITCH_KEY] = legacy
+  }
+  delete fields[LEGACY_PREDOMINANT_PITCH_KEY]
+
+  if (fields[PREDOMINANT_PITCH_KEY] != null && fields[PREDOMINANT_PITCH_KEY] !== '') {
+    fields[PREDOMINANT_PITCH_KEY] = formatPitch(parsePitchNumerator(fields[PREDOMINANT_PITCH_KEY], 0))
+  }
+
+  next.ri0 = { ...ri0, fields }
   return next
 }
 
@@ -898,6 +975,7 @@ function hasLegacyLowSlopeTopLevel(fields = {}) {
   return fields.Location != null
     || fields['Style / Grade'] != null
     || fields.Pitch != null
+    || fields['Pitch (x/12)'] != null
     || fields.Damaged != null
     || fields['Exposed Rafters'] != null
     || fields._damage != null
@@ -908,13 +986,29 @@ function normalizeLowSlopePitch(value) {
   return formatPitch(parsePitchNumerator(value, 0))
 }
 
-function normalizeLowSlopeSubItem(sub) {
-  const fields = { ...(sub?.fields || {}) }
-  if (fields.Pitch != null && fields.Pitch !== '') {
-    fields.Pitch = normalizeLowSlopePitch(fields.Pitch)
+const STRUCTURE_PITCH_KEY = 'Pitch (x/12)'
+const LEGACY_STRUCTURE_PITCH_KEY = 'Pitch'
+
+function normalizeStructurePitchFields(fields = {}) {
+  const next = { ...fields }
+  const legacy = next[LEGACY_STRUCTURE_PITCH_KEY]
+  if (
+    legacy != null
+    && legacy !== ''
+    && (next[STRUCTURE_PITCH_KEY] == null || next[STRUCTURE_PITCH_KEY] === '')
+  ) {
+    next[STRUCTURE_PITCH_KEY] = normalizeLowSlopePitch(legacy)
   }
+  delete next[LEGACY_STRUCTURE_PITCH_KEY]
+  if (next[STRUCTURE_PITCH_KEY] != null && next[STRUCTURE_PITCH_KEY] !== '') {
+    next[STRUCTURE_PITCH_KEY] = normalizeLowSlopePitch(next[STRUCTURE_PITCH_KEY])
+  }
+  return next
+}
+
+function normalizeLowSlopeSubItem(sub) {
   return {
-    fields,
+    fields: normalizeStructurePitchFields(sub?.fields || {}),
     photos: Array.isArray(sub?.photos) ? sub.photos : [],
   }
 }
@@ -926,12 +1020,14 @@ function migrateLowSlopeFields(ri22) {
 
   if (!hasLegacyLowSlopeTopLevel(fields)) return []
 
+  const pitch = fields[STRUCTURE_PITCH_KEY] || fields.Pitch
+
   return [{
     fields: {
       ...(fields.Location ? { Location: fields.Location } : {}),
       ...(fields['Style / Grade'] ? { 'Style / Grade': fields['Style / Grade'] } : {}),
       ...(fields['Exposed Rafters'] ? { 'Exposed Rafters': fields['Exposed Rafters'] } : {}),
-      ...(fields.Pitch ? { Pitch: normalizeLowSlopePitch(fields.Pitch) } : {}),
+      ...(pitch ? { [STRUCTURE_PITCH_KEY]: normalizeLowSlopePitch(pitch) } : {}),
       ...(fields.Damaged ? { Damaged: fields.Damaged } : {}),
       ...(fields._damage ? { _damage: fields._damage } : {}),
     },
@@ -973,17 +1069,14 @@ function hasLegacyOtherStructureTopLevel(fields = {}) {
   return fields.Type != null
     || fields['Style / Grade'] != null
     || fields.Pitch != null
+    || fields['Pitch (x/12)'] != null
     || fields.Damaged != null
     || fields._damage != null
 }
 
 function normalizeOtherStructureSubItem(sub) {
-  const fields = { ...(sub?.fields || {}) }
-  if (fields.Pitch != null && fields.Pitch !== '') {
-    fields.Pitch = normalizeLowSlopePitch(fields.Pitch)
-  }
   return {
-    fields,
+    fields: normalizeStructurePitchFields(sub?.fields || {}),
     photos: Array.isArray(sub?.photos) ? sub.photos : [],
   }
 }
@@ -995,11 +1088,13 @@ function migrateOtherStructureFields(ri23) {
 
   if (!hasLegacyOtherStructureTopLevel(fields)) return []
 
+  const pitch = fields[STRUCTURE_PITCH_KEY] || fields.Pitch
+
   return [{
     fields: {
       ...(fields.Type ? { Type: fields.Type } : {}),
       ...(fields['Style / Grade'] ? { 'Style / Grade': fields['Style / Grade'] } : {}),
-      ...(fields.Pitch ? { Pitch: normalizeLowSlopePitch(fields.Pitch) } : {}),
+      ...(pitch ? { [STRUCTURE_PITCH_KEY]: normalizeLowSlopePitch(pitch) } : {}),
       ...(fields.Damaged ? { Damaged: fields.Damaged } : {}),
       ...(fields._damage ? { _damage: fields._damage } : {}),
     },
@@ -1197,19 +1292,34 @@ function normalizeRi12(roofData) {
   return next
 }
 
-const SKYLIGHT_SIZES = ['Small', 'Medium', 'Large', 'X-Large']
+const SKYLIGHT_SIZES = ['Large (≤16 ft²)', 'X-Large (17+ ft²)']
 
 function normalizeSkylightSize(value) {
   if (value == null || value === '' || value === 'Select') return ''
   const text = String(value).trim()
   if (SKYLIGHT_SIZES.includes(text)) return text
   const lower = text.toLowerCase()
-  if (lower === 'x-large' || lower === 'xlarge' || lower === 'xl' || lower.startsWith('x-large') || lower.startsWith('extra')) {
-    return 'X-Large'
+  if (
+    lower === 'x-large'
+    || lower === 'xlarge'
+    || lower === 'xl'
+    || lower.startsWith('x-large')
+    || lower.startsWith('extra')
+    || lower.includes('17+')
+    || lower.includes('16+')
+  ) {
+    return 'X-Large (17+ ft²)'
   }
-  if (lower.startsWith('small')) return 'Small'
-  if (lower.startsWith('medium')) return 'Medium'
-  if (lower.startsWith('large')) return 'Large'
+  if (
+    lower.startsWith('large')
+    || lower.startsWith('small')
+    || lower.startsWith('medium')
+    || lower.includes('≤16')
+    || lower.includes('<=16')
+    || lower.includes('<16')
+  ) {
+    return 'Large (≤16 ft²)'
+  }
   return ''
 }
 
@@ -1220,18 +1330,17 @@ function isLegacySkylightSubItem(sub) {
 
 function normalizeSkylightSubItem(sub) {
   const source = { ...(sub?.fields || {}) }
-  const size = normalizeSkylightSize(source.Size)
   delete source['Size (L x W)']
   delete source['Size (sq in)']
   delete source['Size (sq. in)']
   delete source['Length (in)']
   delete source['Width (in)']
-  delete source.Size
+  // Size is now L×W (Length/Width ft); drop legacy categorical Size dropdown values.
+  if (normalizeSkylightSize(source.Size)) {
+    delete source.Size
+  }
   return {
-    fields: {
-      ...source,
-      ...(size ? { Size: size } : {}),
-    },
+    fields: source,
     photos: Array.isArray(sub?.photos) ? sub.photos : [],
   }
 }
@@ -1246,10 +1355,8 @@ function migrateSkylightFields(ri14) {
 
   ;(ri14.subItems || []).forEach(sub => {
     if (isLegacySkylightSubItem(sub)) {
-      const size = normalizeSkylightSize(sub.fields?.Size)
       subItems.push({
         fields: {
-          ...(size ? { Size: size } : {}),
           ...(sharedStyle ? { Style: sharedStyle } : {}),
           ...(sub.fields?.Style ? { Style: sub.fields.Style } : {}),
           ...(sharedMount ? { Mount: sharedMount } : {}),
@@ -1584,7 +1691,7 @@ function buildLowSlopeSubItemsFromParsed(roof = {}) {
         ...(ls?.location ? { Location: ls.location } : {}),
         ...(ls?.grade ? { 'Style / Grade': ls.grade } : {}),
         ...(ls?.exposedRafters ? { 'Exposed Rafters': ls.exposedRafters } : {}),
-        ...(ls?.pitch ? { Pitch: normalizeLowSlopePitch(ls.pitch) } : {}),
+        ...(ls?.pitch ? { 'Pitch (x/12)': normalizeLowSlopePitch(ls.pitch) } : {}),
         ...(ls?.damaged ? { Damaged: ls.damaged } : {}),
         ...(ls?.damaged === 'Yes' && ls?.damageDescription ? { _damage: ls.damageDescription } : {}),
       },
@@ -1607,7 +1714,7 @@ function buildLowSlopeSubItemsFromParsed(roof = {}) {
       ...(location ? { Location: location } : {}),
       ...(grade ? { 'Style / Grade': grade } : {}),
       ...(exposedRafters ? { 'Exposed Rafters': exposedRafters } : {}),
-      ...(pitch ? { Pitch: pitch } : {}),
+      ...(pitch ? { 'Pitch (x/12)': pitch } : {}),
       ...(damaged ? { Damaged: damaged } : {}),
     },
     photos: [],
@@ -1616,19 +1723,17 @@ function buildLowSlopeSubItemsFromParsed(roof = {}) {
 
 function buildSkylightSubItemsFromParsed(roof = {}) {
   const list = Array.isArray(roof.skylights) ? roof.skylights : []
-  return list.map(sk => {
-    const size = normalizeSkylightSize(sk?.size)
-    return {
-      fields: {
-        ...(sk?.style ? { Style: sk.style } : {}),
-        ...(sk?.mount ? { Mount: sk.mount } : {}),
-        ...(size ? { Size: size } : {}),
-        ...(sk?.damaged ? { Damaged: sk.damaged } : {}),
-        ...(sk?.damaged === 'Yes' && sk?.damageDescription ? { _damage: sk.damageDescription } : {}),
-      },
-      photos: [],
-    }
-  })
+  return list.map(sk => ({
+    fields: {
+      ...(sk?.style ? { Style: sk.style } : {}),
+      ...(sk?.mount ? { Mount: sk.mount } : {}),
+      ...(sk?.length != null && sk.length !== '' ? { 'Length (ft)': String(sk.length) } : {}),
+      ...(sk?.width != null && sk.width !== '' ? { 'Width (ft)': String(sk.width) } : {}),
+      ...(sk?.damaged ? { Damaged: sk.damaged } : {}),
+      ...(sk?.damaged === 'Yes' && sk?.damageDescription ? { _damage: sk.damageDescription } : {}),
+    },
+    photos: [],
+  }))
 }
 
 function buildRainDiverterSubItemsFromParsed(roof = {}) {
@@ -1663,7 +1768,7 @@ function buildOtherStructureSubItemsFromParsed(roof = {}) {
     fields: {
       ...(os?.type ? { Type: os.type } : {}),
       ...(os?.grade ? { 'Style / Grade': os.grade } : {}),
-      ...(os?.pitch ? { Pitch: normalizeLowSlopePitch(os.pitch) } : {}),
+      ...(os?.pitch ? { 'Pitch (x/12)': normalizeLowSlopePitch(os.pitch) } : {}),
       ...(os?.damaged ? { Damaged: os.damaged } : {}),
       ...(os?.damaged === 'Yes' && os?.damageDescription ? { _damage: os.damageDescription } : {}),
     },
@@ -2514,32 +2619,6 @@ export function InspectionProvider({ children }) {
     })
   }
 
-  function setExteriorMeasurePhoto(itemId, key, dataUrl) {
-    setData(prev => {
-      const item = prev.exteriorData[itemId]
-      const next = {
-        ...prev,
-        exteriorData: {
-          ...prev.exteriorData,
-          [itemId]: { ...item, measurePhotos: { ...item.measurePhotos, [key]: dataUrl } },
-        },
-      }
-      scheduleSave(next)
-      return next
-    })
-  }
-
-  function removeExteriorMeasurePhoto(itemId, key) {
-    setData(prev => {
-      const item = prev.exteriorData[itemId]
-      const rest = { ...item.measurePhotos }
-      delete rest[key]
-      const next = { ...prev, exteriorData: { ...prev.exteriorData, [itemId]: { ...item, measurePhotos: rest } } }
-      scheduleSave(next)
-      return next
-    })
-  }
-
   // ─────────────────────────────────────────────────────────────────
 
   function applyXmlImport(parsed) {
@@ -2564,7 +2643,7 @@ export function InspectionProvider({ children }) {
 
       if (parsed.pitch) {
         const ri0 = roofData.ri0
-        roofData.ri0 = { ...ri0, fields: { ...ri0.fields, 'Predominant Pitch': parsed.pitch } }
+        roofData.ri0 = { ...ri0, fields: { ...ri0.fields, 'Predominant Pitch (x/12)': parsed.pitch } }
       }
 
       if (parsed.valleyPresent) {
@@ -2662,7 +2741,6 @@ export function InspectionProvider({ children }) {
       addInteriorPhoto, removeInteriorPhoto,
       toggleExteriorExclude, updateExteriorField,
       addExteriorPhoto, removeExteriorPhoto,
-      setExteriorMeasurePhoto, removeExteriorMeasurePhoto,
       updateNote,
     }}>
       {children}

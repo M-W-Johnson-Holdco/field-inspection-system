@@ -1,9 +1,19 @@
 import { useState } from 'react'
-import { Camera, FolderOpen } from 'lucide-react'
+import { Camera, ChevronDown, FolderOpen } from 'lucide-react'
 import PhotoLightbox from './PhotoLightbox'
+import useExpandedSection from '../hooks/useExpandedSection'
 
-export default function PhotoZone({ entityId, photos, trigPhoto, onRemove, fullWidth = true }) {
+export default function PhotoZone({
+  entityId,
+  photos,
+  trigPhoto,
+  onRemove,
+  fullWidth = true,
+  inlineActions = false,
+}) {
   const [activeIndex, setActiveIndex] = useState(null)
+  const [thumbsOpen, setThumbsOpen] = useExpandedSection(`photos:${entityId}`, false)
+  const hasPhotos = photos.length > 0
 
   function handleRemove(index, e) {
     e.stopPropagation()
@@ -27,54 +37,91 @@ export default function PhotoZone({ entityId, photos, trigPhoto, onRemove, fullW
     setActiveIndex(current => (current < photos.length - 1 ? current + 1 : current))
   }
 
-  return (
-    <>
-      <div className={`ri-photo-zone field-group${fullWidth ? ' field-group--full' : ''}`}>
-        <span className="ri-photo-label">Photos</span>
-        {photos.length > 0 && (
-          <div className="ri-photo-row">
-            {photos.map((src, i) => (
-              <div key={i} className="ri-photo-thumb">
-                <button
-                  type="button"
-                  className="ri-photo-thumb__open"
-                  onClick={() => setActiveIndex(i)}
-                  aria-label={`View photo ${i + 1} of ${photos.length}`}
-                >
-                  <img src={src} alt="" />
-                </button>
-                <button
-                  type="button"
-                  className="ri-photo-del"
-                  onClick={e => handleRemove(i, e)}
-                  aria-label="Remove photo"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-        <div className="ri-photo-btns">
+  const label = hasPhotos ? (
+    <button
+      type="button"
+      className={`ri-photo-label ri-photo-toggle${thumbsOpen ? ' ri-photo-toggle--open' : ''}`}
+      aria-expanded={thumbsOpen}
+      onClick={() => setThumbsOpen(open => !open)}
+    >
+      <span className="ri-photo-toggle__text">
+        Photos
+        <span className="ri-photo-toggle__count">({photos.length})</span>
+      </span>
+      <ChevronDown className="ri-photo-toggle__chevron" aria-hidden="true" />
+    </button>
+  ) : (
+    <span className="ri-photo-label">Photos</span>
+  )
+
+  const buttons = (
+    <div className="ri-photo-btns">
+      <button
+        type="button"
+        className="ri-btn-photo ri-btn-photo--cam"
+        onClick={() => trigPhoto(entityId, 'cam')}
+        aria-label="Add photo from camera"
+        title="Camera"
+      >
+        <Camera size={16} aria-hidden="true" />
+      </button>
+      <button
+        type="button"
+        className="ri-btn-photo ri-btn-photo--gal"
+        onClick={() => trigPhoto(entityId, 'gal')}
+        aria-label="Add photo from gallery"
+        title="Gallery"
+      >
+        <FolderOpen size={16} aria-hidden="true" />
+      </button>
+    </div>
+  )
+
+  const thumbs = hasPhotos && thumbsOpen && (
+    <div className="ri-photo-row">
+      {photos.map((src, i) => (
+        <div key={i} className="ri-photo-thumb">
           <button
             type="button"
-            className="ri-btn-photo ri-btn-photo--cam"
-            onClick={() => trigPhoto(entityId, 'cam')}
-            aria-label="Add photo from camera"
-            title="Camera"
+            className="ri-photo-thumb__open"
+            onClick={() => setActiveIndex(i)}
+            aria-label={`View photo ${i + 1} of ${photos.length}`}
           >
-            <Camera size={16} aria-hidden="true" />
+            <img src={src} alt="" />
           </button>
           <button
             type="button"
-            className="ri-btn-photo ri-btn-photo--gal"
-            onClick={() => trigPhoto(entityId, 'gal')}
-            aria-label="Add photo from gallery"
-            title="Gallery"
+            className="ri-photo-del"
+            onClick={e => handleRemove(i, e)}
+            aria-label="Remove photo"
           >
-            <FolderOpen size={16} aria-hidden="true" />
+            ×
           </button>
         </div>
+      ))}
+    </div>
+  )
+
+  return (
+    <>
+      <div className={[
+        'ri-photo-zone',
+        'field-group',
+        fullWidth ? 'field-group--full' : '',
+        inlineActions ? 'ri-photo-zone--inline' : '',
+        hasPhotos ? 'ri-photo-zone--collapsible' : '',
+        hasPhotos && thumbsOpen ? 'ri-photo-zone--expanded' : '',
+      ].filter(Boolean).join(' ')}>
+        {inlineActions ? (
+          <div className="ri-photo-zone__header">
+            {label}
+            {buttons}
+          </div>
+        ) : (
+          label
+        )}
+        {thumbs}
+        {!inlineActions && buttons}
       </div>
 
       {activeIndex != null && (

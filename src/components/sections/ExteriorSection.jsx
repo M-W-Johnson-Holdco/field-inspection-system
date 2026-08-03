@@ -2,29 +2,43 @@ import { useRef } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { useInspection } from '../../context/InspectionContext'
 import PhotoZone from '../PhotoZone'
-import FenceMeasureTool from '../FenceMeasureTool'
 import FieldsGrid from '../FieldsGrid'
 import DamageDescriptionInput from '../DamageDescriptionInput'
 import MeasurementInput, { isLinearMeasurementField } from '../MeasurementInput'
 import { EXTERIOR_ITEMS, EXTERIOR_SUBSECTIONS } from '../../data/exteriorItems'
 import { fieldGroupProps } from '../../utils/fieldLayout'
-import { fieldSelectClass, withSelectPlaceholderClass, ynOptionsForField, optionsForField } from '../../utils/fieldGrid'
+import { fieldSelectClass, withSelectPlaceholderClass, ynOptionsForField, optionsForField, visibleFieldsForValues } from '../../utils/fieldGrid'
 import useExpandedSection from '../../hooks/useExpandedSection'
-
-// Maps measured field labels → the fields-object key tracking whether AI filled them
-const AI_FLAG_FIELDS = {
-  'Height (FT)': '_heightAiFilled',
-  'Post Spacing (LF)': '_postSpacingAiFilled',
-}
+import { fenceTotalLf } from '../../utils/fenceLength'
 
 // ── Field Renderer ─────────────────────────────────────────────────
-function FieldRenderer({ field, value, onChange, aiFilled }) {
+function FieldRenderer({ field, value, onChange, allValues }) {
   const { t, l, o, p } = field
-  const lbl = <label className="form-label">{l}</label>
-  const extraClass = aiFilled ? 'field-group--ai-filled' : ''
+  const lbl = (
+    <label className="form-label">
+      {l}
+      {field.labelHint && (
+        <span className="form-label__hint"> ({field.labelHint})</span>
+      )}
+    </label>
+  )
+
+  if (t === 'computedFenceLf') {
+    const total = fenceTotalLf(allValues || {})
+    return (
+      <div {...fieldGroupProps(field)}>
+        <div className="dimension-lw-input__area" aria-live="polite">
+          <span className="dimension-lw-input__area-label">{l}</span>
+          <output className="dimension-lw-input__area-value">
+            {total != null ? `${total} LF` : '—'}
+          </output>
+        </div>
+      </div>
+    )
+  }
 
   if (t === 'num' && isLinearMeasurementField(field)) {
-    return <MeasurementInput field={field} value={value} onChange={onChange} aiFilled={aiFilled} />
+    return <MeasurementInput field={field} value={value} onChange={onChange} />
   }
 
   if (t === 'yn' || t === 'radio') {
@@ -33,7 +47,7 @@ function FieldRenderer({ field, value, onChange, aiFilled }) {
       <div {...fieldGroupProps(field)}>
         {lbl}
         <select
-          className={fieldSelectClass(field)}
+          className={withSelectPlaceholderClass(fieldSelectClass(field), value)}
           value={value || ''}
           onChange={e => onChange(e.target.value)}
         >
@@ -47,6 +61,51 @@ function FieldRenderer({ field, value, onChange, aiFilled }) {
   if (t === 'multiRadio' || t === 'multi' || t === 'toggleMulti') {
     const arr = Array.isArray(value) ? value : []
     const opts = optionsForField(field)
+
+    // Native device picker (same control as Shingle Style): pick options one at a time.
+    if (field.nativeMenu) {
+      const ordered = opts.filter(opt => arr.includes(opt))
+      const displayValue = ordered.length ? '__selected__' : ''
+      const displayLabel = ordered.length ? ordered.join(', ') : 'Select'
+      return (
+        <div {...fieldGroupProps(field)}>
+          {lbl}
+          <select
+            className={withSelectPlaceholderClass(
+              fieldSelectClass(
+                field.halfWidthDesktop ? { ...field, t: 'radio' } : field,
+              ),
+              displayValue,
+            )}
+            value={displayValue}
+            onChange={e => {
+              const next = e.target.value
+              if (!next || next === '__selected__') return
+              const nextArr = arr.includes(next)
+                ? arr.filter(v => v !== next)
+                : [...arr, next]
+              onChange(opts.filter(opt => nextArr.includes(opt)))
+            }}
+            aria-label={l}
+          >
+            <option value={displayValue} hidden>{displayLabel}</option>
+            {opts.map(opt => (
+              <option key={opt} value={opt}>
+                {ordered.includes(opt) ? `✓ ${opt}` : opt}
+              </option>
+            ))}
+          </select>
+          {ordered.length > 0 && (
+            <div className="multi-select__selected" aria-label={`Selected ${l}`}>
+              {ordered.map(opt => (
+                <span key={opt} className="multi-select__chip">{opt}</span>
+              ))}
+            </div>
+          )}
+        </div>
+      )
+    }
+
     return (
       <div {...fieldGroupProps(field)}>
         {lbl}
@@ -99,7 +158,7 @@ function FieldRenderer({ field, value, onChange, aiFilled }) {
     }
     const inputCh = Math.max(String(value || p || '').length, 3)
     return (
-      <div {...fieldGroupProps(field, extraClass)}>
+      <div {...fieldGroupProps(field)}>
         {lbl}
         <div className="number-stepper">
           <button type="button" className="number-stepper__btn" onClick={() => adjustValue(-1)} aria-label={`Decrease ${l}`}>−</button>
@@ -154,8 +213,9 @@ function ExteriorItem({ itemDef, trigPhoto }) {
 
   function handleFieldChange(label, val) {
     updateExteriorField(id, label, val)
-    const flagKey = AI_FLAG_FIELDS[label]
-    if (flagKey && item.fields[flagKey]) updateExteriorField(id, flagKey, false)
+    if (label === 'Damaged Items' && Array.isArray(val) && !val.includes('Other')) {
+      if (item.fields.Other) updateExteriorField(id, 'Other', '')
+    }
   }
 
   return (
@@ -175,54 +235,55 @@ function ExteriorItem({ itemDef, trigPhoto }) {
       {!excluded && (
         <div className="ri-item__body">
           <FieldsGrid
-            fields={fields}
+            fields={visibleFieldsForValues(fields, item.fields)}
             renderField={f => (
               <FieldRenderer
                 key={f.l}
                 field={f}
                 value={item.fields[f.l]}
                 onChange={val => handleFieldChange(f.l, val)}
-                aiFilled={!!item.fields[AI_FLAG_FIELDS[f.l]]}
+                allValues={item.fields}
               />
             )}
           >
             {hasD && (
-              <div className="ri-damage-row">
-                <div className="field-group field-group--compact">
-                  <label className="form-label">Damaged</label>
-                  <select
-                    className="field-select compact-select compact-select--yn"
-                    value={damageStatus}
-                    onChange={e => handleDamageStatus(e.target.value)}
-                  >
-                    <option value="">Select</option>
-                    <option value="Yes">Yes</option>
-                    <option value="No">No</option>
-                  </select>
-                </div>
-                {damageStatus === 'Yes' && (
-                  <>
-                    <label className="form-label">{damageLabel || 'Damage Description'}</label>
-                    <DamageDescriptionInput
-                      placeholder={damagePlaceholder || 'Describe damage...'}
-                      value={item.fields['_damage'] || ''}
-                      onChange={val => updateExteriorField(id, '_damage', val)}
-                    />
-                  </>
-                )}
+              <div {...fieldGroupProps({ t: 'yn', l: 'Damaged', full: true })}>
+                <label className="form-label">Damaged</label>
+                <select
+                  className={withSelectPlaceholderClass(
+                    fieldSelectClass({ t: 'yn', l: 'Damaged', full: true }),
+                    damageStatus,
+                  )}
+                  value={damageStatus || ''}
+                  onChange={e => handleDamageStatus(e.target.value)}
+                >
+                  <option value="">Select</option>
+                  {ynOptionsForField({ t: 'yn', l: 'Damaged' }).map(opt => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
               </div>
             )}
-            {itemDef.cvMeasure && <FenceMeasureTool itemId={id} />}
+            {hasD && damageStatus === 'Yes' && (
+              <div className="ri-damage-row">
+                <label className="form-label">{damageLabel || 'Damage Description'}</label>
+                <DamageDescriptionInput
+                  placeholder={damagePlaceholder || 'Describe damage...'}
+                  value={item.fields['_damage'] || ''}
+                  onChange={val => updateExteriorField(id, '_damage', val)}
+                />
+              </div>
+            )}
             {hasP && (
               <PhotoZone
                 entityId={id}
                 photos={photos}
                 trigPhoto={trigPhoto}
                 onRemove={removeExteriorPhoto}
+                inlineActions
               />
             )}
           </FieldsGrid>
-
         </div>
       )}
     </div>
@@ -246,7 +307,7 @@ function SubSectionCard({ sectionKey, title, items, trigPhoto }) {
       </button>
       <div className={`collapse-panel ${isOpen ? 'collapse-panel--open' : ''}`} aria-hidden={!isOpen}>
         <div className="collapse-panel__inner">
-          <div className="ri-card__content">
+          <div className="ri-card__content ext-items">
             {items.map(item => (
               <ExteriorItem key={item.id} itemDef={item} trigPhoto={trigPhoto} />
             ))}

@@ -4,6 +4,14 @@ import { ROOF_ITEMS } from '../data/roofItems'
 export function isFieldVisible(field, values = {}) {
   if (!field.showWhen) return true
   const actual = values[field.showWhen.field]
+  if (field.showWhen.includes != null) {
+    const needle = field.showWhen.includes
+    if (Array.isArray(actual)) return actual.includes(needle)
+    if (typeof actual === 'string') {
+      return actual === needle || actual.startsWith(`${needle} - `)
+    }
+    return false
+  }
   const expected = field.showWhen.equals
   if (typeof actual === 'string' && actual.startsWith(`${expected} - `)) return true
   return actual === expected
@@ -50,7 +58,7 @@ function isSkylightSubFieldsPattern(fields) {
   return fields.length === 4
     && fields[0].t === 'select' && fields[0].l === 'Style'
     && fields[1].t === 'select' && fields[1].l === 'Mount'
-    && fields[2].t === 'select' && fields[2].l === 'Size'
+    && fields[2].t === 'lwxw' && fields[2].l === 'Size'
     && fields[3].t === 'yn' && fields[3].l === 'Damaged'
 }
 
@@ -101,7 +109,7 @@ function isShingleStyleFieldsPattern(fields) {
     && fields[0].t === 'multiRadio' && fields[0].l === 'Style'
     && fields[1].t === 'num' && fields[1].l === 'Stories'
     && fields[2].t === 'num' && fields[2].l === 'Layers'
-    && fields[3].t === 'pitch'
+    && fields[3].t === 'pitch' && fields[3].l.startsWith('Predominant Pitch')
 }
 
 export function groupFieldsForGrid(fields) {
@@ -166,6 +174,23 @@ export function groupFieldsForGrid(fields) {
     if (
       field.t === 'num' && field.l === 'Qty'
       && next?.t === 'num' && /\bLF\b/i.test(next.l)
+      && !field.full && !next.full
+    ) {
+      groups.push({
+        type: 'row',
+        qtyRow: true,
+        groups: [
+          { type: 'single', field },
+          { type: 'single', field: next },
+        ],
+      })
+      i += 2
+      continue
+    }
+
+    if (
+      field.t === 'num' && field.l === 'Post Qty'
+      && next?.t === 'num' && next.l === 'Post Spacing (LF)'
       && !field.full && !next.full
     ) {
       groups.push({
@@ -313,43 +338,20 @@ export function fieldSelectClass(field) {
   return 'field-select'
 }
 
-/** Fields that should never offer an N/A choice in the dropdown. */
+/** Multi-select (“select all that apply”) never offers N/A. All single-choice dropdowns do. */
 function omitsNAOption(field) {
-  if (field?.allowNA === false) return true
-  if (field?.allowNA === true) return false
-  const label = String(field?.l || '')
-  return (
-    label === 'Damaged'
-    || label === 'Painted'
-    || label === 'Type'
-    || label === 'Material'
-    || label === 'Style'
-    || label === 'Mount'
-    || label === 'Location'
-    || label === 'Width'
-    ||     label === 'Grade'
-    || label === 'Glaze'
-    || label === 'Action'
-    || /^Size\b/i.test(label)
-    || /damage/i.test(label)
-  )
+  return field?.t === 'multi'
+    || field?.t === 'multiRadio'
+    || field?.t === 'toggleMulti'
 }
 
-/** Yes/No options; some site-access yn fields also include N/A. */
+/** Yes/No dropdown options — always ends with N/A. */
 export function ynOptionsForField(field) {
-  const label = String(field?.l || '')
   if (omitsNAOption(field)) return ['Yes', 'No']
-  if (
-    label === 'OK Saturday Build'
-    || label === 'Pest Control Flashing'
-    || label === 'Overhead Clearance Issue'
-  ) {
-    return ['Yes', 'No', 'N/A']
-  }
-  return ['Yes', 'No']
+  return ['Yes', 'No', 'N/A']
 }
 
-/** Option-list fields (radio/select). Type/Material/Size/Damaged/Painted never get N/A. */
+/** Option-list fields (radio/select). Appends N/A unless this is a multi-select. */
 export function optionsForField(field) {
   const opts = Array.isArray(field?.o) ? [...field.o] : []
   if (omitsNAOption(field)) {

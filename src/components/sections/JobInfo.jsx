@@ -273,6 +273,7 @@ export default function JobInfo() {
                     <option value="">Select</option>
                     <option value="No">No</option>
                     <option value="Yes">Yes</option>
+                    <option value="N/A">N/A</option>
                   </select>
                 </div>
 
@@ -323,6 +324,7 @@ export default function JobInfo() {
                     <option value="Primary">Primary Property</option>
                     <option value="Secondary">Secondary Property</option>
                     <option value="Rental">Rental Property</option>
+                    <option value="N/A">N/A</option>
                   </select>
                 </div>
 

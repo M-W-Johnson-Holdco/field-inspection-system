@@ -12,14 +12,20 @@ import { fieldSelectClass, materialOptionColumnStyle, withSelectPlaceholderClass
 import { formatPitch, parsePitchNumerator } from '../../utils/pitch'
 import useExpandedSection from '../../hooks/useExpandedSection'
 import { getRoofItemStatus, isRoofItemActive } from '../../utils/roofItemStatus'
+import { skylightAreaSqFt, skylightSizeBucket, skylightSizeLabel } from '../../utils/skylightSize'
 
 // ── Field Renderer ─────────────────────────────────────────────────
 function PitchInput({ field, value, onChange }) {
-  const placeholder = field.p || '4/12'
-  const displayValue = value ? formatPitch(parsePitchNumerator(value, 0)) : ''
+  const numeratorOnly = Boolean(field.showNumeratorOnly)
+  const numerator = value != null && value !== '' ? parsePitchNumerator(value, 0) : null
+  const displayValue = numerator == null ? '' : (numeratorOnly ? String(numerator) : formatPitch(numerator))
+  const placeholder = numeratorOnly
+    ? String(field.p != null && field.p !== '' ? parsePitchNumerator(field.p, 0) : 0)
+    : (field.p || '4/12')
+  const inputCh = Math.max(String(displayValue || placeholder || '').length, 3)
 
   function adjust(delta) {
-    const base = value ? parsePitchNumerator(value, 0) : 0
+    const base = numerator == null ? 0 : numerator
     onChange(formatPitch(base + delta))
   }
 
@@ -35,7 +41,7 @@ function PitchInput({ field, value, onChange }) {
   return (
     <div {...fieldGroupProps(field)}>
       <label className="form-label">{field.l}</label>
-      <div className="number-stepper number-stepper--pitch">
+      <div className={numeratorOnly ? 'number-stepper' : 'number-stepper number-stepper--pitch'}>
         <button
           type="button"
           className="number-stepper__btn"
@@ -44,17 +50,32 @@ function PitchInput({ field, value, onChange }) {
         >
           −
         </button>
-        <div className="number-stepper__pitch-value">
+        {numeratorOnly ? (
           <input
-            className="field-input number-stepper__input number-stepper__pitch-input"
-            type="text"
+            className="field-input number-stepper__input"
+            style={{ '--field-ch': inputCh }}
+            type="number"
             inputMode="numeric"
+            min="0"
+            step="1"
             value={displayValue}
             placeholder={placeholder}
             aria-label={field.l}
             onChange={handleChange}
           />
-        </div>
+        ) : (
+          <div className="number-stepper__pitch-value">
+            <input
+              className="field-input number-stepper__input number-stepper__pitch-input"
+              type="text"
+              inputMode="numeric"
+              value={displayValue}
+              placeholder={placeholder}
+              aria-label={field.l}
+              onChange={handleChange}
+            />
+          </div>
+        )}
         <button
           type="button"
           className="number-stepper__btn"
@@ -70,7 +91,14 @@ function PitchInput({ field, value, onChange }) {
 
 function FieldRenderer({ field, value, onChange, subFields, onSubFieldChange }) {
   const { t, l, o, p } = field
-  const lbl = <label className="form-label">{l}</label>
+  const lbl = (
+    <label className="form-label">
+      {l}
+      {field.labelHint && (
+        <span className="form-label__hint"> ({field.labelHint})</span>
+      )}
+    </label>
+  )
 
   if (t === 'lwxw') {
     const lengthKey = field.lengthKey || 'Length (in)'
@@ -114,34 +142,45 @@ function FieldRenderer({ field, value, onChange, subFields, onSubFieldChange }) 
       const ordered = opts.filter(opt => arr.includes(opt))
       const displayValue = ordered.length ? '__selected__' : ''
       const displayLabel = ordered.length ? ordered.join(', ') : 'Select'
+      const selectClass = withSelectPlaceholderClass(
+        fieldSelectClass(
+          field.halfWidthDesktop ? { ...field, t: 'radio' } : field,
+        ),
+        displayValue,
+      )
+      const selectEl = (
+        <select
+          className={field.wrapSelected ? `${selectClass} field-select--native-multi-overlay` : selectClass}
+          value={displayValue}
+          onChange={e => {
+            const next = e.target.value
+            if (!next || next === '__selected__') return
+            const nextArr = arr.includes(next)
+              ? arr.filter(v => v !== next)
+              : [...arr, next]
+            onChange(opts.filter(opt => nextArr.includes(opt)))
+          }}
+          aria-label={l}
+        >
+          <option value={displayValue} hidden>{displayLabel}</option>
+          {opts.map(opt => (
+            <option key={opt} value={opt}>
+              {ordered.includes(opt) ? `✓ ${opt}` : opt}
+            </option>
+          ))}
+        </select>
+      )
       return (
         <div {...fieldGroupProps(field)}>
           {lbl}
-          <select
-            className={withSelectPlaceholderClass(
-              fieldSelectClass(
-                field.halfWidthDesktop ? { ...field, t: 'radio' } : field,
-              ),
-              displayValue,
-            )}
-            value={displayValue}
-            onChange={e => {
-              const next = e.target.value
-              if (!next || next === '__selected__') return
-              const nextArr = arr.includes(next)
-                ? arr.filter(v => v !== next)
-                : [...arr, next]
-              onChange(opts.filter(opt => nextArr.includes(opt)))
-            }}
-            aria-label={l}
-          >
-            <option value={displayValue} hidden>{displayLabel}</option>
-            {opts.map(opt => (
-              <option key={opt} value={opt}>
-                {ordered.includes(opt) ? `✓ ${opt}` : opt}
-              </option>
-            ))}
-          </select>
+          {field.wrapSelected ? (
+            <div className={`native-multi-face${ordered.length ? '' : ' native-multi-face--placeholder'}`}>
+              <span className="native-multi-face__text">{displayLabel}</span>
+              {selectEl}
+            </div>
+          ) : (
+            selectEl
+          )}
         </div>
       )
     }
@@ -303,9 +342,10 @@ function collapsibleSubPills(itemId, fields = {}) {
     }
   } else if (itemId === 'ri14') {
     const style = selectValue(fields.Style)
-    const size = selectValue(fields.Size)
+    const bucket = skylightSizeBucket(skylightAreaSqFt(fields))
+    const sizeLabel = skylightSizeLabel(bucket)
     if (style) grey.push(style)
-    if (size) grey.push(size)
+    if (sizeLabel) grey.push(sizeLabel)
     if (fields.Damaged === 'Yes') red.push('Damaged')
   } else if (itemId === 'ri15') {
     const length = selectValue(fields['Length (LF)'])
@@ -417,10 +457,28 @@ function CollapsibleRoofSubCard({
                     />
                   )
                 }}
-              />
+              >
+                {showDamage && (
+                  <div className="ri-damage-row">
+                    <label className="form-label">Damage Description</label>
+                    <DamageDescriptionInput
+                      placeholder="Describe damage..."
+                      value={sub.fields?._damage || ''}
+                      onChange={value => onUpdateField('_damage', value)}
+                    />
+                  </div>
+                )}
+                <PhotoZone
+                  entityId={`${itemId}__sub_${index}`}
+                  photos={sub.photos || []}
+                  trigPhoto={trigPhoto}
+                  onRemove={onRemovePhoto}
+                  inlineActions
+                />
+              </FieldsGrid>
             )}
 
-            {showDamage && (
+            {(!subFields || subFields.length === 0) && showDamage && (
               <div className="ri-damage-row">
                 <label className="form-label">Damage Description</label>
                 <DamageDescriptionInput
@@ -431,12 +489,15 @@ function CollapsibleRoofSubCard({
               </div>
             )}
 
-            <PhotoZone
-              entityId={`${itemId}__sub_${index}`}
-              photos={sub.photos || []}
-              trigPhoto={trigPhoto}
-              onRemove={onRemovePhoto}
-            />
+            {(!subFields || subFields.length === 0) && (
+              <PhotoZone
+                entityId={`${itemId}__sub_${index}`}
+                photos={sub.photos || []}
+                trigPhoto={trigPhoto}
+                onRemove={onRemovePhoto}
+                inlineActions
+              />
+            )}
           </div>
         </div>
       </div>
@@ -497,6 +558,11 @@ function CheckItem({ itemDef, trigPhoto }) {
 
   if (sizeCounts) {
     for (const sub of subItems || []) {
+      if (subItemSizeCounters.fromMeasuredArea) {
+        const bucket = skylightSizeBucket(skylightAreaSqFt(sub.fields || {}))
+        if (bucket && bucket in sizeCounts) sizeCounts[bucket] += 1
+        continue
+      }
       let size = sub.fields?.[subItemSizeCounters.field]
       if (size == null || size === '' || size === 'Select') continue
       if (subItemSizeCounters.matchPrefix) {
@@ -521,9 +587,10 @@ function CheckItem({ itemDef, trigPhoto }) {
       'ri-size-counters',
       subItemSizeCounters.compact && 'ri-size-counters--compact',
       subItemSizeCounters.equalWidth && 'ri-size-counters--equal',
+      subItemSizeCounters.equalWidth2 && 'ri-size-counters--equal-2',
     ].filter(Boolean).join(' ')
 
-    return (
+    const counters = (
       <div className={counterClass} aria-label={`${lbl} counts by ${subItemSizeCounters.counterLabel || 'size'}`}>
         {subItemSizeCounters.sizes.map(size => {
           const suffix = subItemSizeCounters.labelSuffix ?? '"'
@@ -536,6 +603,15 @@ function CheckItem({ itemDef, trigPhoto }) {
         })}
       </div>
     )
+
+    if (!subItemSizeCounters.legend) return counters
+
+    return (
+      <div className="elev-size-counters">
+        {counters}
+        <p className="elev-size-counters__legend">{subItemSizeCounters.legend}</p>
+      </div>
+    )
   }
 
   function renderSizeAdjusters() {
@@ -546,7 +622,7 @@ function CheckItem({ itemDef, trigPhoto }) {
         {subItemSizeCounters.sizes.map(size => {
           const suffix = subItemSizeCounters.labelSuffix ?? '"'
           return (
-            <div key={size} className="field-group field-group--compact field-group--stepper-row">
+            <div key={size} className="field-group field-group--full field-group--stepper-row field-group--inline-stepper">
               <label className="form-label">{size}{suffix} Qty</label>
               <div className="number-stepper">
                 <button
@@ -744,6 +820,7 @@ function CheckItem({ itemDef, trigPhoto }) {
                   photos={photos}
                   trigPhoto={trigPhoto}
                   onRemove={removeRoofPhoto}
+                  inlineActions
                 />
               )}
             </FieldsGrid>

@@ -12,7 +12,7 @@ function buildPreviewRows(parsed, existing) {
     rows.push({ label: 'Property Address', value: parts.join(', '), overwrite: Boolean(existing?.addr) })
   }
   if (pitch) {
-    rows.push({ label: 'Predominant Pitch', value: pitch, overwrite: Boolean(existing?.pitch) })
+    rows.push({ label: 'Predominant Pitch (x/12)', value: pitch, overwrite: Boolean(existing?.pitch) })
   }
   if (lineLengths?.RIDGE > 0) {
     rows.push({

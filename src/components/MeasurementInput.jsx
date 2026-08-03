@@ -44,15 +44,13 @@ function MeasurementStepper({ label, value, onChange, placeholder = '0' }) {
   )
 }
 
-export default function MeasurementInput({ field, value, onChange, aiFilled }) {
-  const extraClass = aiFilled ? 'field-group--ai-filled' : ''
-
+export default function MeasurementInput({ field, value, onChange }) {
   if (field.lfFeetOnly) {
     const { feet } = parseMeasurement(value)
     const display = feet !== '' ? feet : String(value || '').replace(/[^\d.]/g, '')
 
     return (
-      <div {...fieldGroupProps(field, extraClass)}>
+      <div {...fieldGroupProps(field)}>
         <label className="form-label">{field.l}</label>
         <MeasurementStepper
           label={`${field.l} feet`}
@@ -74,7 +72,7 @@ export default function MeasurementInput({ field, value, onChange, aiFilled }) {
   }
 
   return (
-    <div {...fieldGroupProps(field, extraClass)}>
+    <div {...fieldGroupProps(field)}>
       <label className="form-label">{field.l}</label>
       <div className="measurement-input">
         <div className="measurement-input__part">

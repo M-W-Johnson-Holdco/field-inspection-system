@@ -1,11 +1,11 @@
 /** Shutter area size buckets (square inches). */
 export const SHUTTER_SIZE_BUCKETS = [
-  { key: 'Small', label: 'Small', min: 0, max: 770, inclusiveMax: false },
-  { key: 'Medium', label: 'Medium', min: 770, max: 1120, inclusiveMax: false },
-  { key: 'Large', label: 'Large', min: 1120, max: Infinity, inclusiveMax: true },
+  { key: 'Small', label: 'Small', min: 0, max: 770, inclusiveMax: true },
+  { key: 'Medium', label: 'Medium', min: 771, max: 1120, inclusiveMax: true },
+  { key: 'Large', label: 'Large', min: 1121, max: Infinity, inclusiveMax: true },
 ]
 
-export const SHUTTER_SIZE_LEGEND = 'Small <770 · Medium 770–1,120 · Large 1,120+ sq in'
+export const SHUTTER_SIZE_LEGEND = 'Small ≤770 in² · Medium 771–1,120 in² · Large 1,121+ in²'
 
 export function shutterAreaSqIn(fields = {}) {
   const length = Number(fields['Length (in)'])
@@ -16,8 +16,8 @@ export function shutterAreaSqIn(fields = {}) {
 
 export function shutterSizeBucket(area) {
   if (area == null || !Number.isFinite(area) || area <= 0) return null
-  if (area < 770) return 'Small'
-  if (area < 1120) return 'Medium'
+  if (area <= 770) return 'Small'
+  if (area <= 1120) return 'Medium'
   return 'Large'
 }
 
