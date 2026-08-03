@@ -3737,20 +3737,6 @@ summary.field-select.field-select--placeholder {
   text-align: center;
 }
 
-.ri-size-counters--equal-2 {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  width: 100%;
-  max-width: 100%;
-}
-
-.ri-size-counters--equal-2 .ri-size-counter {
-  width: 100%;
-  min-width: 0;
-  justify-content: center;
-  gap: 6px;
-}
-
 .dimension-lw-input__area {
   display: flex;
   align-items: center;
@@ -3895,23 +3881,38 @@ summary.field-select.field-select--placeholder {
   min-width: 0;
 }
 
-.ri-size-counters--equal {
+/* Higher specificity so these beat the flex default above */
+.ri-size-counters.ri-size-counters--equal {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   width: 100%;
   max-width: 100%;
 }
 
-.ri-size-counters--equal .ri-size-counter {
+.ri-size-counters.ri-size-counters--equal .ri-size-counter {
   width: 100%;
   min-width: 0;
   justify-content: center;
   gap: 6px;
 }
 
-.ri-size-counters--equal .ri-size-counter__label,
-.ri-size-counters--equal .ri-size-counter__value {
+.ri-size-counters.ri-size-counters--equal .ri-size-counter__label,
+.ri-size-counters.ri-size-counters--equal .ri-size-counter__value {
   text-align: center;
+}
+
+.ri-size-counters.ri-size-counters--equal-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
+  max-width: 100%;
+}
+
+.ri-size-counters.ri-size-counters--equal-2 .ri-size-counter {
+  width: 100%;
+  min-width: 0;
+  justify-content: center;
+  gap: 6px;
 }
 
 .ri-size-counter {
@@ -3938,6 +3939,16 @@ summary.field-select.field-select--placeholder {
   font-weight: 900;
   color: var(--primary);
   text-align: right;
+}
+
+@media (min-width: 760px) {
+  .ri-size-counters {
+    flex-wrap: nowrap;
+  }
+
+  .ri-size-counters:not(.ri-size-counters--compact) > .ri-size-counter {
+    flex: 1 1 0;
+  }
 }
 
 .ri-size-adjusters {
@@ -4513,23 +4524,23 @@ summary.field-select.field-select--placeholder {
     flex: 0 0 auto;
   }
 
-  .ri-size-counters--equal {
+  .ri-size-counters.ri-size-counters--equal {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .ri-size-counters--equal .ri-size-counter {
+  .ri-size-counters.ri-size-counters--equal .ri-size-counter {
     flex: none;
     width: 100%;
     justify-content: center;
   }
 
-  .ri-size-counters--equal-2 {
+  .ri-size-counters.ri-size-counters--equal-2 {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .ri-size-counters--equal-2 .ri-size-counter {
+  .ri-size-counters.ri-size-counters--equal-2 .ri-size-counter {
     flex: none;
     width: 100%;
     justify-content: center;
