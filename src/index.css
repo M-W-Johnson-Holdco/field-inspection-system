@@ -752,14 +752,19 @@ button:disabled {
 .pill-row {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
+  width: 100%;
+  max-width: 100%;
 }
 
 .choice-pill,
 .select-pill {
   display: inline-flex;
+  flex: 0 0 auto;
   min-height: 38px;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   padding: 7px 11px;
   border: 1px solid var(--border);
@@ -770,6 +775,7 @@ button:disabled {
   font-size: 13px;
   font-weight: 750;
   user-select: none;
+  box-sizing: border-box;
 }
 
 .choice-pill input {
@@ -2644,8 +2650,9 @@ button:disabled {
 .ri-item:not(:last-child)::after {
   content: '';
   position: absolute;
-  left: calc(var(--card-pad) * -1);
-  right: calc(var(--card-pad) * -1);
+  /* Bleed only to the containing card/panel edges — override via --ri-item-bleed-x */
+  left: calc(var(--ri-item-bleed-x, var(--card-pad)) * -1);
+  right: calc(var(--ri-item-bleed-x, var(--card-pad)) * -1);
   /* Sit at the content edge so item padding is below the line, not in the Photos gap */
   bottom: var(--ri-item-pad-y);
   height: 2px;
@@ -2771,6 +2778,12 @@ button:disabled {
 .ri-item__body .ri-fields-grid > *:last-child,
 .int-room-body .ri-fields-grid > *:last-child {
   padding-bottom: 0;
+}
+
+/* Keep breathing room under Photos before the next-item divider */
+.ri-item__body .ri-fields-grid > .ri-photo-zone:last-child,
+.int-room-body .ri-fields-grid > .ri-photo-zone:last-child {
+  padding-bottom: 10px;
 }
 
 .ri-item__body .ri-fields-grid > *:not(:first-child),
@@ -3532,13 +3545,16 @@ summary.field-select.field-select--placeholder {
 
 .multi-select__selected {
   display: flex;
-  width: min(100%, 260px);
   flex-wrap: wrap;
+  align-items: center;
+  width: 100%;
+  max-width: 100%;
   gap: 5px;
   margin-top: 6px;
 }
 
 .multi-select__chip {
+  flex: 0 0 auto;
   padding: 4px 8px;
   border: 1px solid rgba(45, 110, 181, 0.18);
   border-radius: 999px;
@@ -3547,6 +3563,7 @@ summary.field-select.field-select--placeholder {
   font-size: 11px;
   font-weight: 800;
   line-height: 1.2;
+  box-sizing: border-box;
 }
 
 .multi-select__chip--remove {
@@ -3682,30 +3699,46 @@ summary.field-select.field-select--placeholder {
   max-width: 100%;
 }
 
-.dimension-lw-input .measurement-input__part {
-  display: grid;
-  grid-template-columns: 9.75rem max-content;
-  align-items: center;
-  justify-content: start;
-  gap: 8px;
-  width: max-content;
-  max-width: 100%;
-}
-
-.measurement-input .number-stepper,
-.dimension-lw-input .number-stepper {
+.measurement-input .number-stepper {
   width: max-content;
   max-width: 100%;
   flex: 0 0 auto;
 }
 
-.dimension-lw-input__label {
+.dimension-lw-input-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
-  color: #64748b;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.2px;
-  text-transform: uppercase;
+}
+
+.dimension-lw-input-wrap.field-group {
+  align-items: stretch;
+}
+
+.dimension-lw-input-wrap > .dimension-lw-input__row {
+  width: 100%;
+  max-width: 100%;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  border-top: 1px solid var(--border);
+  margin: 0;
+}
+
+.dimension-lw-input-wrap > .dimension-lw-input__title-row + .dimension-lw-input__row,
+.dimension-lw-input-wrap > .dimension-lw-input__row:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.dimension-lw-input-wrap > .dimension-lw-input__row:last-of-type {
+  padding-bottom: 0;
+}
+
+.dimension-lw-input-wrap > .dimension-lw-input__area {
+  margin-top: 10px;
 }
 
 .dimension-lw-input__title-row {
@@ -3713,7 +3746,7 @@ summary.field-select.field-select--placeholder {
   align-items: baseline;
   flex-wrap: wrap;
   gap: 8px 12px;
-  margin-bottom: 6px;
+  margin-bottom: 10px;
 }
 
 .dimension-lw-input__title-row .form-label {
@@ -3765,8 +3798,8 @@ summary.field-select.field-select--placeholder {
   font-variant-numeric: tabular-nums;
 }
 
-.ri-fields-grid .field-group--stepper-row .dimension-lw-input {
-  width: max-content;
+.ri-fields-grid .field-group--stepper-row.dimension-lw-input-wrap {
+  width: 100%;
   max-width: 100%;
 }
 
@@ -3828,11 +3861,15 @@ summary.field-select.field-select--placeholder {
 .toggle-chip-row {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
   margin-top: 4px;
+  width: 100%;
+  max-width: 100%;
 }
 
 .toggle-chip {
+  flex: 0 0 auto;
   padding: 6px 14px;
   border-radius: 20px;
   border: 1.5px solid var(--border);
@@ -3841,6 +3878,7 @@ summary.field-select.field-select--placeholder {
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
+  box-sizing: border-box;
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
@@ -4455,9 +4493,11 @@ summary.field-select.field-select--placeholder {
 }
 
 .elev-items {
+  --elev-items-pad-x: 12px;
+  --ri-item-bleed-x: var(--elev-items-pad-x);
   display: flex;
   flex-direction: column;
-  padding: 0 12px 4px;
+  padding: 0 var(--elev-items-pad-x) 4px;
   border: 1px solid var(--border);
   border-top: 0;
   border-radius: 0 0 14px 14px;
@@ -4502,8 +4542,9 @@ summary.field-select.field-select--placeholder {
   }
 
   .elev-items {
-    padding-right: var(--card-pad);
-    padding-left: var(--card-pad);
+    --elev-items-pad-x: var(--card-pad);
+    padding-right: var(--elev-items-pad-x);
+    padding-left: var(--elev-items-pad-x);
   }
 
   .ri-size-counters {
@@ -4670,6 +4711,62 @@ summary.field-select.field-select--placeholder {
 
 .elev-items .ri-fields-grid > .field-group.field-group--inline-stepper {
   align-items: center;
+}
+
+/* Exterior: match Elevations stacked full-width fields */
+.ext-items {
+  min-width: 0;
+}
+
+.ext-items .ri-fields-grid {
+  grid-template-columns: minmax(0, 1fr);
+  width: 100%;
+  min-width: 0;
+}
+
+.ext-items .ri-fields-grid > .field-group,
+.ext-items .ri-fields-grid > .field-group--full,
+.ext-items .ri-fields-grid > .field-group--option-select,
+.ext-items .ri-fields-grid > .field-group--compact,
+.ext-items .ri-fields-grid > .field-stack,
+.ext-items .ri-fields-grid > .ri-damage-row {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-width: 0;
+  justify-self: stretch;
+  align-items: stretch;
+}
+
+.ext-items .ri-fields-grid select.field-select,
+.ext-items .ri-fields-grid select.compact-select,
+.ext-items .ri-fields-grid .field-input:not(.number-stepper__input),
+.ext-items .ri-fields-grid .field-textarea {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.ext-items .ri-fields-grid > .field-group.field-group--inline-stepper {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  height: auto;
+}
+
+.ext-items .ri-fields-grid > .field-group.field-group--inline-stepper > .form-label {
+  margin-bottom: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ext-items .ri-fields-grid > .field-group.field-group--inline-stepper > .number-stepper,
+.ext-items .ri-fields-grid > .field-group.field-group--inline-stepper > .measurement-input {
+  flex: 0 0 auto;
+  margin-left: auto;
+  width: max-content;
+  max-width: 100%;
 }
 
 /* ─── Interior Section ──────────────────────────────────────────── */

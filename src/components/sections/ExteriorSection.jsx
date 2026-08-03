@@ -47,7 +47,7 @@ function FieldRenderer({ field, value, onChange, allValues }) {
       <div {...fieldGroupProps(field)}>
         {lbl}
         <select
-          className={fieldSelectClass(field)}
+          className={withSelectPlaceholderClass(fieldSelectClass(field), value)}
           value={value || ''}
           onChange={e => onChange(e.target.value)}
         >
@@ -247,30 +247,31 @@ function ExteriorItem({ itemDef, trigPhoto }) {
             )}
           >
             {hasD && (
+              <div {...fieldGroupProps({ t: 'yn', l: 'Damaged', full: true })}>
+                <label className="form-label">Damaged</label>
+                <select
+                  className={withSelectPlaceholderClass(
+                    fieldSelectClass({ t: 'yn', l: 'Damaged', full: true }),
+                    damageStatus,
+                  )}
+                  value={damageStatus || ''}
+                  onChange={e => handleDamageStatus(e.target.value)}
+                >
+                  <option value="">Select</option>
+                  {ynOptionsForField({ t: 'yn', l: 'Damaged' }).map(opt => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {hasD && damageStatus === 'Yes' && (
               <div className="ri-damage-row">
-                <div className="field-group field-group--compact">
-                  <label className="form-label">Damaged</label>
-                  <select
-                    className="field-select compact-select compact-select--yn"
-                    value={damageStatus}
-                    onChange={e => handleDamageStatus(e.target.value)}
-                  >
-                    <option value="">Select</option>
-                    <option value="Yes">Yes</option>
-                    <option value="No">No</option>
-                    <option value="N/A">N/A</option>
-                  </select>
-                </div>
-                {damageStatus === 'Yes' && (
-                  <>
-                    <label className="form-label">{damageLabel || 'Damage Description'}</label>
-                    <DamageDescriptionInput
-                      placeholder={damagePlaceholder || 'Describe damage...'}
-                      value={item.fields['_damage'] || ''}
-                      onChange={val => updateExteriorField(id, '_damage', val)}
-                    />
-                  </>
-                )}
+                <label className="form-label">{damageLabel || 'Damage Description'}</label>
+                <DamageDescriptionInput
+                  placeholder={damagePlaceholder || 'Describe damage...'}
+                  value={item.fields['_damage'] || ''}
+                  onChange={val => updateExteriorField(id, '_damage', val)}
+                />
               </div>
             )}
             {hasP && (
@@ -279,10 +280,10 @@ function ExteriorItem({ itemDef, trigPhoto }) {
                 photos={photos}
                 trigPhoto={trigPhoto}
                 onRemove={removeExteriorPhoto}
+                inlineActions
               />
             )}
           </FieldsGrid>
-
         </div>
       )}
     </div>
@@ -306,7 +307,7 @@ function SubSectionCard({ sectionKey, title, items, trigPhoto }) {
       </button>
       <div className={`collapse-panel ${isOpen ? 'collapse-panel--open' : ''}`} aria-hidden={!isOpen}>
         <div className="collapse-panel__inner">
-          <div className="ri-card__content">
+          <div className="ri-card__content ext-items">
             {items.map(item => (
               <ExteriorItem key={item.id} itemDef={item} trigPhoto={trigPhoto} />
             ))}

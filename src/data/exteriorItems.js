@@ -24,8 +24,8 @@ export const EXTERIOR_ITEMS = [
   {
     id: 'ei_gates', lbl: 'Privacy Gates', flags: ['P', 'D'],
     fields: [
-      { t: 'num', l: 'Qty', p: '0' },
-      { t: 'radio', l: 'Material', o: ['Aluminum', 'Cedar', 'Pine', 'Steel', 'Vinyl', 'Wood'] },
+      { t: 'num', l: 'Qty', p: '0', full: true },
+      { t: 'radio', l: 'Material', o: ['Aluminum', 'Cedar', 'Pine', 'Steel', 'Vinyl', 'Wood'], full: true },
     ],
     damageLabel: 'Damage Description',
     damagePlaceholder: 'Describe damage...',
@@ -56,12 +56,12 @@ export const EXTERIOR_ITEMS = [
   {
     id: 'ei_site', lbl: 'Site Access', flags: [],
     fields: [
-      { t: 'textarea', l: 'Delivery / Trailer Placement', p: 'Materials right side, trailer left...' },
-      { t: 'textarea', l: 'Landscaping to Protect', p: 'Cover shrubs, AC unit, flower beds...' },
-      { t: 'yn', l: 'OK Saturday Build' },
-      { t: 'yn', l: 'Pest Control Flashing' },
-      { t: 'txt', l: 'Gate Code', p: 'If applicable' },
-      { t: 'yn', l: 'Overhead Clearance Issue' },
+      { t: 'textarea', l: 'Delivery / Trailer Placement', p: 'Materials right side, trailer left...', full: true },
+      { t: 'textarea', l: 'Landscaping to Protect', p: 'Cover shrubs, AC unit, flower beds...', full: true },
+      { t: 'yn', l: 'OK Saturday Build', full: true },
+      { t: 'yn', l: 'Pest Control Flashing', full: true },
+      { t: 'txt', l: 'Gate Code', p: 'If applicable', full: true },
+      { t: 'yn', l: 'Overhead Clearance Issue', full: true },
     ],
   },
 ]
