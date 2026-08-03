@@ -1,5 +1,5 @@
 /** Window screen area size buckets (square feet). */
-export const SCREEN_SIZE_LEGEND = 'Small <10 · Medium 10+ sq ft'
+export const SCREEN_SIZE_LEGEND = 'Small ≤9 ft² · Medium 10–16 ft² · Large 17+ ft²'
 
 export function screenAreaSqFt(fields = {}) {
   const length = Number(fields['Length (ft)'])
@@ -11,12 +11,13 @@ export function screenAreaSqFt(fields = {}) {
 
 export function screenSizeBucket(area) {
   if (area == null || !Number.isFinite(area) || area <= 0) return null
-  if (area < 10) return 'Small'
-  return 'Medium'
+  if (area <= 9) return 'Small'
+  if (area < 17) return 'Medium'
+  return 'Large'
 }
 
 export function countScreenSizeBuckets(subItems = []) {
-  const counts = { Small: 0, Medium: 0 }
+  const counts = { Small: 0, Medium: 0, Large: 0 }
   for (const sub of subItems) {
     const bucket = screenSizeBucket(screenAreaSqFt(sub?.fields || {}))
     if (bucket) counts[bucket] += 1

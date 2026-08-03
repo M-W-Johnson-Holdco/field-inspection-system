@@ -579,7 +579,8 @@ export default function ActionBar() {
         <XmlImportModal
           existing={{
             addr: data.jobInfo?.addr,
-            pitch: data.roofData?.ri0?.fields?.['Predominant Pitch'],
+            pitch: data.roofData?.ri0?.fields?.['Predominant Pitch (x/12)']
+              ?? data.roofData?.ri0?.fields?.['Predominant Pitch'],
             ridgeLF: data.roofData?.ri6?.fields?.['Length (LF)'],
             valleyIncluded: isRoofItemActive(data.roofData?.ri5),
           }}

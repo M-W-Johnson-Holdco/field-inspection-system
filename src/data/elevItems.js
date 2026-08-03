@@ -1,6 +1,6 @@
 export const DIRECTIONS = ['Front', 'Right', 'Rear', 'Left']
 
-export const ELEV_ADDMORE_IDS = new Set(['ev3', 'ev11', 'ev4', 'ev12', 'ev5', 'ev6', 'ev7', 'ev8'])
+export const ELEV_ADDMORE_IDS = new Set(['ev3', 'ev11', 'ev4', 'ev12', 'ev5', 'ev6', 'ev7', 'ev8', 'ev14'])
 
 export const ELEV_ITEMS = [
   {
@@ -90,7 +90,7 @@ export const ELEV_ITEMS = [
         lengthLabel: 'Length (Feet)',
         widthLabel: 'Width (Feet)',
         showArea: true,
-        areaUnit: 'sq ft',
+        areaUnit: 'ft²',
       },
       { t: 'yn', l: 'Damaged', full: true },
     ],
@@ -115,7 +115,7 @@ export const ELEV_ITEMS = [
         lengthLabel: 'Length (Feet)',
         widthLabel: 'Width (Feet)',
         showArea: true,
-        areaUnit: 'sq ft',
+        areaUnit: 'ft²',
       },
       { t: 'yn', l: 'Damaged', full: true },
     ],
@@ -140,7 +140,7 @@ export const ELEV_ITEMS = [
         lengthLabel: 'Length (Inches)',
         widthLabel: 'Width (Inches)',
         showAreaSqIn: true,
-        areaUnit: 'sq in',
+        areaUnit: 'in²',
       },
       { t: 'yn', l: 'Damaged', full: true },
     ],
@@ -199,7 +199,46 @@ export const ELEV_ITEMS = [
         lengthLabel: 'Length (Feet)',
         widthLabel: 'Width (Feet)',
         showArea: true,
-        areaUnit: 'sq ft',
+        areaUnit: 'ft²',
+      },
+      { t: 'yn', l: 'Painted', full: true },
+      { t: 'yn', l: 'Damaged', full: true },
+    ],
+  },
+  {
+    id: 'ev14', lbl: 'Deck',
+    addMore: true,
+    addMoreLabel: 'Add Deck',
+    subItemPhotos: true,
+    preserveFieldOrder: true,
+    fields: [],
+    subFields: [
+      { t: 'select', l: 'Material', o: ['Select', 'Treated Wood', 'Wood', 'Composite'], full: true, allowNA: false },
+      { t: 'num', l: 'Handrail Height (Inches)', p: '36', full: true },
+      { t: 'num', l: 'Steps', p: '0', full: true },
+      {
+        t: 'lwxw',
+        l: 'Deck Size',
+        full: true,
+        lengthKey: 'Deck Length (ft)',
+        widthKey: 'Deck Width (ft)',
+        lengthLabel: 'Length (Feet)',
+        widthLabel: 'Width (Feet)',
+        showArea: true,
+        areaUnit: 'ft²',
+        areaLabel: 'Total Deck Area',
+      },
+      {
+        t: 'lwxw',
+        l: 'Tread Size',
+        full: true,
+        lengthKey: 'Tread Length (in)',
+        widthKey: 'Tread Width (in)',
+        lengthLabel: 'Length (Inches)',
+        widthLabel: 'Width (Inches)',
+        showArea: true,
+        areaUnit: 'in²',
+        areaLabel: 'Total Tread Area',
       },
       { t: 'yn', l: 'Painted', full: true },
       { t: 'yn', l: 'Damaged', full: true },

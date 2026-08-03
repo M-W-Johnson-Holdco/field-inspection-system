@@ -11,10 +11,10 @@ export const ROOF_ITEMS = [
   {
     id: 'ri0', lbl: 'Shingle Style / Grade', flags: ['P'],
     fields: [
-      { t: 'multiRadio', l: 'Style', o: ['3-Tab', 'Architectural', 'Designer', 'Disco', 'Impact Resistant'], allowNA: false, nativeMenu: true },
+      { t: 'multiRadio', l: 'Style', o: ['3-Tab', 'Architectural', 'Designer', 'Disco', 'Impact Resistant'], allowNA: false, nativeMenu: true, wrapSelected: true, labelHint: 'SELECT ALL THAT APPLY' },
       { t: 'num', l: 'Stories', full: true },
       { t: 'num', l: 'Layers', full: true },
-      { t: 'pitch', l: 'Predominant Pitch', p: '4/12', full: true },
+      { t: 'pitch', l: 'Predominant Pitch (x/12)', p: '4', full: true, showNumeratorOnly: true },
     ],
   },
   {
@@ -30,14 +30,14 @@ export const ROOF_ITEMS = [
     id: 'ri2', lbl: 'Underlayment', flags: ['P', 'D'],
     fields: [
       { t: 'radio', l: 'Grade', o: ['Felt - 15lbs', 'Felt - 30lbs', 'Synthetic', 'Premium Synthetic', 'Unknown'] },
-      { t: 'num', l: 'Layers' },
+      { t: 'num', l: 'Layers', full: true },
     ],
   },
   {
     id: 'ri3', lbl: 'Ridge Cap', flags: ['P', 'M', 'D'],
     fields: [
       { t: 'radio', l: 'Grade', o: ['3-Tab', 'H&R', 'Hi Profile'] },
-      { t: 'num', l: 'Exposure (inches)' },
+      { t: 'num', l: 'Exposure (inches)', full: true },
     ],
   },
   {
@@ -143,12 +143,29 @@ export const ROOF_ITEMS = [
     addMoreLabel: 'Add Skylight',
     subItemPhotos: true,
     subItemDamaged: true,
-    subItemSizeCounters: { field: 'Style', sizes: ['Fixed', 'Venting', 'Tubular'], labelSuffix: '', counterLabel: 'style', equalWidth: true },
+    subItemSizeCounters: {
+      fromMeasuredArea: true,
+      sizes: ['Large', 'X-Large'],
+      labelSuffix: '',
+      counterLabel: 'size',
+      equalWidth2: true,
+      legend: 'Large ≤16 ft² · X-Large 17+ ft²',
+    },
     fields: [],
     subFields: [
       { t: 'select', l: 'Style', o: ['Select', 'Fixed', 'Tubular', 'Venting'], full: true },
       { t: 'select', l: 'Mount', o: ['Select', 'Flush Mount', 'Curb Mount'], full: true },
-      { t: 'select', l: 'Size', fullRow: true, o: ['Select', 'Small', 'Medium', 'Large', 'X-Large'] },
+      {
+        t: 'lwxw',
+        l: 'Size',
+        full: true,
+        lengthKey: 'Length (ft)',
+        widthKey: 'Width (ft)',
+        lengthLabel: 'Length (Feet)',
+        widthLabel: 'Width (Feet)',
+        showArea: true,
+        areaUnit: 'ft²',
+      },
       { t: 'yn', l: 'Damaged' },
     ],
   },
@@ -179,7 +196,7 @@ export const ROOF_ITEMS = [
     subItemSizeCounters: { field: 'Size / Width', sizes: ['Small', 'Medium', 'Large'], labelSuffix: '', counterLabel: 'size', matchPrefix: true, equalWidth: true },
     fields: [],
     subFields: [
-      { t: 'select', l: 'Size / Width', fullRow: true, o: ['Select', 'Small (width < 24")', 'Medium (width 24"–36")', 'Large (width > 36")'] },
+      { t: 'select', l: 'Size / Width', fullRow: true, o: ['Select', 'Small (width ≤23")', 'Medium (width 24"–36")', 'Large (width 37+")'] },
       { t: 'radio', l: 'Counter Flashing', o: ['Replace', 'Reuse'], full: true },
       { t: 'yn', l: 'Cricket Present', full: true },
       { t: 'yn', l: 'Painted', full: true },
@@ -228,7 +245,7 @@ export const ROOF_ITEMS = [
       { t: 'txt', l: '(Other)', showWhen: { field: 'Location', equals: 'Other' }, full: true },
       { t: 'txt', l: 'Style / Grade', p: 'e.g. TPO, Mod.Bitumen, EPDM', full: true },
       { t: 'yn', l: 'Exposed Rafters' },
-      { t: 'pitch', l: 'Pitch', p: '1/12' },
+      { t: 'pitch', l: 'Pitch (x/12)', p: '1', full: true, showNumeratorOnly: true },
       { t: 'yn', l: 'Damaged' },
     ],
   },
@@ -243,7 +260,7 @@ export const ROOF_ITEMS = [
     subFields: [
       { t: 'txt', l: 'Type', p: 'Detached garage / shed', full: true },
       { t: 'txt', l: 'Style / Grade', full: true },
-      { t: 'pitch', l: 'Pitch', p: '4/12' },
+      { t: 'pitch', l: 'Pitch (x/12)', p: '4', full: true, showNumeratorOnly: true },
       { t: 'yn', l: 'Damaged' },
     ],
   },

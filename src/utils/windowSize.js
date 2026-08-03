@@ -1,5 +1,5 @@
 /** Window area size buckets (square feet). */
-export const WINDOW_SIZE_LEGEND = 'Small <12 · Medium 12–19 · Large 19+ sq ft'
+export const WINDOW_SIZE_LEGEND = 'Small ≤11 ft² · Medium 12–19 ft² · Large 20+ ft²'
 
 export function windowAreaSqFt(fields = {}) {
   const length = Number(fields['Length (ft)'])
@@ -11,8 +11,8 @@ export function windowAreaSqFt(fields = {}) {
 
 export function windowSizeBucket(area) {
   if (area == null || !Number.isFinite(area) || area <= 0) return null
-  if (area < 12) return 'Small'
-  if (area < 19) return 'Medium'
+  if (area <= 11) return 'Small'
+  if (area < 20) return 'Medium'
   return 'Large'
 }
 

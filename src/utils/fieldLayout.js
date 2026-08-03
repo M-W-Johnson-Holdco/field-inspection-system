@@ -10,7 +10,7 @@ function usesStepperRow(field) {
 }
 
 function buildFieldGroupClass(field, extra = '') {
-  const layout = ['multiRadio', 'multi', 'toggleMulti', 'textarea', 'lwxw'].includes(field.t)
+  const layout = ['multiRadio', 'multi', 'toggleMulti', 'textarea', 'lwxw', 'computedFenceLf'].includes(field.t)
     || field.full
     ? 'field-group--full'
     : 'field-group--compact'
@@ -21,7 +21,12 @@ function buildFieldGroupClass(field, extra = '') {
   const optionSelect = field.t === 'radio' || field.t === 'select' ? 'field-group--option-select' : ''
   const fullRowMobile = field.fullRow ? 'field-group--full-row-mobile' : ''
   const halfWidthDesktop = field.halfWidthDesktop ? 'field-group--half-width-desktop' : ''
-  const classes = [layout, measurement, pitch, stepperRow, wideLabel, optionSelect, fullRowMobile, halfWidthDesktop, extra].filter(Boolean).join(' ')
+  // Label left / +/- right for all numeric steppers (opt out with inlineStepper: false)
+  const inlineStepper = (
+    (field.t === 'num' || field.t === 'pitch')
+    && field.inlineStepper !== false
+  ) ? 'field-group--inline-stepper' : ''
+  const classes = [layout, measurement, pitch, stepperRow, wideLabel, optionSelect, fullRowMobile, halfWidthDesktop, inlineStepper, extra].filter(Boolean).join(' ')
   return classes ? `field-group ${classes}` : 'field-group'
 }
 

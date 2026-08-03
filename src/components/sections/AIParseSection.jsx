@@ -9,7 +9,7 @@ const ROOF_MAP = [
   { key: 'shingleStyle',            itemId: 'ri0',  label: 'Style' },
   { key: 'stories',                 itemId: 'ri0',  label: 'Stories' },
   { key: 'layers',                  itemId: 'ri0',  label: 'Layers' },
-  { key: 'pitch',                   itemId: 'ri0',  label: 'Predominant Pitch' },
+  { key: 'pitch',                   itemId: 'ri0',  label: 'Predominant Pitch (x/12)' },
   { key: 'edgeFlashingType',        itemId: 'ri1',  label: 'Type' },
   { key: 'edgeMaterial',            itemId: 'ri1',  label: 'Material' },
   { key: 'edgePainted',             itemId: 'ri1',  label: 'Painted' },
@@ -124,6 +124,7 @@ const ELEV_MAP = [
   { key: 'screenQty',            itemId: 'ev5',  label: 'Qty' },
   { key: 'screenSmallQty',       itemId: 'ev5',  label: '_smallQty' },
   { key: 'screenMediumQty',      itemId: 'ev5',  label: '_mediumQty' },
+  { key: 'screenLargeQty',       itemId: 'ev5',  label: '_largeQty' },
   { key: 'gableVentQty',         itemId: 'ev13', label: 'Qty' },
   { key: 'gableVentMaterial',    itemId: 'ev13', label: 'Material' },
   { key: 'gableVentDamage',      itemId: 'ev13', label: 'Damaged' },
@@ -166,6 +167,17 @@ const ELEV_MAP = [
   { key: 'garageDoorDamage',     itemId: 'ev8',  label: 'Damaged' },
   { key: 'garageDoorDamageDescription', itemId: 'ev8', label: '_damage' },
   { key: 'garageDoorQty',        itemId: 'ev8',  label: 'Qty' },
+  { key: 'deckMaterial',         itemId: 'ev14', label: 'Material' },
+  { key: 'deckHandrailHeight',   itemId: 'ev14', label: 'Handrail Height (Inches)' },
+  { key: 'deckSteps',            itemId: 'ev14', label: 'Steps' },
+  { key: 'deckLength',           itemId: 'ev14', label: 'Deck Length (ft)' },
+  { key: 'deckWidth',            itemId: 'ev14', label: 'Deck Width (ft)' },
+  { key: 'deckTreadLength',      itemId: 'ev14', label: 'Tread Length (in)' },
+  { key: 'deckTreadWidth',       itemId: 'ev14', label: 'Tread Width (in)' },
+  { key: 'deckPainted',          itemId: 'ev14', label: 'Painted' },
+  { key: 'deckDamage',           itemId: 'ev14', label: 'Damaged' },
+  { key: 'deckDamageDescription', itemId: 'ev14', label: '_damage' },
+  { key: 'deckQty',              itemId: 'ev14', label: 'Qty' },
 ]
 
 // Maps AI JSON exterior keys → { itemId, fieldLabel }
@@ -173,6 +185,7 @@ const EXTERIOR_MAP = [
   { key: 'fenceMaterial',          itemId: 'ei_fence',   label: 'Material' },
   { key: 'fenceStyle',             itemId: 'ei_fence',   label: 'Style' },
   { key: 'fencePosts',             itemId: 'ei_fence',   label: 'Posts' },
+  { key: 'fencePostQty',           itemId: 'ei_fence',   label: 'Post Qty' },
   { key: 'fencePostSpacing',       itemId: 'ei_fence',   label: 'Post Spacing (LF)' },
   { key: 'fenceHeight',            itemId: 'ei_fence',   label: 'Height (FT)' },
   { key: 'fenceStained',           itemId: 'ei_fence',   label: 'Stained' },
@@ -185,6 +198,7 @@ const EXTERIOR_MAP = [
   { key: 'poolDamaged',            itemId: 'ei_pool',    label: '_damagePresent' },
   { key: 'poolDamageNotes',        itemId: 'ei_pool',    label: '_damage' },
   { key: 'outdoorDamagedItems',    itemId: 'ei_outdoor', label: 'Damaged Items' },
+  { key: 'outdoorOther',           itemId: 'ei_outdoor', label: 'Other' },
   { key: 'outdoorDamaged',         itemId: 'ei_outdoor', label: '_damagePresent' },
   { key: 'outdoorNotes',           itemId: 'ei_outdoor', label: '_damage' },
   { key: 'deliveryPlacement',      itemId: 'ei_site',    label: 'Delivery / Trailer Placement' },
@@ -263,6 +277,7 @@ function normalizeScreenParseFields(fields = {}) {
   delete next.Qty
   delete next._smallQty
   delete next._mediumQty
+  delete next._largeQty
   return next
 }
 
@@ -386,7 +401,7 @@ function applyParsed(parsed, ctx) {
   // Elevations
   const elevations = parsed.elevations || {}
   const DIRS = ['Front', 'Right', 'Rear', 'Left']
-  const ADDMORE_ELEV_IDS = new Set(['ev3', 'ev11', 'ev4', 'ev12', 'ev5', 'ev6', 'ev7', 'ev8'])
+  const ADDMORE_ELEV_IDS = new Set(['ev3', 'ev11', 'ev4', 'ev12', 'ev5', 'ev6', 'ev7', 'ev8', 'ev14'])
   const ADDMORE_PARENT_FIELDS_BY_ID = {
     ev3: new Set(['Style', 'Material', 'Size (Inches)', 'Painted']),
     ev11: new Set(['Style', 'Material']),
@@ -434,6 +449,7 @@ function applyParsed(parsed, ctx) {
         || cellKey.startsWith('ev6_')
         || cellKey.startsWith('ev7_')
         || cellKey.startsWith('ev8_')
+        || cellKey.startsWith('ev14_')
       ) {
         let count = Math.max(1, Math.floor(Number(qtyRaw)) || 1)
         let cardFields = { ...fields }
@@ -447,7 +463,8 @@ function applyParsed(parsed, ctx) {
         } else if (cellKey.startsWith('ev5_')) {
           const small = Math.floor(Number(fields._smallQty)) || 0
           const medium = Math.floor(Number(fields._mediumQty)) || 0
-          const sizeTotal = small + medium
+          const large = Math.floor(Number(fields._largeQty)) || 0
+          const sizeTotal = small + medium + large
           if (sizeTotal > 0) count = sizeTotal
           cardFields = normalizeScreenParseFields(cardFields)
         } else if (cellKey.startsWith('ev6_')) {
@@ -461,6 +478,8 @@ function applyParsed(parsed, ctx) {
           cardFields = normalizeDoorParseFields(cardFields)
         } else if (cellKey.startsWith('ev8_')) {
           cardFields = normalizeGarageDoorParseFields(cardFields)
+        } else if (cellKey.startsWith('ev14_')) {
+          delete cardFields.Qty
         } else {
           cardFields = {
             ...(fields['Length (LF)'] != null ? { 'Length (LF)': fields['Length (LF)'] } : {}),
@@ -491,6 +510,9 @@ function applyParsed(parsed, ctx) {
     let val = ext[key]
     if (val == null) return
     if (key === 'outdoorDamagedItems') val = toArray(val)
+    if (key === 'fenceMaterial' && Array.isArray(val)) {
+      val = val.find(v => v != null && String(v).trim() !== '') || ''
+    }
     updateExteriorField(itemId, label, val)
   })
 

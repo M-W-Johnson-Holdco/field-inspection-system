@@ -64,7 +64,8 @@ export default function DimensionLwInput({
   const lengthLabel = field.lengthLabel || 'Length'
   const widthLabel = field.widthLabel || 'Width'
   const showArea = Boolean(field.showAreaSqIn || field.showArea)
-  const areaUnit = field.areaUnit || 'sq in'
+  const areaUnit = field.areaUnit || 'in²'
+  const areaLabel = field.areaLabel || 'Total Area'
   const areaValue = showArea ? formatArea(lengthValue, widthValue) : null
 
   return (
@@ -89,7 +90,7 @@ export default function DimensionLwInput({
       </div>
       {showArea && (
         <div className="dimension-lw-input__area" aria-live="polite">
-          <span className="dimension-lw-input__area-label">Total Area</span>
+          <span className="dimension-lw-input__area-label">{areaLabel}</span>
           <output className="dimension-lw-input__area-value">
             {areaValue != null ? `${areaValue} ${areaUnit}` : '—'}
           </output>

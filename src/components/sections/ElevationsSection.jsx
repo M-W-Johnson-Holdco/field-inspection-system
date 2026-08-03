@@ -10,16 +10,16 @@ import { fieldSelectClass, withSelectPlaceholderClass, ynOptionsForField, option
 import MeasurementInput, { isLinearMeasurementField } from '../MeasurementInput'
 import DimensionLwInput from '../DimensionLwInput'
 import useExpandedSection from '../../hooks/useExpandedSection'
-import { countShutterSizeBuckets, shutterAreaSqIn, shutterSizeBucket } from '../../utils/shutterSize'
-import { countScreenSizeBuckets, screenAreaSqFt, screenSizeBucket } from '../../utils/screenSize'
-import { countWindowSizeBuckets, windowAreaSqFt, windowSizeBucket } from '../../utils/windowSize'
+import { countShutterSizeBuckets, shutterAreaSqIn, shutterSizeBucket, SHUTTER_SIZE_LEGEND } from '../../utils/shutterSize'
+import { countScreenSizeBuckets, screenAreaSqFt, screenSizeBucket, SCREEN_SIZE_LEGEND } from '../../utils/screenSize'
+import { countWindowSizeBuckets, windowAreaSqFt, windowSizeBucket, WINDOW_SIZE_LEGEND } from '../../utils/windowSize'
 
 function elevSizeCounterConfig(itemDef, subItems) {
   if (itemDef.shutterSizeCounters) {
     return {
       sizes: ['Small', 'Medium', 'Large'],
       counts: countShutterSizeBuckets(subItems),
-      legend: 'Small <770 · Medium 770–1,120 · Large 1,120+ sq in',
+      legend: SHUTTER_SIZE_LEGEND,
       gridClass: 'ri-size-counters--equal',
       ariaLabel: 'Shutter counts by size',
     }
@@ -28,17 +28,17 @@ function elevSizeCounterConfig(itemDef, subItems) {
     return {
       sizes: ['Small', 'Medium', 'Large'],
       counts: countWindowSizeBuckets(subItems),
-      legend: 'Small <12 · Medium 12–19 · Large 19+ sq ft',
+      legend: WINDOW_SIZE_LEGEND,
       gridClass: 'ri-size-counters--equal',
       ariaLabel: 'Window counts by size',
     }
   }
   if (itemDef.screenSizeCounters) {
     return {
-      sizes: ['Small', 'Medium'],
+      sizes: ['Small', 'Medium', 'Large'],
       counts: countScreenSizeBuckets(subItems),
-      legend: 'Small <10 · Medium 10+ sq ft',
-      gridClass: 'ri-size-counters--equal-2',
+      legend: SCREEN_SIZE_LEGEND,
+      gridClass: 'ri-size-counters--equal',
       ariaLabel: 'Window screen counts by size',
     }
   }
@@ -289,6 +289,7 @@ function ElevSubCard({
   sub,
   index,
   subFields,
+  preserveFieldOrder,
   trigPhoto,
   onUpdateField,
   onRemove,
@@ -306,7 +307,7 @@ function ElevSubCard({
   const doorLength = Number(sub.fields?.['Length (in)'])
   const doorWidth = Number(sub.fields?.['Width (in)'])
   const doorArea = Number.isFinite(doorLength) && Number.isFinite(doorWidth) && doorLength > 0 && doorWidth > 0
-    ? `${doorLength * doorWidth} sq in`
+    ? `${doorLength * doorWidth} in²`
     : null
   const doorPill = isDoor
     ? [doorStyle, doorArea].filter(Boolean).join(' · ') || null
@@ -315,30 +316,35 @@ function ElevSubCard({
   const shutterArea = isShutter ? shutterAreaSqIn(sub.fields || {}) : null
   const shutterBucket = isShutter ? shutterSizeBucket(shutterArea) : null
   const shutterPill = shutterBucket
-    ? (shutterArea != null ? `${shutterBucket} · ${shutterArea} sq in` : shutterBucket)
+    ? (shutterArea != null ? `${shutterBucket} · ${shutterArea} in²` : shutterBucket)
     : null
   const isScreen = cellKey.startsWith('ev5_')
   const screenArea = isScreen ? screenAreaSqFt(sub.fields || {}) : null
   const screenBucket = isScreen ? screenSizeBucket(screenArea) : null
   const screenPill = screenBucket
-    ? (screenArea != null ? `${screenBucket} · ${screenArea} sq ft` : screenBucket)
+    ? (screenArea != null ? `${screenBucket} · ${screenArea} ft²` : screenBucket)
     : null
   const isWindow = cellKey.startsWith('ev12_')
   const windowArea = isWindow ? windowAreaSqFt(sub.fields || {}) : null
   const windowBucket = isWindow ? windowSizeBucket(windowArea) : null
   const windowPill = windowBucket
-    ? (windowArea != null ? `${windowBucket} · ${windowArea} sq ft` : windowBucket)
+    ? (windowArea != null ? `${windowBucket} · ${windowArea} ft²` : windowBucket)
+    : null
+  const isDeck = cellKey.startsWith('ev14_')
+  const deckMaterial = isDeck && sub.fields?.Material && sub.fields.Material !== 'Select'
+    ? sub.fields.Material
     : null
   const isGarageDoor = cellKey.startsWith('ev8_')
   const garageType = sub.fields?.Type
   const garageTypePill = isGarageDoor && garageType && garageType !== 'Select' ? garageType : null
-  const damagePill = (isGarageDoor || isShutter || isScreen || isWindow) && sub.fields?.Damaged === 'Yes' ? 'Damaged' : null
+  const damagePill = (isGarageDoor || isShutter || isScreen || isWindow || isDeck) && sub.fields?.Damaged === 'Yes' ? 'Damaged' : null
   const greyPills = [
-    !isGarageDoor && !isShutter && !isScreen && !isWindow && !isDoor && lengthPill ? lengthPill : null,
+    !isGarageDoor && !isShutter && !isScreen && !isWindow && !isDoor && !isDeck && lengthPill ? lengthPill : null,
     doorPill,
     shutterPill,
     screenPill,
     windowPill,
+    deckMaterial,
     garageTypePill,
   ].filter(Boolean)
   const redPills = [damagePill].filter(Boolean)
@@ -387,7 +393,11 @@ function ElevSubCard({
         <div className="collapse-panel__inner">
           <div className="ri-collapsible-sub-body">
             <FieldsGrid
-              fields={orderElevFields(visibleFieldsForValues(subFields, sub.fields || {}))}
+              fields={
+                preserveFieldOrder
+                  ? visibleFieldsForValues(subFields, sub.fields || {})
+                  : orderElevFields(visibleFieldsForValues(subFields, sub.fields || {}))
+              }
               renderField={field => (
                 <FieldRenderer
                   key={field.l}
@@ -414,6 +424,7 @@ function ElevSubCard({
                 photos={sub.photos || []}
                 trigPhoto={trigPhoto}
                 onRemove={onRemovePhoto}
+                inlineActions
               />
             </FieldsGrid>
           </div>
@@ -440,6 +451,7 @@ function ElevItem({ itemDef, direction, trigPhoto }) {
     addMoreLabel,
     subFields = [],
     fields = [],
+    preserveFieldOrder,
   } = itemDef
   const cellKey = `${itemDef.id}_${direction}`
   const cell = data.elevData[cellKey] || { excluded: false, fields: {}, subItems: [], photos: [] }
@@ -505,6 +517,7 @@ function ElevItem({ itemDef, direction, trigPhoto }) {
                     sub={sub}
                     index={idx}
                     subFields={subFields}
+                    preserveFieldOrder={preserveFieldOrder}
                     trigPhoto={trigPhoto}
                     onUpdateField={(label, value) => updateElevSubField(cellKey, idx, label, value)}
                     onRemove={() => removeElevSubItem(cellKey, idx)}
@@ -561,6 +574,7 @@ function ElevItem({ itemDef, direction, trigPhoto }) {
                 photos={photos}
                 trigPhoto={trigPhoto}
                 onRemove={removeElevPhoto}
+                inlineActions
               />
             </FieldsGrid>
           )}

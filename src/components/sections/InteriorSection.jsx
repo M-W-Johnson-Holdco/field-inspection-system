@@ -5,7 +5,7 @@ import PhotoZone from '../PhotoZone'
 import DamageDescriptionInput from '../DamageDescriptionInput'
 import useExpandedSection from '../../hooks/useExpandedSection'
 import { fieldGroupProps } from '../../utils/fieldLayout'
-import { fieldSelectClass, withSelectPlaceholderClass } from '../../utils/fieldGrid'
+import { fieldSelectClass, withSelectPlaceholderClass, ynOptionsForField, optionsForField } from '../../utils/fieldGrid'
 
 const ROOM_PRESETS = [
   'Attic', 'Bathroom', 'Bedroom', 'Dining Room', 'Garage', 'Hallway',
@@ -15,9 +15,9 @@ const ROOM_PRESETS = [
 
 const STORY_OPTS = ['Basement', '1st Floor', '2nd Floor', '3rd Floor', '4th Floor', 'Attic']
 
-// ── Damage Field Pair ─────────────────────────────────────────────
+// ── Damage Yes/No + description (Elevations Damaged pattern) ──────
 function DamageField({ label, yesNoValue, notesValue, onYesNo, onNotes }) {
-  const ynField = { t: 'yn', l: label }
+  const ynField = { t: 'yn', l: label, full: true }
 
   function handleYesNo(val) {
     onYesNo(val)
@@ -26,7 +26,7 @@ function DamageField({ label, yesNoValue, notesValue, onYesNo, onNotes }) {
   }
 
   return (
-    <div className="int-damage-field">
+    <>
       <div {...fieldGroupProps(ynField)}>
         <label className="form-label">{label}</label>
         <select
@@ -35,18 +35,22 @@ function DamageField({ label, yesNoValue, notesValue, onYesNo, onNotes }) {
           onChange={e => handleYesNo(e.target.value)}
         >
           <option value="">Select</option>
-          <option value="Yes">Yes</option>
-          <option value="No">No</option>
+          {ynOptionsForField(ynField).map(opt => (
+            <option key={opt} value={opt}>{opt}</option>
+          ))}
         </select>
       </div>
       {yesNoValue === 'Yes' && (
-        <DamageDescriptionInput
-          placeholder={`Describe ${label.toLowerCase()}…`}
-          value={notesValue || ''}
-          onChange={onNotes}
-        />
+        <div className="ri-damage-row">
+          <label className="form-label">Damage Description</label>
+          <DamageDescriptionInput
+            placeholder={`Describe ${label.toLowerCase()}…`}
+            value={notesValue || ''}
+            onChange={onNotes}
+          />
+        </div>
       )}
-    </div>
+    </>
   )
 }
 
@@ -67,11 +71,15 @@ function RoomCard({ room, trigPhoto }) {
     f.moldPresent   === 'Yes' && 'Mold / Mildew',
   ].filter(Boolean)
 
-  const hasDamage = damageTags.length > 0
+  const roomSelectField = { t: 'select', l: 'Room / Location', full: true, o: ['Select', ...ROOM_PRESETS] }
+  const otherNameField = { t: 'txt', l: 'Other Room / Location', full: true }
+  const storyField = { t: 'select', l: 'Story', full: true, o: ['Select', ...STORY_OPTS] }
+  const notesField = { t: 'textarea', l: 'General Notes', full: true }
+  const roomSelectValue = room.name?.startsWith('Other - ') ? 'Other' : (room.name || '')
+  const showOtherName = room.name === 'Other' || room.name?.startsWith('Other - ')
 
   return (
-    <div className={`app-card int-room-card${hasDamage ? ' int-room-card--damage' : ''}`}>
-      {/* Header row */}
+    <div className="app-card int-room-card">
       <div className="int-room-header">
         <button
           type="button"
@@ -107,26 +115,25 @@ function RoomCard({ room, trigPhoto }) {
       <div className={`collapse-panel ${open ? 'collapse-panel--open' : ''}`} aria-hidden={!open}>
         <div className="collapse-panel__inner">
           <div className="int-room-body">
-            {/* Room identity */}
-            <div className="int-room-identity">
-              <div className="field-group">
+            <div className="ri-fields-grid">
+              <div {...fieldGroupProps(roomSelectField)}>
                 <label className="form-label">Room / Location</label>
                 <select
-                  className="field-select"
-                  value={room.name?.startsWith('Other - ') ? 'Other' : (room.name || '')}
+                  className={withSelectPlaceholderClass(fieldSelectClass(roomSelectField), roomSelectValue)}
+                  value={roomSelectValue}
                   onChange={e => updateInteriorRoom(room.id, '_name', e.target.value)}
                 >
-                  <option value="">Select</option>
-                  {ROOM_PRESETS.map(r => (
-                    <option key={r} value={r}>{r}</option>
+                  {optionsForField(roomSelectField).map(r => (
+                    <option key={r} value={r === 'Select' ? '' : r}>{r}</option>
                   ))}
                 </select>
               </div>
-              {(room.name === 'Other' || room.name?.startsWith('Other - ')) && (
-                <div className="field-group">
-                  <label className="form-label">OTHER ROOM/LOCATION</label>
+
+              {showOtherName && (
+                <div {...fieldGroupProps(otherNameField)}>
+                  <label className="form-label">Other Room / Location</label>
                   <input
-                    className="field-input int-custom-name-input"
+                    className="field-input"
                     type="text"
                     value={room.customName || ''}
                     placeholder="e.g. Sun Room"
@@ -134,23 +141,20 @@ function RoomCard({ room, trigPhoto }) {
                   />
                 </div>
               )}
-              <div className="field-group">
+
+              <div {...fieldGroupProps(storyField)}>
                 <label className="form-label">Story</label>
                 <select
-                  className="field-select compact-select"
+                  className={withSelectPlaceholderClass(fieldSelectClass(storyField), f.story)}
                   value={f.story || ''}
                   onChange={e => set('story', e.target.value)}
                 >
-                  <option value="">Select</option>
-                  {STORY_OPTS.map(s => (
-                    <option key={s} value={s}>{s}</option>
+                  {optionsForField(storyField).map(s => (
+                    <option key={s} value={s === 'Select' ? '' : s}>{s}</option>
                   ))}
                 </select>
               </div>
-            </div>
 
-            {/* Damage fields */}
-            <div className="int-damage-grid">
               <DamageField
                 label="Ceiling Damage"
                 yesNoValue={f.ceilingDamage}
@@ -179,26 +183,25 @@ function RoomCard({ room, trigPhoto }) {
                 onYesNo={v => set('moldPresent', v)}
                 onNotes={v => set('moldNotes', v)}
               />
-            </div>
 
-            {/* General notes */}
-            <div className="field-group" style={{ marginBottom: '12px' }}>
-              <label className="form-label">General Notes</label>
-              <textarea
-                className="field-textarea"
-                placeholder="Any other observations for this room…"
-                value={f.notes || ''}
-                onChange={e => set('notes', e.target.value)}
+              <div {...fieldGroupProps(notesField)}>
+                <label className="form-label">General Notes</label>
+                <textarea
+                  className="field-textarea"
+                  placeholder="Any other observations for this room…"
+                  value={f.notes || ''}
+                  onChange={e => set('notes', e.target.value)}
+                />
+              </div>
+
+              <PhotoZone
+                entityId={room.id}
+                photos={room.photos}
+                trigPhoto={trigPhoto}
+                onRemove={removeInteriorPhoto}
+                inlineActions
               />
             </div>
-
-            <PhotoZone
-              entityId={room.id}
-              photos={room.photos}
-              trigPhoto={trigPhoto}
-              onRemove={removeInteriorPhoto}
-              fullWidth={false}
-            />
           </div>
         </div>
       </div>
@@ -251,7 +254,6 @@ export default function InteriorSection() {
       <input ref={camRef} type="file" accept="image/*" capture="environment" multiple style={{ display: 'none' }} onChange={handleFiles} />
       <input ref={galRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleFiles} />
 
-      {/* Section header card */}
       <div className="app-card ri-card">
         <div className="elev-header">
           <p className="section-eyebrow" style={{ marginBottom: 0 }}>3. Interior Damage</p>
