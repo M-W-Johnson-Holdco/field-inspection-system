@@ -96,6 +96,73 @@ export async function saveJsonToDrive(token, configFolderName, fileName, data) {
   }
 }
 
+/**
+ * Ensure the email is a Shared Drive member (Content manager / writer).
+ * Idempotent — already-a-member is treated as success.
+ * Caller must be a Shared Drive Manager (organizer).
+ */
+export async function ensureSharedDriveMember(token, email, role = 'writer') {
+  const emailAddress = normalizeEmail(email)
+  if (!emailAddress) return { email: emailAddress, status: 'skipped' }
+
+  const url = `${DRIVE}/files/${SHARED_DRIVE_ID}/permissions?${SD_PARAMS}&sendNotificationEmail=true&fields=id`
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      type: 'user',
+      role,
+      emailAddress,
+    }),
+  })
+
+  if (res.status === 401) throw new TokenExpiredError()
+  if (res.ok) return { email: emailAddress, status: 'added' }
+
+  const text = await res.text().catch(() => String(res.status))
+  if (
+    res.status === 400
+    || res.status === 409
+  ) {
+    const lower = text.toLowerCase()
+    if (
+      lower.includes('alreadyexists')
+      || lower.includes('already a member')
+      || lower.includes('already exists')
+    ) {
+      return { email: emailAddress, status: 'exists' }
+    }
+  }
+
+  return {
+    email: emailAddress,
+    status: 'error',
+    error: `Drive ${res.status}: ${text}`,
+  }
+}
+
+/** Invite every allowlisted user to the Shared Drive. Returns per-email results. */
+export async function ensureSharedDriveMembers(token, emails = [], role = 'writer') {
+  const unique = [...new Set(emails.map(normalizeEmail).filter(Boolean))]
+  const results = []
+  for (const email of unique) {
+    try {
+      results.push(await ensureSharedDriveMember(token, email, role))
+    } catch (err) {
+      if (err instanceof TokenExpiredError) throw err
+      results.push({
+        email,
+        status: 'error',
+        error: String(err?.message || err),
+      })
+    }
+  }
+  return results
+}
+
 async function multipartUpload(token, folderId, name, mimeType, blob) {
   const boundary = 'tcboundary'
   const meta = JSON.stringify({ name, mimeType, parents: [folderId] })

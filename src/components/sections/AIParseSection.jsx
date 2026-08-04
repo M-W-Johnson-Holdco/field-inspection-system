@@ -27,6 +27,8 @@ const ROOF_MAP = [
   { key: 'starterDamaged',          itemId: 'ri4',  label: 'Damaged' },
   { key: 'starterDamageDescription', itemId: 'ri4', label: '_damage' },
   { key: 'valleyStyle',             itemId: 'ri5',  label: 'Style' },
+  { key: 'valleyChooseOne',         itemId: 'ri5',  label: 'Choose One' },
+  { key: 'valleyWValleyChooseOne',  itemId: 'ri5',  label: 'Choose One (W-Valley)' },
   { key: 'valleyDamaged',           itemId: 'ri5',  label: 'Damaged' },
   { key: 'valleyDamageDescription', itemId: 'ri5',  label: '_damage' },
   { key: 'solarPanelQty',           itemId: 'ri24', label: 'Qty' },
@@ -43,11 +45,11 @@ const ROOF_MAP = [
   { key: 'boxVentDamaged',          itemId: 'ri7',  label: 'Damaged' },
   { key: 'boxVentDamageDescription', itemId: 'ri7', label: '_damage' },
   { key: 'turbineQty',              itemId: 'ri8',  label: 'Qty' },
-  { key: 'turbineMaterial',         itemId: 'ri8',  label: 'Material' },
   { key: 'turbinePainted',          itemId: 'ri8',  label: 'Painted' },
   { key: 'turbineDamaged',          itemId: 'ri8',  label: 'Damaged' },
   { key: 'turbineDamageDescription', itemId: 'ri8', label: '_damage' },
   { key: 'powerVentQty',            itemId: 'ri9',  label: 'Qty' },
+  { key: 'powerVentMaterial',       itemId: 'ri9',  label: 'Material' },
   { key: 'powerVentPainted',        itemId: 'ri9',  label: 'Painted' },
   { key: 'powerVentDamaged',        itemId: 'ri9',  label: 'Damaged' },
   { key: 'powerVentDamageDescription', itemId: 'ri9', label: '_damage' },
@@ -55,13 +57,37 @@ const ROOF_MAP = [
   { key: 'solarVentPainted',        itemId: 'ri10', label: 'Painted' },
   { key: 'solarVentDamaged',        itemId: 'ri10', label: 'Damaged' },
   { key: 'solarVentDamageDescription', itemId: 'ri10', label: '_damage' },
+  { key: 'offRidgeVentQty',         itemId: 'ri25', label: 'Qty' },
+  { key: 'offRidgeVentPainted',     itemId: 'ri25', label: 'Painted' },
+  { key: 'offRidgeVentDamaged',     itemId: 'ri25', label: 'Damaged' },
+  { key: 'offRidgeVentDamageDescription', itemId: 'ri25', label: '_damage' },
+  { key: 'domeVentQty',             itemId: 'ri26', label: 'Qty' },
+  { key: 'domeVentPainted',         itemId: 'ri26', label: 'Painted' },
+  { key: 'domeVentDamaged',         itemId: 'ri26', label: 'Damaged' },
+  { key: 'domeVentDamageDescription', itemId: 'ri26', label: '_damage' },
+  { key: 'rooftopIntakeVentQty',    itemId: 'ri27', label: 'Qty' },
+  { key: 'rooftopIntakeVentPainted', itemId: 'ri27', label: 'Painted' },
+  { key: 'rooftopIntakeVentDamaged', itemId: 'ri27', label: 'Damaged' },
+  { key: 'rooftopIntakeVentDamageDescription', itemId: 'ri27', label: '_damage' },
   { key: 'kickoutsExisting',        itemId: 'ri13', label: 'Existing' },
   { key: 'kickoutsNeeded',          itemId: 'ri13', label: 'Needed' },
   { key: 'kickoutsPainted',         itemId: 'ri13', label: 'Painted' },
   { key: 'rainDiverterPainted',     itemId: 'ri15', label: 'Painted' },
   { key: 'powerMeterMastQty',       itemId: 'ri16', label: 'Qty' },
-  { key: 'corniceGableType',        itemId: 'ri21', label: 'Type' },
-  { key: 'corniceGableStory',       itemId: 'ri21', label: 'Story' },
+  { key: 'corniceReturnMaterial',   itemId: 'ri21', label: 'Material' },
+  { key: 'corniceReturnStories',    itemId: 'ri21', label: 'Stories' },
+  { key: 'corniceReturnQty',        itemId: 'ri21', label: 'Qty' },
+  { key: 'corniceReturnPainted',    itemId: 'ri21', label: 'Painted' },
+  { key: 'corniceReturnDamaged',    itemId: 'ri21', label: 'Damaged' },
+  { key: 'corniceReturnDamageDescription', itemId: 'ri21', label: '_damage' },
+  { key: 'corniceStripMaterial',    itemId: 'ri28', label: 'Material' },
+  { key: 'corniceStripLF',          itemId: 'ri28', label: 'Length (LF)' },
+  { key: 'corniceStripStories',     itemId: 'ri28', label: 'Stories' },
+  { key: 'corniceStripPainted',     itemId: 'ri28', label: 'Painted' },
+  { key: 'corniceStripDamaged',     itemId: 'ri28', label: 'Damaged' },
+  { key: 'corniceStripDamageDescription', itemId: 'ri28', label: '_damage' },
+  // Legacy parse keys
+  { key: 'corniceGableStory',       itemId: 'ri21', label: 'Stories' },
   { key: 'corniceGableQty',         itemId: 'ri21', label: 'Qty' },
 ]
 // Pipe jacks, exhaust stacks, rain diverters, chimneys, skylights, and low-slope sections
@@ -359,6 +385,7 @@ function applyParsed(parsed, ctx) {
     if (val == null) return
     if (key === 'pitch') val = formatPitch(parsePitchNumerator(val, 0))
     if (key === 'shingleStyle') val = toArray(val)
+    if (key === 'valleyStyle') val = toArray(val)
     updateRoofField(itemId, label, val)
   })
 
@@ -377,6 +404,9 @@ function applyParsed(parsed, ctx) {
     { itemId: 'ri8',  key: 'turbineDamaged' },
     { itemId: 'ri9',  key: 'powerVentDamaged' },
     { itemId: 'ri10', key: 'solarVentDamaged' },
+    { itemId: 'ri25', key: 'offRidgeVentDamaged' },
+    { itemId: 'ri26', key: 'domeVentDamaged' },
+    { itemId: 'ri27', key: 'rooftopIntakeVentDamaged' },
   ]
   DAMAGE_FLAG_ITEMS.forEach(({ itemId, key }) => {
     const val = roof[key]

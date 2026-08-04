@@ -117,7 +117,16 @@ export default function AccessAdminModal({ onClose }) {
       }
 
       try {
-        await updatePermissions(withBootstrapAdmins({ users }))
+        const result = await updatePermissions(withBootstrapAdmins({ users }))
+        const failures = result?.inviteFailures || []
+        if (failures.length) {
+          const names = failures.map(f => f.email).join(', ')
+          setError(
+            `Access list saved, but could not add to the Shared Drive: ${names}. `
+            + 'Your Google account needs Manager access on the Field Inspection Shared Drive, then Save again.'
+          )
+          return
+        }
       } catch (err) {
         if (!(err instanceof TokenExpiredError)) throw err
         const recovered = await recoverFromTokenExpiry()
@@ -125,7 +134,16 @@ export default function AccessAdminModal({ onClose }) {
           setError('Google Drive session expired. Sign in again, then save.')
           return
         }
-        await updatePermissions(withBootstrapAdmins({ users }))
+        const result = await updatePermissions(withBootstrapAdmins({ users }))
+        const failures = result?.inviteFailures || []
+        if (failures.length) {
+          const names = failures.map(f => f.email).join(', ')
+          setError(
+            `Access list saved, but could not add to the Shared Drive: ${names}. `
+            + 'Your Google account needs Manager access on the Field Inspection Shared Drive, then Save again.'
+          )
+          return
+        }
       }
       onClose()
     } catch (err) {
@@ -154,7 +172,9 @@ export default function AccessAdminModal({ onClose }) {
 
         <div className="access-admin-modal__body">
           <p className="access-admin-modal__intro">
-            Only people on this list can sign in. Choose a role for each user:
+            Only people on this list can sign in. Saving also invites them to the Field Inspection
+            Shared Drive (Content manager) so they can open the app.
+            Choose a role for each user:
             <strong> Sales</strong> (own inspections),
             <strong> Supervisor</strong> (their company),
             <strong> Admin</strong> (PT + TC and Access settings).

@@ -249,9 +249,9 @@ function FieldRenderer({ field, value, onChange, subFields, onSubFieldChange }) 
             className="field-input number-stepper__input"
             style={{ '--field-ch': inputCh }}
             type="number"
-            inputMode="numeric"
+            inputMode="decimal"
             min="0"
-            step="1"
+            step="any"
             value={value === '' || value == null ? '' : value}
             placeholder={p || '0'}
             onChange={e => onChange(e.target.value)}

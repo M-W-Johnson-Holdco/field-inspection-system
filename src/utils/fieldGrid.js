@@ -48,9 +48,9 @@ function isFlashingSubFieldsPattern(fields) {
 function isChimneySubFieldsPattern(fields) {
   return fields.length === 5
     && fields[0].t === 'select' && fields[0].l === 'Size / Width'
-    && isOptionSelectField(fields[1]) && fields[1].l === 'Counter Flashing'
-    && fields[2].t === 'yn' && fields[2].l === 'Cricket Present'
-    && fields[3].t === 'yn' && fields[3].l === 'Painted'
+    && isOptionSelectField(fields[1]) && fields[1].l === 'Material'
+    && isOptionSelectField(fields[2]) && fields[2].l === 'Counter Flashing'
+    && fields[3].t === 'yn' && fields[3].l === 'Cricket Present'
     && fields[4].t === 'yn' && fields[4].l === 'Damaged'
 }
 
@@ -206,7 +206,7 @@ export function groupFieldsForGrid(fields) {
     }
 
     if (
-      field.t === 'num' && field.l === 'Story'
+      field.t === 'num' && (field.l === 'Story' || field.l === 'Stories')
       && next?.t === 'num' && next.l === 'Qty'
       && !field.full && !next.full
     ) {
@@ -338,23 +338,22 @@ export function fieldSelectClass(field) {
   return 'field-select'
 }
 
-/** Multi-select (“select all that apply”) never offers N/A. All single-choice dropdowns do. */
-function omitsNAOption(field) {
-  return field?.t === 'multi'
-    || field?.t === 'multiRadio'
-    || field?.t === 'toggleMulti'
-}
-
 /** Yes/No dropdown options — always ends with N/A. */
 export function ynOptionsForField(field) {
-  if (omitsNAOption(field)) return ['Yes', 'No']
+  if (field?.t === 'multi' || field?.t === 'multiRadio' || field?.t === 'toggleMulti') {
+    return field?.allowNA === true ? ['Yes', 'No', 'N/A'] : ['Yes', 'No']
+  }
   return ['Yes', 'No', 'N/A']
 }
 
-/** Option-list fields (radio/select). Appends N/A unless this is a multi-select. */
+/** Option-list fields. Appends N/A unless this is a multi-select without allowNA. */
 export function optionsForField(field) {
   const opts = Array.isArray(field?.o) ? [...field.o] : []
-  if (omitsNAOption(field)) {
+  if (field?.t === 'multi' || field?.t === 'multiRadio' || field?.t === 'toggleMulti') {
+    if (field?.allowNA === true) {
+      if (!opts.includes('N/A')) opts.push('N/A')
+      return opts
+    }
     return opts.filter(opt => opt !== 'N/A')
   }
   if (!opts.includes('N/A')) {

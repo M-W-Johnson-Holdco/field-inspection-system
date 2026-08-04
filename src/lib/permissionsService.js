@@ -7,7 +7,7 @@ import {
   ROLES,
   withBootstrapAdmins,
 } from './accessConfig'
-import { loadJsonFromDrive, saveJsonToDrive } from './driveService'
+import { ensureSharedDriveMembers, loadJsonFromDrive, saveJsonToDrive } from './driveService'
 
 const PERMISSIONS_FILE_NAME = 'permissions.json'
 
@@ -61,5 +61,14 @@ export async function savePermissions(token, permissions) {
   const clean = withBootstrapAdmins(sanitizePermissions(permissions))
   // Drop legacy keys so Drive file stays on the new shape.
   await saveJsonToDrive(token, CONFIG_FOLDER_NAME, PERMISSIONS_FILE_NAME, clean)
-  return clean
+
+  // Also invite allowlisted users onto the Shared Drive so they can read permissions.json.
+  const inviteResults = await ensureSharedDriveMembers(
+    token,
+    clean.users.map(entry => entry.email),
+    'writer',
+  )
+  const inviteFailures = inviteResults.filter(result => result.status === 'error')
+
+  return { permissions: clean, inviteResults, inviteFailures }
 }

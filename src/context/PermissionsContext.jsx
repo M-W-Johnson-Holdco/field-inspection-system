@@ -49,9 +49,10 @@ export function PermissionsProvider({ children }) {
   const updatePermissions = useCallback(async (nextPermissions) => {
     const token = await ensureAccessToken()
     if (!token) throw new Error('Not signed in')
-    const saved = await savePermissions(token, nextPermissions)
+    const result = await savePermissions(token, nextPermissions)
+    const saved = result?.permissions ?? result
     setPermissions(saved)
-    return saved
+    return result
   }, [ensureAccessToken])
 
   const role = roleForEmail(user?.email, permissions)
