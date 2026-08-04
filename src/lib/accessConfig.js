@@ -44,7 +44,12 @@ export const ROLE_DESCRIPTIONS = {
 }
 
 // First admins who can open Access Settings before permissions.json exists on Drive.
-export const BOOTSTRAP_ACCESS_ADMINS = ['j.gil@peachtreerestorations.com', 'k.liss@peachtreerestorations.com']
+export const BOOTSTRAP_ACCESS_ADMINS = [
+  'j.gil@peachtreerestorations.com',
+  'k.liss@peachtreerestorations.com',
+  'r.deering@peachtreerestorations.com',
+  'mj@peachtreerestorations.com',
+]
 
 export const DEFAULT_PERMISSIONS = {
   users: BOOTSTRAP_ACCESS_ADMINS.map(email => ({
