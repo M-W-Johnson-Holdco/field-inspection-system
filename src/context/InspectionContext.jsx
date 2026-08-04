@@ -784,6 +784,7 @@ function normalizeRoofData(roofData = {}) {
     next[itemDef.id] = withRoofItemStatus(item, getRoofItemStatus(item))
   }
   next = normalizeRi0(next)
+  next = normalizeRi5(next)
   next = normalizeRi11(next)
   next = normalizeRi12(next)
   next = normalizeRi14(next)
@@ -819,11 +820,23 @@ function normalizeRi0(roofData) {
   return next
 }
 
+function normalizeRi5(roofData) {
+  const next = { ...roofData }
+  const ri5 = next.ri5
+  if (!ri5) return next
+
+  const fields = { ...(ri5.fields || {}) }
+  if (fields.Style != null && fields.Style !== '' && !Array.isArray(fields.Style)) {
+    fields.Style = [String(fields.Style)]
+  }
+  next.ri5 = { ...ri5, fields }
+  return next
+}
+
 function hasLegacyChimneyTopLevel(fields = {}) {
   return fields.Qty != null
     || fields['Size / Width'] != null
     || fields['Counter Flashing'] != null
-    || fields.Painted != null
     || fields.Damaged != null
     || fields['Chimney Condition / Leak Hazard Notes'] != null
 }
@@ -833,6 +846,8 @@ function normalizeChimneySubItem(sub) {
   if (fields['Size / Width']) {
     fields['Size / Width'] = normalizeChimneySizeValue(fields['Size / Width'])
   }
+  // Painted is section-level now — drop any per-chimney value.
+  delete fields.Painted
   return {
     fields,
     photos: Array.isArray(sub?.photos) ? sub.photos : [],
@@ -849,7 +864,6 @@ function migrateChimneyFields(ri17) {
     ...(fields['Size / Width'] ? { 'Size / Width': normalizeChimneySizeValue(fields['Size / Width']) } : {}),
     ...(fields['Counter Flashing'] ? { 'Counter Flashing': fields['Counter Flashing'] } : {}),
     ...(fields['Cricket Present'] ? { 'Cricket Present': fields['Cricket Present'] } : {}),
-    ...(fields.Painted ? { Painted: fields.Painted } : {}),
     ...(fields.Damaged ? { Damaged: fields.Damaged } : {}),
     ...(fields._damage ? { _damage: fields._damage } : {}),
   }
@@ -874,24 +888,35 @@ function normalizeRi17(roofData) {
 
   const fields = ri17.fields || {}
   if (hasLegacyChimneyTopLevel(fields)) {
+    const painted = fields.Painted
+      || (ri17.subItems || []).find(sub => sub.fields?.Painted)?.fields.Painted
+      || ''
     next.ri17 = {
       ...ri17,
-      fields: {},
+      fields: painted ? { Painted: painted } : {},
       subItems: migrateChimneyFields(ri17),
       photos: [],
     }
     return next
   }
 
+  let parentFields = { ...fields }
   const normalizedSubItems = (ri17.subItems || []).map(normalizeChimneySubItem)
+
+  if (!parentFields.Painted) {
+    const fromSub = (ri17.subItems || []).find(sub => sub.fields?.Painted)?.fields.Painted
+    if (fromSub) parentFields = { ...parentFields, Painted: fromSub }
+  }
+
   const subItemsChanged = normalizedSubItems.some((sub, index) => {
     const original = ri17.subItems?.[index]
     return JSON.stringify(sub.fields) !== JSON.stringify(original?.fields || {})
       || !Array.isArray(original?.photos)
   })
+  const parentChanged = JSON.stringify(parentFields) !== JSON.stringify(fields)
 
-  if (subItemsChanged) {
-    next.ri17 = { ...ri17, subItems: normalizedSubItems }
+  if (subItemsChanged || parentChanged) {
+    next.ri17 = { ...ri17, fields: parentFields, subItems: normalizedSubItems }
   }
 
   return next
@@ -910,7 +935,7 @@ function normalizeFlashingItems(roofData) {
     const subItems = item.subItems || []
     const firstSub = subItems.find(sub => {
       const fields = sub?.fields || {}
-      return fields.Painted || fields.Damaged || fields._damage
+      return fields.Material || fields.Painted || fields.Damaged || fields._damage
     })
     const lifted = firstSub?.fields || {}
     const photos = [
@@ -921,6 +946,7 @@ function normalizeFlashingItems(roofData) {
     next[itemId] = {
       ...item,
       fields: {
+        ...(lifted.Material || topFields.Material ? { Material: lifted.Material || topFields.Material } : {}),
         ...(lifted.Painted || topFields.Painted ? { Painted: lifted.Painted || topFields.Painted } : {}),
         ...(lifted.Damaged || topFields.Damaged ? { Damaged: lifted.Damaged || topFields.Damaged } : {}),
         ...(lifted._damage || topFields._damage ? { _damage: lifted._damage || topFields._damage } : {}),
@@ -935,7 +961,18 @@ function normalizeFlashingItems(roofData) {
 
 function normalizeCorniceFields(fields = {}) {
   const next = { ...fields }
-  if (next.Story != null && next.Story !== '') next.Story = String(next.Story)
+
+  if ((next.Stories == null || next.Stories === '') && next.Story != null && next.Story !== '') {
+    next.Stories = String(next.Story)
+  }
+  delete next.Story
+
+  if (!next.Material || next.Material === '' || next.Material === 'Select') {
+    if (next.Type === 'Metal') next.Material = 'Metal'
+  }
+  delete next.Type
+
+  if (next.Stories != null && next.Stories !== '') next.Stories = String(next.Stories)
   if (next.Qty != null && next.Qty !== '') next.Qty = String(next.Qty)
   return next
 }
@@ -949,7 +986,7 @@ function normalizeRi21(roofData) {
   const subItems = ri21.subItems || []
   const firstSub = subItems.find(sub => {
     const fields = sub?.fields || {}
-    return fields.Type || fields.Story || fields.Qty
+    return fields.Material || fields.Type || fields.Painted || fields.Damaged || fields.Stories || fields.Story || fields.Qty
   })
   const lifted = firstSub ? normalizeCorniceFields(firstSub.fields || {}) : {}
   const photos = [
@@ -960,9 +997,12 @@ function normalizeRi21(roofData) {
   next.ri21 = {
     ...ri21,
     fields: {
-      ...(lifted.Type || topFields.Type ? { Type: lifted.Type || topFields.Type } : {}),
-      ...(lifted.Story || topFields.Story ? { Story: lifted.Story || topFields.Story } : {}),
+      ...(lifted.Material || topFields.Material ? { Material: lifted.Material || topFields.Material } : {}),
+      ...(lifted.Stories || topFields.Stories ? { Stories: lifted.Stories || topFields.Stories } : {}),
       ...(lifted.Qty || topFields.Qty ? { Qty: lifted.Qty || topFields.Qty } : {}),
+      ...(lifted.Painted || topFields.Painted ? { Painted: lifted.Painted || topFields.Painted } : {}),
+      ...(lifted.Damaged || topFields.Damaged ? { Damaged: lifted.Damaged || topFields.Damaged } : {}),
+      ...(lifted._damage || topFields._damage ? { _damage: lifted._damage || topFields._damage } : {}),
     },
     subItems: [],
     photos,
@@ -1007,8 +1047,17 @@ function normalizeStructurePitchFields(fields = {}) {
 }
 
 function normalizeLowSlopeSubItem(sub) {
+  const fields = normalizeStructurePitchFields(sub?.fields || {})
+  if ((!fields['Edgemetal Material'] || fields['Edgemetal Material'] === 'Select') && fields.Material) {
+    fields['Edgemetal Material'] = fields.Material
+  }
+  if (!fields['Edgemetal Painted'] && fields.Painted) {
+    fields['Edgemetal Painted'] = fields.Painted
+  }
+  delete fields.Material
+  delete fields.Painted
   return {
-    fields: normalizeStructurePitchFields(sub?.fields || {}),
+    fields,
     photos: Array.isArray(sub?.photos) ? sub.photos : [],
   }
 }
@@ -1588,9 +1637,9 @@ function buildChimneySubItemsFromParsed(roof = {}) {
     return list.map(ch => ({
       fields: {
         ...(ch?.size ? { 'Size / Width': normalizeChimneySizeValue(ch.size) } : {}),
+        ...(ch?.material ? { Material: ch.material } : {}),
         ...(ch?.counterFlashing ? { 'Counter Flashing': ch.counterFlashing } : {}),
         ...(ch?.cricketPresent ? { 'Cricket Present': ch.cricketPresent } : {}),
-        ...(ch?.painted ? { Painted: ch.painted } : {}),
         ...(ch?.damaged ? { Damaged: ch.damaged } : {}),
         ...(ch?.damaged === 'Yes' && ch?.damageDescription ? { _damage: ch.damageDescription } : {}),
       },
@@ -1601,10 +1650,9 @@ function buildChimneySubItemsFromParsed(roof = {}) {
   // Legacy fallback: single shared chimney profile repeated `chimneyQty` times.
   const size = normalizeChimneySizeValue(roof.chimneySize || '')
   const counterFlashing = roof.counterFlashingCondition || ''
-  const painted = roof.chimneyPainted || ''
   const damaged = roof.chimneyDamaged || ''
   const qty = Math.max(0, Number(roof.chimneyQty) || 0)
-  const hasData = size || counterFlashing || painted || damaged
+  const hasData = size || counterFlashing || damaged
   const count = qty > 0 ? qty : (hasData ? 1 : 0)
   const subItems = []
 
@@ -1613,7 +1661,6 @@ function buildChimneySubItemsFromParsed(roof = {}) {
       fields: {
         ...(size ? { 'Size / Width': size } : {}),
         ...(counterFlashing ? { 'Counter Flashing': counterFlashing } : {}),
-        ...(painted ? { Painted: painted } : {}),
         ...(damaged ? { Damaged: damaged } : {}),
       },
       photos: [],
@@ -1623,10 +1670,17 @@ function buildChimneySubItemsFromParsed(roof = {}) {
   return subItems
 }
 
+function chimneyPaintedFromParsed(roof = {}) {
+  if (roof.chimneyPainted) return roof.chimneyPainted
+  const list = Array.isArray(roof.chimneys) ? roof.chimneys : []
+  return list.find(ch => ch?.painted)?.painted || ''
+}
+
 const FLASHING_IMPORT_CONFIG = [
   {
     itemId: 'ri18',
     listKey: 'stepFlashing',
+    material: 'stepFlashingMaterial',
     painted: 'stepFlashingPainted',
     damaged: 'stepFlashingDamaged',
     damageDescription: 'stepFlashingDamageDescription',
@@ -1635,6 +1689,7 @@ const FLASHING_IMPORT_CONFIG = [
   {
     itemId: 'ri19',
     listKey: 'counterFlashing',
+    material: 'counterFlashingMaterial',
     painted: 'counterFlashingPainted',
     damaged: 'counterFlashingDamaged',
     damageDescription: 'counterFlashingDamageDescription',
@@ -1643,6 +1698,7 @@ const FLASHING_IMPORT_CONFIG = [
   {
     itemId: 'ri20',
     listKey: 'lFlashing',
+    material: 'lFlashingMaterial',
     painted: 'lFlashingPainted',
     damaged: 'lFlashingDamaged',
     damageDescription: 'lFlashingDamageDescription',
@@ -1660,8 +1716,9 @@ function isPresentValue(value) {
 
 function buildFlashingFieldsFromParsed(roof = {}, config) {
   const list = Array.isArray(roof[config.listKey]) ? roof[config.listKey] : []
-  const first = list.find(fl => fl?.painted || fl?.damaged || fl?.damageDescription) || list[0]
+  const first = list.find(fl => fl?.material || fl?.painted || fl?.damaged || fl?.damageDescription) || list[0]
 
+  const material = first?.material || roof[config.material] || ''
   const painted = first?.painted || roof[config.painted] || ''
   const damaged = first?.damaged || roof[config.damaged] || ''
   const damageDescription = (
@@ -1673,10 +1730,11 @@ function buildFlashingFieldsFromParsed(roof = {}, config) {
 
   if (present === false) return null
 
-  const hasData = painted || damaged || damageDescription || present === true
+  const hasData = material || painted || damaged || damageDescription || present === true
   if (!hasData) return null
 
   return {
+    ...(material ? { Material: material } : {}),
     ...(painted ? { Painted: painted } : {}),
     ...(damaged ? { Damaged: damaged } : {}),
     ...(damaged === 'Yes' && damageDescription ? { _damage: damageDescription } : {}),
@@ -1690,6 +1748,16 @@ function buildLowSlopeSubItemsFromParsed(roof = {}) {
       fields: {
         ...(ls?.location ? { Location: ls.location } : {}),
         ...(ls?.grade ? { 'Style / Grade': ls.grade } : {}),
+        ...(ls?.edgemetalExisting ? { 'Edgemetal Existing?': ls.edgemetalExisting } : {}),
+        ...(ls?.edgemetalExisting === 'Yes' && ls?.edgemetalWidthInches != null
+          ? { 'Edgemetal Width (Inches)': String(ls.edgemetalWidthInches) }
+          : {}),
+        ...(ls?.edgemetalExisting === 'Yes' && (ls?.edgemetalMaterial || ls?.material)
+          ? { 'Edgemetal Material': ls.edgemetalMaterial || ls.material }
+          : {}),
+        ...(ls?.edgemetalExisting === 'Yes' && (ls?.edgemetalPainted || ls?.painted)
+          ? { 'Edgemetal Painted': ls.edgemetalPainted || ls.painted }
+          : {}),
         ...(ls?.exposedRafters ? { 'Exposed Rafters': ls.exposedRafters } : {}),
         ...(ls?.pitch ? { 'Pitch (x/12)': normalizeLowSlopePitch(ls.pitch) } : {}),
         ...(ls?.damaged ? { Damaged: ls.damaged } : {}),
@@ -2193,7 +2261,8 @@ export function InspectionProvider({ children }) {
 
   function importRoofChimneys(roof = {}) {
     const subItems = buildChimneySubItemsFromParsed(roof)
-    if (!subItems.length) return
+    const painted = chimneyPaintedFromParsed(roof)
+    if (!subItems.length && !painted) return
 
     setData(prev => {
       const item = prev.roofData.ri17
@@ -2203,7 +2272,7 @@ export function InspectionProvider({ children }) {
           ...prev.roofData,
           ri17: {
             ...withRoofItemStatus(item, 'present'),
-            fields: {},
+            fields: painted ? { Painted: painted } : {},
             subItems,
           },
         },

@@ -91,9 +91,10 @@ function PitchInput({ field, value, onChange }) {
 
 function FieldRenderer({ field, value, onChange, subFields, onSubFieldChange }) {
   const { t, l, o, p } = field
+  const labelText = field.displayLabel || l
   const lbl = (
     <label className="form-label">
-      {l}
+      {labelText}
       {field.labelHint && (
         <span className="form-label__hint"> ({field.labelHint})</span>
       )}
@@ -136,6 +137,21 @@ function FieldRenderer({ field, value, onChange, subFields, onSubFieldChange }) 
   if (t === 'multiRadio' || t === 'multi') {
     const arr = Array.isArray(value) ? value : []
     const opts = optionsForField(field)
+    const exclusiveNA = field.allowNA === true && opts.includes('N/A')
+
+    function toggleMultiOption(opt) {
+      let nextArr
+      if (exclusiveNA && opt === 'N/A') {
+        nextArr = arr.includes('N/A') ? [] : ['N/A']
+      } else if (arr.includes(opt)) {
+        nextArr = arr.filter(v => v !== opt)
+      } else {
+        nextArr = exclusiveNA
+          ? [...arr.filter(v => v !== 'N/A'), opt]
+          : [...arr, opt]
+      }
+      onChange(opts.filter(o => nextArr.includes(o)))
+    }
 
     // Native device picker (same control as Yes/No): pick options one at a time.
     if (field.nativeMenu) {
@@ -155,10 +171,7 @@ function FieldRenderer({ field, value, onChange, subFields, onSubFieldChange }) 
           onChange={e => {
             const next = e.target.value
             if (!next || next === '__selected__') return
-            const nextArr = arr.includes(next)
-              ? arr.filter(v => v !== next)
-              : [...arr, next]
-            onChange(opts.filter(opt => nextArr.includes(opt)))
+            toggleMultiOption(next)
           }}
           aria-label={l}
         >
@@ -199,12 +212,7 @@ function FieldRenderer({ field, value, onChange, subFields, onSubFieldChange }) 
                 <input
                   type="checkbox"
                   checked={arr.includes(opt)}
-                  onChange={() => {
-                    const next = arr.includes(opt)
-                      ? arr.filter(v => v !== opt)
-                      : [...arr, opt]
-                    onChange(next)
-                  }}
+                  onChange={() => toggleMultiOption(opt)}
                 />
                 {opt}
               </label>
@@ -287,9 +295,9 @@ function FieldRenderer({ field, value, onChange, subFields, onSubFieldChange }) 
             className="field-input number-stepper__input"
             style={{ '--field-ch': inputCh }}
             type="number"
-            inputMode="numeric"
+            inputMode="decimal"
             min="0"
-            step="1"
+            step="any"
             value={value === '' || value == null ? '' : value}
             placeholder={p || '0'}
             onChange={e => onChange(e.target.value)}
@@ -352,8 +360,10 @@ function collapsibleSubPills(itemId, fields = {}) {
     if (length) grey.push(`${length} LF`)
   } else if (itemId === 'ri17') {
     const size = String(fields['Size / Width'] || '').match(/^(Small|Medium|Large)/)?.[1]
+    const material = selectValue(fields.Material)
     const counter = selectValue(fields['Counter Flashing'])
     if (size) grey.push(size)
+    if (material) grey.push(material)
     if (counter) grey.push(counter)
     if (fields['Cricket Present'] === 'Yes') grey.push('Cricket')
     if (fields.Damaged === 'Yes') red.push('Damaged')
@@ -362,6 +372,7 @@ function collapsibleSubPills(itemId, fields = {}) {
     const style = selectValue(fields['Style / Grade'])
     if (location) grey.push(location.startsWith('Other') ? 'Other' : location)
     if (style) grey.push(style)
+    if (fields['Edgemetal Existing?'] === 'Yes') grey.push('Edgemetal')
     if (fields.Damaged === 'Yes') red.push('Damaged')
   } else if (itemId === 'ri23') {
     const type = selectValue(fields.Type)
@@ -526,12 +537,13 @@ function CheckItem({ itemDef, trigPhoto }) {
   const subItemLabel = (addMoreLabel || 'Item').replace('Add ', '')
   const showItemPhotos = hasP && !subItemPhotos
   const typeAboveSizeQty = Boolean(subItemSizeCounters?.editable)
+  const visibleFields = visibleFieldsForValues(fields, item.fields || {})
   const leadingFields = typeAboveSizeQty
-    ? fields.filter(f => f.l === 'Type' || f.l === 'Painted')
+    ? visibleFields.filter(f => f.l === 'Type' || f.l === 'Painted')
     : []
   const mainFields = typeAboveSizeQty
-    ? fields.filter(f => f.l !== 'Type' && f.l !== 'Painted')
-    : fields
+    ? visibleFields.filter(f => f.l !== 'Type' && f.l !== 'Painted')
+    : visibleFields
 
   function renderFieldControl(f) {
     return (

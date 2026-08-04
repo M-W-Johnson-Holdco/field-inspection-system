@@ -177,11 +177,10 @@ export default function JobInfo() {
     )
   }
 
-  function toggleLossType(val) {
-    const current = Array.isArray(ji.lossType) ? ji.lossType : []
+  function setLossTypeSelection(nextSelected) {
     updateJobInfo(
       'lossType',
-      current.includes(val) ? current.filter(item => item !== val) : [...current, val],
+      LOSS_TYPE_OPTIONS.filter(option => nextSelected.includes(option)),
     )
   }
 
@@ -237,6 +236,14 @@ export default function JobInfo() {
   const addressErrors = validateAddressParts(addressDraft)
   const showAddressErrors = addressTouched && hasAddressErrors(addressErrors)
   const addressCanComplete = !hasAddressErrors(addressErrors)
+  const lossTypeSelected = Array.isArray(ji.lossType) ? ji.lossType : []
+  const lossTypeOrdered = LOSS_TYPE_OPTIONS.filter(option => lossTypeSelected.includes(option))
+  const lossTypeDisplayValue = lossTypeOrdered.length ? '__selected__' : ''
+  const lossTypeDisplayLabel = lossTypeOrdered.length ? lossTypeOrdered.join(', ') : 'Select'
+  const lossTypeSelectClass = withSelectPlaceholderClass(
+    'field-select compact-select field-select--native-multi-overlay',
+    lossTypeDisplayValue,
+  )
 
   return (
     <section className={`job-card app-card ${isOpen ? 'job-card--open' : ''}`}>
@@ -354,38 +361,33 @@ export default function JobInfo() {
                 {field('claimFileDate', 'Claim File Date', { type: 'date', full: true })}
                 {field('stormDate', 'Date of Loss', { type: 'date', full: true })}
                 <div className="form-field form-field--full">
-                  <label className="form-label">Loss Type</label>
-                  <details className="multi-select multi-select--field-select">
-                    <summary className={withSelectPlaceholderClass(
-                      'field-select compact-select',
-                      (ji.lossType || []).length ? ji.lossType.join(', ') : '',
-                    )}>
-                      {(ji.lossType || []).length ? ji.lossType.join(', ') : 'Select'}
-                    </summary>
-                    <div
-                      className="multi-select__menu"
-                      onMouseDown={e => e.preventDefault()}
-                      onClick={e => e.stopPropagation()}
+                  <label className="form-label">
+                    Loss Type
+                    <span className="form-label__hint"> (SELECT ALL THAT APPLY)</span>
+                  </label>
+                  <div className={`native-multi-face${lossTypeOrdered.length ? '' : ' native-multi-face--placeholder'}`}>
+                    <span className="native-multi-face__text">{lossTypeDisplayLabel}</span>
+                    <select
+                      className={lossTypeSelectClass}
+                      value={lossTypeDisplayValue}
+                      aria-label="Loss Type"
+                      onChange={e => {
+                        const next = e.target.value
+                        if (!next || next === '__selected__') return
+                        const nextSelected = lossTypeSelected.includes(next)
+                          ? lossTypeSelected.filter(item => item !== next)
+                          : [...lossTypeSelected, next]
+                        setLossTypeSelection(nextSelected)
+                      }}
                     >
+                      <option value={lossTypeDisplayValue} hidden>{lossTypeDisplayLabel}</option>
                       {LOSS_TYPE_OPTIONS.map(option => (
-                        <label key={option} className="multi-select__option">
-                          <input
-                            type="checkbox"
-                            checked={(ji.lossType || []).includes(option)}
-                            onChange={() => toggleLossType(option)}
-                          />
-                          {option}
-                        </label>
+                        <option key={option} value={option}>
+                          {lossTypeOrdered.includes(option) ? `✓ ${option}` : option}
+                        </option>
                       ))}
-                    </div>
-                  </details>
-                  {(ji.lossType || []).length > 0 && (
-                    <div className="multi-select__selected" aria-label="Selected loss types">
-                      {ji.lossType.map(option => (
-                        <span key={option} className="multi-select__chip">{option}</span>
-                      ))}
-                    </div>
-                  )}
+                    </select>
+                  </div>
                 </div>
               </div>
             </JobInfoGroup>

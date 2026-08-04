@@ -71,7 +71,24 @@ export const ROOF_LINE_ITEMS = {
   }],
   ri5: (fields) => [{
     trade: 'Roofing', category: 'RFG',
-    description: `Valley - ${str(fields, 'Style') || 'unspecified'}`,
+    description: (() => {
+      const styles = Array.isArray(fields?.Style)
+        ? fields.Style
+        : (fields?.Style ? [String(fields.Style)] : [])
+      const styleLabel = styles.join('/') || 'unspecified'
+      const details = []
+      if (styles.includes('Ice & Water')) {
+        const choose = str(fields, 'Choose One')
+        if (choose) details.push(choose)
+      }
+      if (styles.includes('W-Valley')) {
+        const choose = str(fields, 'Choose One (W-Valley)')
+        if (choose) details.push(choose)
+      }
+      return details.length
+        ? `Valley - ${styleLabel} (${details.join('; ')})`
+        : `Valley - ${styleLabel}`
+    })(),
     unit: 'LF', qty: null, damaged: null, note: null,
   }],
   ri24: (fields) => [{
@@ -94,19 +111,37 @@ export const ROOF_LINE_ITEMS = {
   }],
   ri8: (fields) => [{
     trade: 'Roofing', category: 'RFG',
-    description: `Turbine vent - ${str(fields, 'Material') || 'unspecified'}`,
+    description: 'Turbine vent',
     unit: 'EA', qty: num(fields, 'Qty'),
     damaged: yn(fields, 'Damaged'), note: yn(fields, 'Painted') ? 'Painted' : null,
   }],
   ri9: (fields) => [{
     trade: 'Roofing', category: 'RFG',
-    description: 'Power vent',
+    description: `Power vent - ${str(fields, 'Material') || 'unspecified'}`,
     unit: 'EA', qty: num(fields, 'Qty'),
     damaged: yn(fields, 'Damaged'), note: yn(fields, 'Painted') ? 'Painted' : null,
   }],
   ri10: (fields) => [{
     trade: 'Roofing', category: 'RFG',
     description: 'Solar-powered vent',
+    unit: 'EA', qty: num(fields, 'Qty'),
+    damaged: yn(fields, 'Damaged'), note: yn(fields, 'Painted') ? 'Painted' : null,
+  }],
+  ri25: (fields) => [{
+    trade: 'Roofing', category: 'RFG',
+    description: 'Off-ridge vent',
+    unit: 'EA', qty: num(fields, 'Qty'),
+    damaged: yn(fields, 'Damaged'), note: yn(fields, 'Painted') ? 'Painted' : null,
+  }],
+  ri26: (fields) => [{
+    trade: 'Roofing', category: 'RFG',
+    description: 'Dome vent',
+    unit: 'EA', qty: num(fields, 'Qty'),
+    damaged: yn(fields, 'Damaged'), note: yn(fields, 'Painted') ? 'Painted' : null,
+  }],
+  ri27: (fields) => [{
+    trade: 'Roofing', category: 'RFG',
+    description: 'Rooftop intake vent',
     unit: 'EA', qty: num(fields, 'Qty'),
     damaged: yn(fields, 'Damaged'), note: yn(fields, 'Painted') ? 'Painted' : null,
   }],
@@ -123,24 +158,36 @@ export const ROOF_LINE_ITEMS = {
   }],
   ri18: (fields) => [{
     trade: 'Roofing', category: 'RFG',
-    description: 'Step flashing',
+    description: `Step flashing${str(fields, 'Material') ? ` - ${str(fields, 'Material')}` : ''}`,
     unit: 'EA', qty: null, damaged: yn(fields, 'Damaged'), note: yn(fields, 'Painted') ? 'Painted' : null,
   }],
   ri19: (fields) => [{
     trade: 'Roofing', category: 'RFG',
-    description: 'Counter flashing',
+    description: `Counter flashing${str(fields, 'Material') ? ` - ${str(fields, 'Material')}` : ''}`,
     unit: 'EA', qty: null, damaged: yn(fields, 'Damaged'), note: yn(fields, 'Painted') ? 'Painted' : null,
   }],
   ri20: (fields) => [{
     trade: 'Roofing', category: 'RFG',
-    description: 'L flashing',
+    description: `L flashing${str(fields, 'Material') ? ` - ${str(fields, 'Material')}` : ''}`,
     unit: 'EA', qty: null, damaged: yn(fields, 'Damaged'), note: yn(fields, 'Painted') ? 'Painted' : null,
   }],
   ri21: (fields) => [{
     trade: 'Roofing', category: 'RFG',
-    description: `Cornice gable - ${str(fields, 'Type') || 'unspecified'}`,
-    unit: 'EA', qty: num(fields, 'Qty') ?? 1, damaged: null,
-    note: fields?.Story ? `Story ${fields.Story}` : null,
+    description: `Cornice return - ${str(fields, 'Material') || 'unspecified'}`,
+    unit: 'EA', qty: num(fields, 'Qty') ?? 1, damaged: yn(fields, 'Damaged'),
+    note: [
+      (fields?.Stories || fields?.Story) ? `${fields.Stories || fields.Story} stories` : null,
+      yn(fields, 'Painted') ? 'Painted' : null,
+    ].filter(Boolean).join('; ') || null,
+  }],
+  ri28: (fields) => [{
+    trade: 'Roofing', category: 'RFG',
+    description: `Cornice strip - ${str(fields, 'Material') || 'unspecified'}`,
+    unit: 'LF', qty: num(fields, 'Length (LF)'), damaged: yn(fields, 'Damaged'),
+    note: [
+      (fields?.Stories || fields?.Story) ? `${fields.Stories || fields.Story} stories` : null,
+      yn(fields, 'Painted') ? 'Painted' : null,
+    ].filter(Boolean).join('; ') || null,
   }],
 }
 
@@ -184,21 +231,29 @@ export const ROOF_SUBITEM_LINE_ITEMS = {
     damaged: null,
     note: yn(parentFields, 'Painted') ? 'Painted' : null,
   }),
-  ri17: (f) => ({
+  ri17: (f, parentFields) => ({
     trade: 'Roofing', category: 'RFG',
-    description: `Chimney flashing - ${str(f, 'Size / Width') || 'unspecified size'}`,
+    description: `Chimney flashing - ${str(f, 'Size / Width') || 'unspecified size'}${str(f, 'Material') ? ` - ${str(f, 'Material')}` : ''}`,
     unit: 'EA', qty: 1, damaged: yn(f, 'Damaged'),
     note: [
       `Counter flashing: ${str(f, 'Counter Flashing') || '?'}`,
       str(f, 'Cricket Present') ? `Cricket: ${str(f, 'Cricket Present')}` : null,
-      yn(f, 'Painted') ? 'painted' : null,
+      yn(parentFields, 'Painted') || yn(f, 'Painted') ? 'painted' : null,
     ].filter(Boolean).join(', '),
   }),
   ri22: (f) => ({
     trade: 'Roofing', category: 'RFG',
     description: `Low slope roofing - ${str(f, 'Location') || 'unspecified'} (${str(f, 'Style / Grade') || 'unspecified'})`,
     unit: 'SQ', qty: null, damaged: yn(f, 'Damaged'),
-    note: yn(f, 'Exposed Rafters') ? 'Exposed rafters' : null,
+    note: [
+      yn(f, 'Exposed Rafters') ? 'Exposed rafters' : null,
+      f?.['Edgemetal Existing?'] === 'Yes' ? [
+        'Edgemetal',
+        num(f, 'Edgemetal Width (Inches)') != null ? `${num(f, 'Edgemetal Width (Inches)')}"` : null,
+        str(f, 'Edgemetal Material') || str(f, 'Material'),
+        yn(f, 'Edgemetal Painted') || yn(f, 'Painted') ? 'painted' : null,
+      ].filter(Boolean).join(' ') : null,
+    ].filter(Boolean).join('; ') || null,
   }),
   ri23: (f) => ({
     trade: 'Roofing', category: 'RFG',

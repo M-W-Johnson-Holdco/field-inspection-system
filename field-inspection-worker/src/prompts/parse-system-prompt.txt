@@ -52,12 +52,14 @@ roof.shingleStyle: array, values from ["3-Tab","Architectural","Designer","Disco
 roof.edgeFlashingType: "Drip Edge" or "Critter Guard"
 roof.edgeMaterial: "Galvanized" or "Aluminum" or "N/A"
 roof.underlaymentGrade: "Felt - 15lbs" or "Felt - 30lbs" or "Synthetic" or "Premium Synthetic" or "Unknown"
-roof.ridgeCapGrade: "3-Tab" or "H&R" or "Hi Profile"
+roof.ridgeCapGrade: "3-Tab" or "H&R" or "Hi Profile" or "Impact Resistant"
 roof.ridgeVentType: "Metal" or "Shingle Over"
-roof.starterStyle: "Starter Strip" or "3-Tab"
-roof.valleyStyle: "Ice & Water" or "W-Valley" or "Valley Metal"
+roof.starterStyle: "Starter Strip" or "3-Tab" or "Double Layer/Premium"
+roof.valleyStyle: array, values from ["Ice & Water","Valley Metal","W-Valley","N/A"] — "N/A" is exclusive (do not combine with other styles)
+roof.valleyChooseOne: "Cut" or "Weaved" or "N/A" — only when valleyStyle includes "Ice & Water"; otherwise null
+roof.valleyWValleyChooseOne: "Aluminum" or "Copper" or "N/A" — only when valleyStyle includes "W-Valley"; otherwise null
 roof.boxVentMaterial: "Metal" or "Plastic" or "Wood" or "N/A"
-roof.turbineMaterial: "Metal" or "Plastic" or "N/A"
+roof.powerVentMaterial: "Metal" or "Plastic" or "N/A"
 roof.kickoutsExisting: "Yes" or "No"
 roof.kickoutsNeeded: "Yes" or "No"
 roof.exposedRafters: "Yes" or "No"
@@ -67,7 +69,9 @@ roof.pipeJacks[].type: "3-in-1/Neoprene" or "Lead" or "Lifetime/Silicone"
 roof.exhaustStackPainted: "Yes" or "No" for whether all exhaust stacks are painted
 roof.exhaustStacks[].size: "Small (3-4\")" or "Medium (5-7\")" or "Large (8\"+)"
 roof.exhaustStacks[].damaged: array containing any mentioned values from "Cap", "Stack", "Flange"
+roof.chimneyPainted: "Yes" or "No" or "N/A" for whether chimney flashing is painted (section-level, not per chimney)
 roof.chimneys[].size: "Small" (width ≤23in) or "Medium" (24-36in) or "Large" (37+in)
+roof.chimneys[].material: "Galvanized" or "Copper" or "Aluminum" or "N/A"
 roof.chimneys[].counterFlashing: "Replace" or "Reuse"
 roof.chimneys[].cricketPresent: "Yes" or "No"
 roof.skylights[].style: "Fixed" or "Tubular" or "Venting"
@@ -76,10 +80,28 @@ roof.skylights[].length: number (feet) or null
 roof.skylights[].width: number (feet) or null
 roof.skylights[].size: legacy — ignored; size bucket is derived from length × width (Large ≤16 ft², X-Large 17+)
 roof.rainDiverters[].lengthLF: linear feet for that rain diverter (number)
+roof.stepFlashingMaterial: "Galvanized" or "Copper" or "Aluminum" or "N/A"
+roof.counterFlashingMaterial: "Galvanized" or "Copper" or "Aluminum" or "N/A"
+roof.lFlashingMaterial: "Galvanized" or "Copper" or "Aluminum" or "N/A"
 roof.lowSlope[].location: "Front Porch" or "Back Porch" or "Other"
+roof.lowSlope[].edgemetalExisting: "Yes" or "No" or "N/A"
+roof.lowSlope[].edgemetalWidthInches: number — only when edgemetalExisting is "Yes"; otherwise null
+roof.lowSlope[].edgemetalMaterial: "Galvanized" or "Aluminum" or "Copper" or "N/A" — only when edgemetalExisting is "Yes"; otherwise null
+roof.lowSlope[].edgemetalPainted: "Yes" or "No" or "N/A" — only when edgemetalExisting is "Yes"; otherwise null
 roof.lowSlope[].pitch: number (rise over 12, e.g. 1 for 1/12) or null — stored as "x/12"
 roof.otherStructures[].pitch: number (rise over 12, e.g. 4 for 4/12) or null — stored as "x/12"
-roof.corniceGableType: "Shingles" or "Metal"
+roof.corniceReturnMaterial: "3-Tab" or "Laminate" or "Metal" or "Copper" or "N/A"
+roof.corniceReturnStories: number of stories
+roof.corniceReturnQty: quantity
+roof.corniceReturnPainted: "Yes" or "No" or "N/A"
+roof.corniceReturnDamaged: "Yes" or "No" or "N/A"
+roof.corniceReturnDamageDescription: free text when damaged is Yes
+roof.corniceStripMaterial: "3-Tab" or "Laminate" or "Metal" or "Copper" or "N/A"
+roof.corniceStripLF: linear feet of cornice strip (number)
+roof.corniceStripStories: number of stories
+roof.corniceStripPainted: "Yes" or "No" or "N/A"
+roof.corniceStripDamaged: "Yes" or "No" or "N/A"
+roof.corniceStripDamageDescription: free text when damaged is Yes
 
 elevations.[direction].gutterPainted: "Yes" or "No" or "N/A"
 elevations.[direction].gutterMaterial: "Aluminum" or "Steel" or "Copper" or "Vinyl" or "N/A"
@@ -203,7 +225,7 @@ Return this exact structure (use null for any scalar field not mentioned, and []
     "underlaymentGrade": null, "underlaymentLayers": null, "underlaymentDamaged": null,
     "ridgeCapGrade": null, "ridgeCapExposure": null, "ridgeCapDamaged": null,
     "starterStyle": null, "starterDamaged": null,
-    "valleyStyle": null, "valleyDamaged": null,
+    "valleyStyle": null, "valleyChooseOne": null, "valleyWValleyChooseOne": null, "valleyDamaged": null,
     "edgeDamageDescription": null, "underlaymentDamageDescription": null,
     "ridgeCapDamageDescription": null, "starterDamageDescription": null,
     "valleyDamageDescription": null, "solarPanelQty": null, "solarPanelDamaged": null,
@@ -212,12 +234,18 @@ Return this exact structure (use null for any scalar field not mentioned, and []
     "ridgeVentDamaged": null, "ridgeVentDamageDescription": null,
     "boxVentQty": null, "boxVentMaterial": null, "boxVentPainted": null,
     "boxVentDamaged": null, "boxVentDamageDescription": null,
-    "turbineQty": null, "turbineMaterial": null, "turbinePainted": null,
+    "turbineQty": null, "turbinePainted": null,
     "turbineDamaged": null, "turbineDamageDescription": null,
-    "powerVentQty": null, "powerVentPainted": null,
+    "powerVentQty": null, "powerVentMaterial": null, "powerVentPainted": null,
     "powerVentDamaged": null, "powerVentDamageDescription": null,
     "solarVentQty": null, "solarVentPainted": null,
     "solarVentDamaged": null, "solarVentDamageDescription": null,
+    "offRidgeVentQty": null, "offRidgeVentPainted": null,
+    "offRidgeVentDamaged": null, "offRidgeVentDamageDescription": null,
+    "domeVentQty": null, "domeVentPainted": null,
+    "domeVentDamaged": null, "domeVentDamageDescription": null,
+    "rooftopIntakeVentQty": null, "rooftopIntakeVentPainted": null,
+    "rooftopIntakeVentDamaged": null, "rooftopIntakeVentDamageDescription": null,
     "pipeJacks": [{ "size": null, "type": null, "painted": null }],
     "exhaustStackPainted": null,
     "exhaustStacks": [{ "size": null, "damaged": [], "damageDescription": null }],
@@ -225,13 +253,17 @@ Return this exact structure (use null for any scalar field not mentioned, and []
     "rainDiverterPainted": null,
     "rainDiverters": [{ "lengthLF": null }],
     "powerMeterMastQty": null,
-    "chimneys": [{ "size": null, "counterFlashing": null, "cricketPresent": null, "painted": null, "damaged": null, "damageDescription": null, "conditionNotes": null }],
-    "stepFlashingPainted": null, "stepFlashingDamaged": null, "stepFlashingDamageDescription": null,
-    "counterFlashingPainted": null, "counterFlashingDamaged": null, "counterFlashingDamageDescription": null,
-    "lFlashingPainted": null, "lFlashingDamaged": null, "lFlashingDamageDescription": null,
+    "chimneyPainted": null,
+    "chimneys": [{ "size": null, "material": null, "counterFlashing": null, "cricketPresent": null, "damaged": null, "damageDescription": null, "conditionNotes": null }],
+    "stepFlashingMaterial": null, "stepFlashingPainted": null, "stepFlashingDamaged": null, "stepFlashingDamageDescription": null,
+    "counterFlashingMaterial": null, "counterFlashingPainted": null, "counterFlashingDamaged": null, "counterFlashingDamageDescription": null,
+    "lFlashingMaterial": null, "lFlashingPainted": null, "lFlashingDamaged": null, "lFlashingDamageDescription": null,
     "skylights": [{ "style": null, "mount": null, "size": null, "length": null, "width": null, "damaged": null, "damageDescription": null }],
-    "corniceGableType": null, "corniceGableStory": null, "corniceGableQty": null,
-    "lowSlope": [{ "location": null, "grade": null, "pitch": null, "exposedRafters": null, "damaged": null, "damageDescription": null }],
+    "corniceReturnMaterial": null, "corniceReturnStories": null, "corniceReturnQty": null,
+    "corniceReturnPainted": null, "corniceReturnDamaged": null, "corniceReturnDamageDescription": null,
+    "corniceStripMaterial": null, "corniceStripLF": null, "corniceStripStories": null,
+    "corniceStripPainted": null, "corniceStripDamaged": null, "corniceStripDamageDescription": null,
+    "lowSlope": [{ "location": null, "grade": null, "edgemetalExisting": null, "edgemetalWidthInches": null, "edgemetalMaterial": null, "edgemetalPainted": null, "pitch": null, "exposedRafters": null, "damaged": null, "damageDescription": null }],
     "otherStructures": [{ "type": null, "grade": null, "pitch": null, "damaged": null, "damageDescription": null }]
   },
   "elevations": {
