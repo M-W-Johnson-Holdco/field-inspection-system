@@ -3,6 +3,7 @@ import { ChevronDown, Plus, Trash2 } from 'lucide-react'
 import { useInspection } from '../../context/InspectionContext'
 import PhotoZone from '../PhotoZone'
 import DamageDescriptionInput from '../DamageDescriptionInput'
+import ItemNotesField from '../ItemNotesField'
 import useExpandedSection from '../../hooks/useExpandedSection'
 import { fieldGroupProps } from '../../utils/fieldLayout'
 import { fieldSelectClass, withSelectPlaceholderClass, ynOptionsForField, optionsForField } from '../../utils/fieldGrid'
@@ -74,7 +75,7 @@ function RoomCard({ room, trigPhoto }) {
   const roomSelectField = { t: 'select', l: 'Room / Location', full: true, o: ['Select', ...ROOM_PRESETS] }
   const otherNameField = { t: 'txt', l: 'Other Room / Location', full: true }
   const storyField = { t: 'select', l: 'Story', full: true, o: ['Select', ...STORY_OPTS] }
-  const notesField = { t: 'textarea', l: 'General Notes', full: true }
+  const sheetrockField = { t: 'yn', l: 'Sheetrock Compromised?', full: true }
   const roomSelectValue = room.name?.startsWith('Other - ') ? 'Other' : (room.name || '')
   const showOtherName = room.name === 'Other' || room.name?.startsWith('Other - ')
 
@@ -155,6 +156,20 @@ function RoomCard({ room, trigPhoto }) {
                 </select>
               </div>
 
+              <div {...fieldGroupProps(sheetrockField)}>
+                <label className="form-label">Sheetrock Compromised?</label>
+                <select
+                  className={withSelectPlaceholderClass(fieldSelectClass(sheetrockField), f.sheetrockCompromised)}
+                  value={f.sheetrockCompromised || ''}
+                  onChange={e => set('sheetrockCompromised', e.target.value)}
+                >
+                  <option value="">Select</option>
+                  {ynOptionsForField(sheetrockField).map(opt => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+              </div>
+
               <DamageField
                 label="Ceiling Damage"
                 yesNoValue={f.ceilingDamage}
@@ -184,15 +199,10 @@ function RoomCard({ room, trigPhoto }) {
                 onNotes={v => set('moldNotes', v)}
               />
 
-              <div {...fieldGroupProps(notesField)}>
-                <label className="form-label">General Notes</label>
-                <textarea
-                  className="field-textarea"
-                  placeholder="Any other observations for this room…"
-                  value={f.notes || ''}
-                  onChange={e => set('notes', e.target.value)}
-                />
-              </div>
+              <ItemNotesField
+                value={f.notes || ''}
+                onChange={v => set('notes', v)}
+              />
 
               <PhotoZone
                 entityId={room.id}

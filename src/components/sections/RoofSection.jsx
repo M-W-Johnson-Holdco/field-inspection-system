@@ -4,6 +4,7 @@ import { useInspection } from '../../context/InspectionContext'
 import PhotoZone from '../PhotoZone'
 import FieldsGrid from '../FieldsGrid'
 import DamageDescriptionInput from '../DamageDescriptionInput'
+import ItemNotesField from '../ItemNotesField'
 import DimensionLwInput from '../DimensionLwInput'
 import MeasurementInput, { isLinearMeasurementField } from '../MeasurementInput'
 import { ROOF_ITEMS, SUBSECTIONS } from '../../data/roofItems'
@@ -479,6 +480,10 @@ function CollapsibleRoofSubCard({
                     />
                   </div>
                 )}
+                <ItemNotesField
+                  value={sub.fields?._notes || ''}
+                  onChange={value => onUpdateField('_notes', value)}
+                />
                 <PhotoZone
                   entityId={`${itemId}__sub_${index}`}
                   photos={sub.photos || []}
@@ -501,13 +506,19 @@ function CollapsibleRoofSubCard({
             )}
 
             {(!subFields || subFields.length === 0) && (
-              <PhotoZone
-                entityId={`${itemId}__sub_${index}`}
-                photos={sub.photos || []}
-                trigPhoto={trigPhoto}
-                onRemove={onRemovePhoto}
-                inlineActions
-              />
+              <>
+                <ItemNotesField
+                  value={sub.fields?._notes || ''}
+                  onChange={value => onUpdateField('_notes', value)}
+                />
+                <PhotoZone
+                  entityId={`${itemId}__sub_${index}`}
+                  photos={sub.photos || []}
+                  trigPhoto={trigPhoto}
+                  onRemove={onRemovePhoto}
+                  inlineActions
+                />
+              </>
             )}
           </div>
         </div>
@@ -827,13 +838,19 @@ function CheckItem({ itemDef, trigPhoto }) {
                 </div>
               )}
               {showItemPhotos && (
-                <PhotoZone
-                  entityId={id}
-                  photos={photos}
-                  trigPhoto={trigPhoto}
-                  onRemove={removeRoofPhoto}
-                  inlineActions
-                />
+                <>
+                  <ItemNotesField
+                    value={item.fields['_notes'] || ''}
+                    onChange={val => updateRoofField(id, '_notes', val)}
+                  />
+                  <PhotoZone
+                    entityId={id}
+                    photos={photos}
+                    trigPhoto={trigPhoto}
+                    onRemove={removeRoofPhoto}
+                    inlineActions
+                  />
+                </>
               )}
             </FieldsGrid>
           )}

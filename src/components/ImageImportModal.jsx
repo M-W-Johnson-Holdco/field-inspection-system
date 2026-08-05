@@ -33,10 +33,12 @@ export default function ImageImportModal({ onBack, onClose }) {
     addElevPhoto,
     addInteriorPhoto,
     addExteriorPhoto,
+    addJobPhoto,
     removeRoofPhoto,
     removeElevPhoto,
     removeInteriorPhoto,
     removeExteriorPhoto,
+    removeJobPhoto,
   } = useInspection()
 
   const fileInputRef = useRef(null)
@@ -162,6 +164,7 @@ export default function ImageImportModal({ onBack, onClose }) {
         else if (leaf.kind === 'elev') addElevPhoto(leaf.target, dataUrl)
         else if (leaf.kind === 'interior') addInteriorPhoto(leaf.target, dataUrl)
         else if (leaf.kind === 'exterior') addExteriorPhoto(leaf.target, dataUrl)
+        else if (leaf.kind === 'job') addJobPhoto(leaf.target, dataUrl)
       }
       removeFromPool(items.map(item => item.id))
       setAssignedCount(prev => prev + items.length)
@@ -180,6 +183,7 @@ export default function ImageImportModal({ onBack, onClose }) {
     else if (leaf.kind === 'elev') removeElevPhoto(leaf.target, index)
     else if (leaf.kind === 'interior') removeInteriorPhoto(leaf.target, index)
     else if (leaf.kind === 'exterior') removeExteriorPhoto(leaf.target, index)
+    else if (leaf.kind === 'job') removeJobPhoto(leaf.target, index)
 
     setPool(prev => [
       ...prev,

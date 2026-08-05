@@ -26,7 +26,8 @@ function buildFieldGroupClass(field, extra = '') {
     (field.t === 'num' || field.t === 'pitch')
     && field.inlineStepper !== false
   ) ? 'field-group--inline-stepper' : ''
-  const classes = [layout, measurement, pitch, stepperRow, wideLabel, optionSelect, fullRowMobile, halfWidthDesktop, inlineStepper, extra].filter(Boolean).join(' ')
+  const noTopDivider = field.noTopDivider ? 'field-group--no-top-divider' : ''
+  const classes = [layout, measurement, pitch, stepperRow, wideLabel, optionSelect, fullRowMobile, halfWidthDesktop, inlineStepper, noTopDivider, extra].filter(Boolean).join(' ')
   return classes ? `field-group ${classes}` : 'field-group'
 }
 

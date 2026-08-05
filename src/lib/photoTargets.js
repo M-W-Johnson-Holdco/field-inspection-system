@@ -2,6 +2,7 @@ import { ROOF_ITEMS, SUBSECTIONS } from '../data/roofItems'
 import { DIRECTIONS, ELEV_ITEMS } from '../data/elevItems'
 import { EXTERIOR_ITEMS, EXTERIOR_SUBSECTIONS } from '../data/exteriorItems'
 import { isRoofItemActive } from '../utils/roofItemStatus'
+import { directionLabel } from '../utils/elevationCompass'
 
 function groupBySubsection(items, subsectionMap) {
   const keys = Object.keys(subsectionMap)
@@ -93,13 +94,13 @@ function buildRoofBranch(roofData) {
   }
 }
 
-function buildElevationsBranch(elevData) {
+function buildElevationsBranch(elevData, frontOfRisk = '') {
   return {
     id: 'elevations',
     label: 'Elevations',
     children: DIRECTIONS.map(direction => ({
       id: `elev:${direction}`,
-      label: direction,
+      label: directionLabel(direction, frontOfRisk),
       children: ELEV_ITEMS.flatMap(itemDef => {
         const cellKey = `${itemDef.id}_${direction}`
         const cell = elevData?.[cellKey]
@@ -183,11 +184,37 @@ function buildExteriorBranch(exteriorData) {
   }
 }
 
+function buildJobPhotosBranch(jobInfo = {}) {
+  return {
+    id: 'job',
+    label: 'Property',
+    children: [
+      {
+        id: 'frontOfHouse',
+        label: 'Front of House',
+        kind: 'job',
+        target: 'frontOfHouse',
+        photoCount: Array.isArray(jobInfo.frontOfHousePhotos) ? jobInfo.frontOfHousePhotos.length : 0,
+        leaf: true,
+      },
+      {
+        id: 'mailbox',
+        label: 'Mailbox',
+        kind: 'job',
+        target: 'mailbox',
+        photoCount: Array.isArray(jobInfo.mailboxPhotos) ? jobInfo.mailboxPhotos.length : 0,
+        leaf: true,
+      },
+    ],
+  }
+}
+
 /** Nested photo assignment tree from live inspection data. */
 export function buildPhotoTargetTree(data = {}) {
   return [
+    buildJobPhotosBranch(data.jobInfo),
     buildRoofBranch(data.roofData),
-    buildElevationsBranch(data.elevData),
+    buildElevationsBranch(data.elevData, data.jobInfo?.frontOfRiskDirection),
     buildInteriorBranch(data.interiorData),
     buildExteriorBranch(data.exteriorData),
   ]
@@ -241,6 +268,15 @@ export function getLeafPhotos(data = {}, leaf) {
     return Array.isArray(data.exteriorData?.[leaf.target]?.photos)
       ? data.exteriorData[leaf.target].photos
       : []
+  }
+
+  if (leaf.kind === 'job') {
+    if (leaf.target === 'frontOfHouse') {
+      return Array.isArray(data.jobInfo?.frontOfHousePhotos) ? data.jobInfo.frontOfHousePhotos : []
+    }
+    if (leaf.target === 'mailbox') {
+      return Array.isArray(data.jobInfo?.mailboxPhotos) ? data.jobInfo.mailboxPhotos : []
+    }
   }
 
   return []

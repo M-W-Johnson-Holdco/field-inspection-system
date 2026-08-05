@@ -4,6 +4,7 @@ import { useInspection } from '../../context/InspectionContext'
 import PhotoZone from '../PhotoZone'
 import FieldsGrid from '../FieldsGrid'
 import DamageDescriptionInput from '../DamageDescriptionInput'
+import ItemNotesField from '../ItemNotesField'
 import MeasurementInput, { isLinearMeasurementField } from '../MeasurementInput'
 import { EXTERIOR_ITEMS, EXTERIOR_SUBSECTIONS } from '../../data/exteriorItems'
 import { fieldGroupProps } from '../../utils/fieldLayout'
@@ -275,6 +276,10 @@ function ExteriorItem({ itemDef, trigPhoto }) {
                 />
               </div>
             )}
+            <ItemNotesField
+              value={item.fields['_notes'] || ''}
+              onChange={val => updateExteriorField(id, '_notes', val)}
+            />
             {hasP && (
               <PhotoZone
                 entityId={id}

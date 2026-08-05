@@ -88,6 +88,24 @@ const EXTERIOR_ITEM_PATH = {
  */
 export function collectInspectionPhotos(inspectionData) {
   const photos = []
+  const ji = inspectionData?.jobInfo || {}
+
+  ;(ji.frontOfHousePhotos || []).forEach((url, i) => {
+    if (!url) return
+    photos.push({
+      path: ['photos', '0-property', 'front_of_house'],
+      name: photoFileName('front_of_house', i),
+      url,
+    })
+  })
+  ;(ji.mailboxPhotos || []).forEach((url, i) => {
+    if (!url) return
+    photos.push({
+      path: ['photos', '0-property', 'mailbox'],
+      name: photoFileName('mailbox', i),
+      url,
+    })
+  })
 
   for (const [itemId, item] of Object.entries(inspectionData?.roofData || {})) {
     const pathParts = ROOF_ITEM_PATH[itemId]
@@ -182,6 +200,10 @@ export function collectInspectionPhotos(inspectionData) {
  * Mutates `clean` in place.
  */
 export function stripPhotosFromInspection(clean) {
+  if (clean.jobInfo) {
+    clean.jobInfo.frontOfHousePhotos = []
+    clean.jobInfo.mailboxPhotos = []
+  }
   for (const item of Object.values(clean.roofData || {})) {
     item.photos = []
     ;(item.subItems || []).forEach(sub => {
