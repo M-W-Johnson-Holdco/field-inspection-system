@@ -38,14 +38,29 @@ function exhaustStackNote(fields, parentFields) {
 export const ROOF_LINE_ITEMS = {
   ri0: (fields) => [{
     trade: 'Roofing', category: 'RFG',
-    description: `Comp. shingle - ${(fields?.Style || []).join('/') || 'unspecified style'}`,
+    description: (() => {
+      const styles = Array.isArray(fields?.Style)
+        ? fields.Style
+        : (fields?.Style ? [String(fields.Style)] : [])
+      const styleLabel = styles.join('/') || 'unspecified style'
+      const gauge = styles.includes('Metal') ? str(fields, 'Metal Gauge') : null
+      return gauge
+        ? `Comp. shingle - ${styleLabel} (${gauge})`
+        : `Comp. shingle - ${styleLabel}`
+    })(),
     unit: 'SQ', qty: null,
     damaged: null,
     note: `${num(fields, 'Stories') ?? '?'} stories, ${num(fields, 'Layers') ?? '?'} layer(s), predominant pitch ${str(fields, 'Predominant Pitch (x/12)') || str(fields, 'Predominant Pitch') || '?'}`,
   }],
   ri1: (fields) => [{
     trade: 'Roofing', category: 'RFG',
-    description: `${str(fields, 'Type') || 'Edge flashing'} - ${str(fields, 'Material') || ''}`.trim(),
+    description: (() => {
+      const types = Array.isArray(fields?.Type)
+        ? fields.Type
+        : (fields?.Type ? [String(fields.Type)] : [])
+      const typeLabel = types.join('/') || 'Edge flashing'
+      return `${typeLabel} - ${str(fields, 'Material') || ''}`.trim()
+    })(),
     unit: 'LF', qty: null,
     damaged: yn(fields, 'Damaged'),
     note: yn(fields, 'Painted') ? 'Painted' : null,
@@ -72,22 +87,22 @@ export const ROOF_LINE_ITEMS = {
   ri5: (fields) => [{
     trade: 'Roofing', category: 'RFG',
     description: (() => {
-      const styles = Array.isArray(fields?.Style)
-        ? fields.Style
-        : (fields?.Style ? [String(fields.Style)] : [])
-      const styleLabel = styles.join('/') || 'unspecified'
+      const materials = Array.isArray(fields?.Material)
+        ? fields.Material
+        : (fields?.Material ? [String(fields.Material)] : [])
+      const materialLabel = materials.join('/') || 'unspecified'
       const details = []
-      if (styles.includes('Ice & Water')) {
-        const choose = str(fields, 'Choose One')
+      if (materials.includes('Ice & Water')) {
+        const choose = str(fields, 'Choose Ice & Water Style')
         if (choose) details.push(choose)
       }
-      if (styles.includes('W-Valley')) {
-        const choose = str(fields, 'Choose One (W-Valley)')
+      if (materials.includes('W-Valley')) {
+        const choose = str(fields, 'Choose W-Valley Style')
         if (choose) details.push(choose)
       }
       return details.length
-        ? `Valley - ${styleLabel} (${details.join('; ')})`
-        : `Valley - ${styleLabel}`
+        ? `Valley - ${materialLabel} (${details.join('; ')})`
+        : `Valley - ${materialLabel}`
     })(),
     unit: 'LF', qty: null, damaged: null, note: null,
   }],
@@ -207,6 +222,29 @@ export const ROOF_SUBITEM_LINE_ITEMS = {
     note: exhaustStackNote(f, parentFields),
   }),
   ri14: (f) => {
+    const style = str(f, 'Style')
+    if (style === 'Tubular') {
+      const diameter = num(f, 'Diameter (in)')
+      const circumference = diameter != null ? Math.round(Math.PI * diameter * 10) / 10 : null
+      const radiusIn = diameter != null ? diameter / 2 : null
+      const area = radiusIn != null ? Math.round(((Math.PI * radiusIn * radiusIn) / 144) * 10) / 10 : null
+      let sizeLabel = null
+      if (area != null) {
+        sizeLabel = area <= 16 ? 'Large (≤16 ft²)' : 'X-Large (17+ ft²)'
+      }
+      return {
+        trade: 'Roofing', category: 'RFG',
+        description: `Skylight - Tubular (${str(f, 'Mount') || '?'})`,
+        unit: 'EA', qty: 1, damaged: yn(f, 'Damaged'),
+        note: [
+          diameter != null ? `Diameter ${diameter}"` : null,
+          circumference != null ? `Circumference ${circumference}"` : null,
+          sizeLabel,
+          area != null ? `${area} ft²` : null,
+        ].filter(Boolean).join('; ') || null,
+      }
+    }
+
     const length = num(f, 'Length (ft)')
     const width = num(f, 'Width (ft)')
     const area = length != null && width != null ? length * width : null
@@ -218,7 +256,7 @@ export const ROOF_SUBITEM_LINE_ITEMS = {
     }
     return {
       trade: 'Roofing', category: 'RFG',
-      description: `Skylight - ${str(f, 'Style') || 'unspecified'} (${str(f, 'Mount') || '?'})`,
+      description: `Skylight - ${style || 'unspecified'} (${str(f, 'Mount') || '?'})`,
       unit: 'EA', qty: 1, damaged: yn(f, 'Damaged'),
       note: [sizeLabel, areaNote].filter(Boolean).join('; ') || null,
     }
@@ -401,15 +439,23 @@ export const ELEV_LINE_ITEMS = {
       else if (area <= 1120) sizeLabel = 'Medium (771-1,120 in²)'
       else sizeLabel = 'Large (1,121+ in²)'
     }
-    const material = str(fields, 'Grade')
-      || str(parentFields, 'Grade')
-      || str(fields, 'Material')
-      || str(parentFields, 'Material')
-      || 'unspecified'
-    const painted = yn(fields, 'Painted') || yn(parentFields, 'Painted')
+    const material = (() => {
+      const grade = str(fields, 'Grade') || str(parentFields, 'Grade')
+      if (grade === 'Custom') {
+        return str(fields, 'Custom Grade')
+          || str(parentFields, 'Custom Grade')
+          || 'Custom'
+      }
+      return grade
+        || str(fields, 'Material')
+        || str(parentFields, 'Material')
+        || 'unspecified'
+    })()
+    const painted = str(fields, 'Painted') || str(parentFields, 'Painted')
+    const finishNote = painted === 'Yes' ? 'Painted' : (painted === 'Stained' ? 'Stained' : null)
     const baseNote = [
       `${dir} elevation`,
-      painted ? 'Painted' : null,
+      finishNote,
       area != null ? `${area} in²` : null,
     ].filter(Boolean).join('; ')
     return [{
@@ -510,14 +556,21 @@ export const ELEV_LINE_ITEMS = {
 // ---- Exterior (FEN / POL / EXT) ----------------------------------------
 
 export const EXTERIOR_LINE_ITEMS = {
-  ei_fence: (fields, damageNote) => [{
-    trade: 'Fencing', category: 'FEN',
-    description: `Fence - ${str(fields, 'Material') || 'unspecified'}, ${str(fields, 'Style') || 'unspecified'} style`,
-    unit: 'LF',
-    qty: fenceTotalLf(fields) ?? num(fields, 'Post Spacing (LF)'),
-    damaged: Boolean(damageNote),
-    note: damageNote || null,
-  }],
+  ei_fence: (fields, damageNote) => {
+    const finishNotes = [
+      yn(fields, 'Stained') ? 'Stained' : null,
+      yn(fields, 'Painted') ? 'Painted' : null,
+      damageNote || null,
+    ].filter(Boolean)
+    return [{
+      trade: 'Fencing', category: 'FEN',
+      description: `Fence - ${str(fields, 'Material') || 'unspecified'}, ${str(fields, 'Style') || 'unspecified'} style`,
+      unit: 'LF',
+      qty: fenceTotalLf(fields) ?? num(fields, 'Post Spacing (LF)'),
+      damaged: Boolean(damageNote),
+      note: finishNotes.length ? finishNotes.join('; ') : null,
+    }]
+  },
   ei_gates: (fields, damageNote) => [{
     trade: 'Fencing', category: 'FEN',
     description: `Privacy gate - ${str(fields, 'Material') || 'unspecified'}`,

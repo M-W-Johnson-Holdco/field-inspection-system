@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { useInspection } from '../../context/InspectionContext'
 import { filterInsuranceCompanies } from '../../data/insuranceCompanies'
@@ -15,7 +15,31 @@ const LOSS_TYPE_OPTIONS = [
   'Lightning',
   'Ice/Snow',
 ]
+const FRONT_OF_RISK_OPTIONS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
 const EMPTY_ADDRESS = { address1: '', address2: '', city: '', state: '', zipcode: '' }
+
+function JobPhotoFrame({ slot, label, photo, onPick }) {
+  const ariaLabel = photo
+    ? label.replace(/^Insert\s+/i, 'Change ')
+    : label
+
+  return (
+    <div className="form-field form-field--full job-photo-frame-field">
+      <button
+        type="button"
+        className={`job-photo-frame${photo ? ' job-photo-frame--filled' : ''}`}
+        onClick={() => onPick(slot)}
+        aria-label={ariaLabel}
+      >
+        {photo ? (
+          <img src={photo} alt={label} className="job-photo-frame__img" />
+        ) : (
+          <span className="job-photo-frame__placeholder">{label}</span>
+        )}
+      </button>
+    </div>
+  )
+}
 
 function phoneDigits(value) {
   return String(value || '').replace(/\D/g, '')
@@ -127,12 +151,29 @@ function JobInfoGroup({ title, headingId, defaultOpen = true, children }) {
 }
 
 export default function JobInfo() {
-  const { data, updateJobInfo } = useInspection()
+  const { data, updateJobInfo, addJobPhoto } = useInspection()
   const ji = data.jobInfo
   const [addressOpen, setAddressOpen] = useState(false)
   const [addressDraft, setAddressDraft] = useState({ ...EMPTY_ADDRESS, ...(ji.addrParts || {}) })
   const [addressTouched, setAddressTouched] = useState(false)
   const [isOpen, setIsOpen] = useExpandedSection('jobInfo:main', true)
+  const activePhotoSlotRef = useRef(null)
+  const fileRef = useRef(null)
+
+  function pickJobPhoto(slot) {
+    activePhotoSlotRef.current = slot
+    fileRef.current?.click()
+  }
+
+  function handleJobPhotoFiles(e) {
+    const slot = activePhotoSlotRef.current
+    const file = e.target.files?.[0]
+    if (!slot || !file) return
+    const reader = new FileReader()
+    reader.onload = ev => addJobPhoto(slot, ev.target.result)
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
 
   function field(id, label, props = {}) {
     const { full, validation, required, ...inputProps } = props
@@ -244,8 +285,10 @@ export default function JobInfo() {
     'field-select compact-select field-select--native-multi-overlay',
     lossTypeDisplayValue,
   )
+  const showDamageSquares = lossTypeSelected.includes('Wind') || lossTypeSelected.includes('Hail')
 
   return (
+    <>
     <section className={`job-card app-card ${isOpen ? 'job-card--open' : ''}`}>
       <button
         type="button"
@@ -321,6 +364,19 @@ export default function JobInfo() {
 
             <JobInfoGroup title="Property Details" headingId="job-info-property-heading">
               <div className="form-grid">
+                <JobPhotoFrame
+                  slot="frontOfHouse"
+                  label="Insert Image of Front of House"
+                  photo={Array.isArray(ji.frontOfHousePhotos) ? ji.frontOfHousePhotos[0] : null}
+                  onPick={pickJobPhoto}
+                />
+                <JobPhotoFrame
+                  slot="mailbox"
+                  label="Insert Image of Mailbox"
+                  photo={Array.isArray(ji.mailboxPhotos) ? ji.mailboxPhotos[0] : null}
+                  onPick={pickJobPhoto}
+                />
+
                 <div className="form-field form-field--full">
                   <label className="form-label">Property Type</label>
                   <select
@@ -332,6 +388,24 @@ export default function JobInfo() {
                     <option value="Secondary">Secondary Property</option>
                     <option value="Rental">Rental Property</option>
                     <option value="N/A">N/A</option>
+                  </select>
+                </div>
+
+                <div className="form-field form-field--full">
+                  <label className="form-label" htmlFor="frontOfRiskDirection">Front of risk direction</label>
+                  <select
+                    id="frontOfRiskDirection"
+                    className={withSelectPlaceholderClass(
+                      'field-select compact-select',
+                      ji.frontOfRiskDirection || '',
+                    )}
+                    value={ji.frontOfRiskDirection || ''}
+                    onChange={e => updateJobInfo('frontOfRiskDirection', e.target.value)}
+                  >
+                    <option value="">Select</option>
+                    {FRONT_OF_RISK_OPTIONS.map(option => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
                   </select>
                 </div>
 
@@ -389,6 +463,10 @@ export default function JobInfo() {
                     </select>
                   </div>
                 </div>
+                {showDamageSquares && field('damageSquares', 'Damage (Squares)', {
+                  full: true,
+                  placeholder: 'Type N/A if unknown',
+                })}
               </div>
             </JobInfoGroup>
           </div>
@@ -467,5 +545,13 @@ export default function JobInfo() {
         </div>
       )}
     </section>
+    <input
+      ref={fileRef}
+      type="file"
+      accept="image/*"
+      hidden
+      onChange={handleJobPhotoFiles}
+    />
+    </>
   )
 }

@@ -10,6 +10,7 @@ export default function PhotoZone({
   onRemove,
   fullWidth = true,
   inlineActions = false,
+  title = 'Photos',
 }) {
   const [activeIndex, setActiveIndex] = useState(null)
   const [thumbsOpen, setThumbsOpen] = useExpandedSection(`photos:${entityId}`, false)
@@ -45,13 +46,13 @@ export default function PhotoZone({
       onClick={() => setThumbsOpen(open => !open)}
     >
       <span className="ri-photo-toggle__text">
-        Photos
+        {title}
         <span className="ri-photo-toggle__count">({photos.length})</span>
       </span>
       <ChevronDown className="ri-photo-toggle__chevron" aria-hidden="true" />
     </button>
   ) : (
-    <span className="ri-photo-label">Photos</span>
+    <span className="ri-photo-label">{title}</span>
   )
 
   const buttons = (

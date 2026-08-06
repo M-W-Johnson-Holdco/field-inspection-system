@@ -6,11 +6,11 @@ function hasLongLabel(field) {
 }
 
 function usesStepperRow(field) {
-  return field.t === 'num' || field.t === 'pitch' || field.t === 'lwxw'
+  return field.t === 'num' || field.t === 'pitch' || field.t === 'lwxw' || field.t === 'diameter'
 }
 
 function buildFieldGroupClass(field, extra = '') {
-  const layout = ['multiRadio', 'multi', 'toggleMulti', 'textarea', 'lwxw', 'computedFenceLf'].includes(field.t)
+  const layout = ['multiRadio', 'multi', 'toggleMulti', 'textarea', 'lwxw', 'diameter', 'computedFenceLf'].includes(field.t)
     || field.full
     ? 'field-group--full'
     : 'field-group--compact'
@@ -26,7 +26,8 @@ function buildFieldGroupClass(field, extra = '') {
     (field.t === 'num' || field.t === 'pitch')
     && field.inlineStepper !== false
   ) ? 'field-group--inline-stepper' : ''
-  const classes = [layout, measurement, pitch, stepperRow, wideLabel, optionSelect, fullRowMobile, halfWidthDesktop, inlineStepper, extra].filter(Boolean).join(' ')
+  const noTopDivider = field.noTopDivider ? 'field-group--no-top-divider' : ''
+  const classes = [layout, measurement, pitch, stepperRow, wideLabel, optionSelect, fullRowMobile, halfWidthDesktop, inlineStepper, noTopDivider, extra].filter(Boolean).join(' ')
   return classes ? `field-group ${classes}` : 'field-group'
 }
 

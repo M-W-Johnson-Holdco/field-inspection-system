@@ -43,6 +43,10 @@ const INITIAL_STATE = {
     claimFileDate: '',
     stormDate: '',
     lossType: [],
+    damageSquares: '',
+    frontOfHousePhotos: [],
+    mailboxPhotos: [],
+    frontOfRiskDirection: '',
     preferredContact: [],
     residenceType: 'Primary',
     addrParts: { address1: '', address2: '', city: '', state: '', zipcode: '' },
@@ -93,6 +97,10 @@ function countSubFieldValue(field, subFields, totals) {
     countValue(subFields?.[field.widthKey || 'Width (in)'], totals)
     return
   }
+  if (field.t === 'diameter') {
+    countValue(subFields?.[field.diameterKey || 'Diameter (in)'], totals)
+    return
+  }
   countValue(subFields?.[field.l], totals)
 }
 
@@ -100,9 +108,15 @@ function calculateCompletion(data) {
   const totals = { filled: 0, total: 0 }
   const ji = data.jobInfo || {}
 
-  ;['cust', 'preferredContact', 'pm', 'insp', 'ins', 'claim', 'claimFileDate', 'stormDate', 'lossType'].forEach(key => {
+  ;['cust', 'preferredContact', 'pm', 'insp', 'ins', 'claim', 'claimFileDate', 'stormDate', 'lossType', 'frontOfRiskDirection'].forEach(key => {
     countValue(ji[key], totals)
   })
+  const lossTypes = Array.isArray(ji.lossType) ? ji.lossType : []
+  if (lossTypes.includes('Wind') || lossTypes.includes('Hail')) {
+    countValue(ji.damageSquares, totals)
+  }
+  countValue(ji.frontOfHousePhotos, totals, value => Array.isArray(value) && value.length > 0)
+  countValue(ji.mailboxPhotos, totals, value => Array.isArray(value) && value.length > 0)
   countValue(ji.phone, totals, isValidPhone)
   countValue(ji.email, totals, isValidEmail)
   countValue(ji.addrParts, totals, isValidAddressParts)
@@ -161,7 +175,7 @@ function calculateCompletion(data) {
 
   ;(data.interiorData?.rooms || []).forEach(room => {
     countValue(room.name && room.name !== 'Other' ? room.name : null, totals)
-    ;['story', 'ceilingDamage', 'wallDamage', 'floorDamage', 'moldPresent'].forEach(key => {
+    ;['story', 'sheetrockCompromised', 'ceilingDamage', 'wallDamage', 'floorDamage', 'moldPresent'].forEach(key => {
       countValue(room.fields?.[key], totals)
     })
     if (room.fields?.ceilingDamage === 'Yes') countValue(room.fields?.ceilingNotes, totals)
@@ -179,6 +193,7 @@ const PIPE_JACK_SIZE_LABELS = [
   { field: 'Qty 2"', size: '2' },
   { field: 'Qty 3"', size: '3' },
   { field: 'Qty 4"', size: '4' },
+  { field: 'Qty 5"', size: '5' },
 ]
 
 const EXHAUST_STACK_TYPES = ['Cap', 'Stack', 'Flange']
@@ -217,7 +232,7 @@ const ELEV_ADDMORE_SHARED_FIELDS = {
   ev4: new Set(['Style', 'Material', 'Width', 'Painted']),
   ev12: new Set(['Grade', 'Type', 'Glaze', 'Painted']),
   ev5: new Set(['Type', 'Grade']),
-  ev6: new Set(['Grade', 'Painted']),
+  ev6: new Set(['Grade', 'Custom Grade', 'Painted']),
 }
 
 function splitElevSharedFields(itemId, fields = {}) {
@@ -693,6 +708,12 @@ function normalizeJobInfo(jobInfo = {}) {
   if (!Array.isArray(next.lossType)) {
     next.lossType = next.lossType ? [next.lossType] : []
   }
+  if (!Array.isArray(next.frontOfHousePhotos)) next.frontOfHousePhotos = []
+  if (!Array.isArray(next.mailboxPhotos)) next.mailboxPhotos = []
+  if (!next.frontOfRiskDirection && next.frontOfRiskDetection) {
+    next.frontOfRiskDirection = next.frontOfRiskDetection
+  }
+  delete next.frontOfRiskDetection
 
   return next
 }
@@ -784,6 +805,7 @@ function normalizeRoofData(roofData = {}) {
     next[itemDef.id] = withRoofItemStatus(item, getRoofItemStatus(item))
   }
   next = normalizeRi0(next)
+  next = normalizeRi1(next)
   next = normalizeRi5(next)
   next = normalizeRi11(next)
   next = normalizeRi12(next)
@@ -816,7 +838,25 @@ function normalizeRi0(roofData) {
     fields[PREDOMINANT_PITCH_KEY] = formatPitch(parsePitchNumerator(fields[PREDOMINANT_PITCH_KEY], 0))
   }
 
+  if (fields['Metal Shingle Gauge'] != null && fields['Metal Gauge'] == null) {
+    fields['Metal Gauge'] = fields['Metal Shingle Gauge']
+  }
+  delete fields['Metal Shingle Gauge']
+
   next.ri0 = { ...ri0, fields }
+  return next
+}
+
+function normalizeRi1(roofData) {
+  const next = { ...roofData }
+  const ri1 = next.ri1
+  if (!ri1) return next
+
+  const fields = { ...(ri1.fields || {}) }
+  if (fields.Type != null && fields.Type !== '' && !Array.isArray(fields.Type)) {
+    fields.Type = [String(fields.Type)]
+  }
+  next.ri1 = { ...ri1, fields }
   return next
 }
 
@@ -826,8 +866,20 @@ function normalizeRi5(roofData) {
   if (!ri5) return next
 
   const fields = { ...(ri5.fields || {}) }
-  if (fields.Style != null && fields.Style !== '' && !Array.isArray(fields.Style)) {
-    fields.Style = [String(fields.Style)]
+  if (fields.Style != null && fields.Material == null) {
+    fields.Material = fields.Style
+  }
+  delete fields.Style
+  if (fields['Choose One'] != null && fields['Choose Ice & Water Style'] == null) {
+    fields['Choose Ice & Water Style'] = fields['Choose One']
+  }
+  delete fields['Choose One']
+  if (fields['Choose One (W-Valley)'] != null && fields['Choose W-Valley Style'] == null) {
+    fields['Choose W-Valley Style'] = fields['Choose One (W-Valley)']
+  }
+  delete fields['Choose One (W-Valley)']
+  if (fields.Material != null && fields.Material !== '' && !Array.isArray(fields.Material)) {
+    fields.Material = [String(fields.Material)]
   }
   next.ri5 = { ...ri5, fields }
   return next
@@ -1564,6 +1616,7 @@ function buildPipeJackSubItemsFromParsed(roof = {}) {
     ['pipeJack2qty', '2'],
     ['pipeJack3qty', '3'],
     ['pipeJack4qty', '4'],
+    ['pipeJack5qty', '5'],
   ]
 
   qtyMap.forEach(([key, size]) => {
@@ -1795,8 +1848,12 @@ function buildSkylightSubItemsFromParsed(roof = {}) {
     fields: {
       ...(sk?.style ? { Style: sk.style } : {}),
       ...(sk?.mount ? { Mount: sk.mount } : {}),
-      ...(sk?.length != null && sk.length !== '' ? { 'Length (ft)': String(sk.length) } : {}),
-      ...(sk?.width != null && sk.width !== '' ? { 'Width (ft)': String(sk.width) } : {}),
+      ...(sk?.style === 'Tubular'
+        ? (sk?.diameter != null && sk.diameter !== '' ? { 'Diameter (in)': String(sk.diameter) } : {})
+        : {
+          ...(sk?.length != null && sk.length !== '' ? { 'Length (ft)': String(sk.length) } : {}),
+          ...(sk?.width != null && sk.width !== '' ? { 'Width (ft)': String(sk.width) } : {}),
+        }),
       ...(sk?.damaged ? { Damaged: sk.damaged } : {}),
       ...(sk?.damaged === 'Yes' && sk?.damageDescription ? { _damage: sk.damageDescription } : {}),
     },
@@ -2102,6 +2159,14 @@ export function InspectionProvider({ children }) {
           fields['Location'] = value ? `Other - ${value}` : 'Other'
           delete fields['(Other)']
         }
+        if (itemId === 'ri14' && label === 'Style') {
+          if (value === 'Tubular') {
+            delete fields['Length (ft)']
+            delete fields['Width (ft)']
+          } else {
+            delete fields['Diameter (in)']
+          }
+        }
         return { ...sub, fields }
       })
       const next = { ...prev, roofData: { ...prev.roofData, [itemId]: { ...item, subItems } } }
@@ -2155,6 +2220,41 @@ export function InspectionProvider({ children }) {
         roofData: {
           ...prev.roofData,
           [itemId]: { ...item, photos: item.photos.filter((_, i) => i !== index) },
+        },
+      }
+      scheduleSave(next)
+      return next
+    })
+  }
+
+  const JOB_PHOTO_FIELDS = {
+    frontOfHouse: 'frontOfHousePhotos',
+    mailbox: 'mailboxPhotos',
+  }
+
+  function addJobPhoto(slot, dataUrl) {
+    const field = JOB_PHOTO_FIELDS[slot]
+    if (!field) return
+    setData(prev => {
+      const next = {
+        ...prev,
+        jobInfo: { ...prev.jobInfo, [field]: [dataUrl] },
+      }
+      scheduleSave(next)
+      return next
+    })
+  }
+
+  function removeJobPhoto(slot, index) {
+    const field = JOB_PHOTO_FIELDS[slot]
+    if (!field) return
+    setData(prev => {
+      const photos = Array.isArray(prev.jobInfo?.[field]) ? prev.jobInfo[field] : []
+      const next = {
+        ...prev,
+        jobInfo: {
+          ...prev.jobInfo,
+          [field]: photos.filter((_, photoIndex) => photoIndex !== index),
         },
       }
       scheduleSave(next)
@@ -2390,6 +2490,7 @@ export function InspectionProvider({ children }) {
         photos: [],
         fields: {
           story: r?.story || '',
+          sheetrockCompromised: r?.sheetrockCompromised || '',
           ceilingDamage: r?.ceilingDamage || '', ceilingNotes: r?.ceilingNotes || '',
           wallDamage: r?.wallDamage || '', wallNotes: r?.wallNotes || '',
           floorDamage: r?.floorDamage || '', floorNotes: r?.floorNotes || '',
@@ -2430,6 +2531,10 @@ export function InspectionProvider({ children }) {
       // Window Screens: Grade only applies to Solar type
       if (cellKey.startsWith('ev5_') && label === 'Type' && value !== 'Solar') {
         delete fields.Grade
+      }
+      // Shutters: Custom Grade only when Grade is Custom
+      if (cellKey.startsWith('ev6_') && label === 'Grade' && value !== 'Custom') {
+        delete fields['Custom Grade']
       }
       // Garage Doors: Window Qty only when Windows is Yes
       if (cellKey.startsWith('ev8_') && label === 'Windows' && value !== 'Yes') {
@@ -2585,7 +2690,7 @@ export function InspectionProvider({ children }) {
         customName: '',
         photos: [],
         fields: {
-          story: '', ceilingDamage: '', ceilingNotes: '',
+          story: '', sheetrockCompromised: '', ceilingDamage: '', ceilingNotes: '',
           wallDamage: '', wallNotes: '', floorDamage: '', floorNotes: '',
           moldPresent: '', moldNotes: '', notes: '',
         },
@@ -2803,6 +2908,7 @@ export function InspectionProvider({ children }) {
       addRoofSubItem, removeRoofSubItem, updateRoofSubField, adjustRoofSubItemSizeCount, importRoofPipeJacks, importRoofExhaustStacks, importRoofRainDiverters, importRoofChimneys, importRoofFlashingItems, importRoofLowSlopeItems,
       importRoofSkylights, importRoofOtherStructures,
       addRoofPhoto, removeRoofPhoto,
+      addJobPhoto, removeJobPhoto,
       toggleElevExclude, updateElevField,
       addElevSubItem, removeElevSubItem, updateElevSubField, replaceElevSubItems,
       addElevPhoto, removeElevPhoto,

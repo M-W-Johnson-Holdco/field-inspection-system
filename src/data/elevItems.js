@@ -127,8 +127,9 @@ export const ELEV_ITEMS = [
     subItemPhotos: true,
     shutterSizeCounters: true,
     fields: [
-      { t: 'select', l: 'Grade', o: ['Select', 'Vinyl', 'Wood'], full: true },
-      { t: 'yn', l: 'Painted', full: true },
+      { t: 'select', l: 'Grade', o: ['Select', 'Vinyl', 'Wood', 'Custom'], full: true },
+      { t: 'txt', l: 'Custom Grade', showWhen: { field: 'Grade', equals: 'Custom' }, full: true, p: 'Type N/A if unknown' },
+      { t: 'select', l: 'Painted', o: ['Select', 'Yes', 'No', 'Stained', 'N/A'], full: true },
     ],
     subFields: [
       {

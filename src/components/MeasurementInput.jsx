@@ -1,5 +1,6 @@
 import { fieldGroupProps } from '../utils/fieldLayout'
 import { formatMeasurement, isLinearMeasurementField, parseMeasurement } from '../utils/measurement'
+import { DECIMAL_INPUT_PROPS, sanitizeDecimalInput } from '../utils/decimalInput'
 
 function MeasurementStepper({ label, value, onChange, placeholder = '0' }) {
   const current = value === '' || value == null ? 0 : Number(value)
@@ -23,14 +24,11 @@ function MeasurementStepper({ label, value, onChange, placeholder = '0' }) {
       <input
         className="field-input number-stepper__input"
         style={{ '--field-ch': inputCh }}
-        type="number"
-        inputMode="decimal"
-        min="0"
-        step="any"
+        {...DECIMAL_INPUT_PROPS}
         value={value || ''}
         placeholder={placeholder}
         aria-label={label}
-        onChange={e => onChange(e.target.value)}
+        onChange={e => onChange(sanitizeDecimalInput(e.target.value))}
       />
       <button
         type="button"

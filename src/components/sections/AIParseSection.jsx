@@ -7,6 +7,7 @@ const WORKER_URL = 'https://field-inspection-worker.k-liss.workers.dev'
 // Maps AI JSON roof keys → { itemId, fieldLabel }
 const ROOF_MAP = [
   { key: 'shingleStyle',            itemId: 'ri0',  label: 'Style' },
+  { key: 'metalShingleGauge',       itemId: 'ri0',  label: 'Metal Gauge' },
   { key: 'stories',                 itemId: 'ri0',  label: 'Stories' },
   { key: 'layers',                  itemId: 'ri0',  label: 'Layers' },
   { key: 'pitch',                   itemId: 'ri0',  label: 'Predominant Pitch (x/12)' },
@@ -26,9 +27,9 @@ const ROOF_MAP = [
   { key: 'starterStyle',            itemId: 'ri4',  label: 'Style' },
   { key: 'starterDamaged',          itemId: 'ri4',  label: 'Damaged' },
   { key: 'starterDamageDescription', itemId: 'ri4', label: '_damage' },
-  { key: 'valleyStyle',             itemId: 'ri5',  label: 'Style' },
-  { key: 'valleyChooseOne',         itemId: 'ri5',  label: 'Choose One' },
-  { key: 'valleyWValleyChooseOne',  itemId: 'ri5',  label: 'Choose One (W-Valley)' },
+  { key: 'valleyStyle',             itemId: 'ri5',  label: 'Material' },
+  { key: 'valleyChooseOne',         itemId: 'ri5',  label: 'Choose Ice & Water Style' },
+  { key: 'valleyWValleyChooseOne',  itemId: 'ri5',  label: 'Choose W-Valley Style' },
   { key: 'valleyDamaged',           itemId: 'ri5',  label: 'Damaged' },
   { key: 'valleyDamageDescription', itemId: 'ri5',  label: '_damage' },
   { key: 'solarPanelQty',           itemId: 'ri24', label: 'Qty' },
@@ -157,6 +158,7 @@ const ELEV_MAP = [
   { key: 'gableVentDamageDescription', itemId: 'ev13', label: '_damage' },
   { key: 'shutterMaterial',      itemId: 'ev6',  label: 'Grade' },
   { key: 'shutterGrade',         itemId: 'ev6',  label: 'Grade' },
+  { key: 'shutterCustomGrade',   itemId: 'ev6',  label: 'Custom Grade' },
   { key: 'shutterLength',        itemId: 'ev6',  label: 'Length (in)' },
   { key: 'shutterWidth',         itemId: 'ev6',  label: 'Width (in)' },
   { key: 'shutterPainted',       itemId: 'ev6',  label: 'Painted' },
@@ -215,6 +217,7 @@ const EXTERIOR_MAP = [
   { key: 'fencePostSpacing',       itemId: 'ei_fence',   label: 'Post Spacing (LF)' },
   { key: 'fenceHeight',            itemId: 'ei_fence',   label: 'Height (FT)' },
   { key: 'fenceStained',           itemId: 'ei_fence',   label: 'Stained' },
+  { key: 'fencePainted',           itemId: 'ei_fence',   label: 'Painted' },
   { key: 'fenceDamaged',           itemId: 'ei_fence',   label: '_damagePresent' },
   { key: 'fenceDamage',            itemId: 'ei_fence',   label: '_damage' },
   { key: 'gatesQty',               itemId: 'ei_gates',   label: 'Qty' },
@@ -231,6 +234,7 @@ const EXTERIOR_MAP = [
   { key: 'landscapingProtect',     itemId: 'ei_site',    label: 'Landscaping to Protect' },
   { key: 'okSaturdayBuild',        itemId: 'ei_site',    label: 'OK Saturday Build' },
   { key: 'pestControlFlashing',    itemId: 'ei_site',    label: 'Pest Control Flashing' },
+  { key: 'portapottyNeeded',       itemId: 'ei_site',    label: 'Portapotty Needed?' },
   { key: 'gateCode',               itemId: 'ei_site',    label: 'Gate Code' },
   { key: 'overheadClearanceIssue', itemId: 'ei_site',    label: 'Overhead Clearance Issue' },
 ]
@@ -346,7 +350,7 @@ function applyParsed(parsed, ctx) {
 
   // Job info
   const ji = parsed.jobInfo || {}
-  const JOB_FIELDS = ['cust','phone','email','pm','insp','ins','claim','claimFileDate','stormDate','residenceType','tenantname','tenantphone','hasSeparateContact','contactName','contactPhone','contactEmail']
+  const JOB_FIELDS = ['cust','phone','email','pm','insp','ins','claim','claimFileDate','stormDate','residenceType','tenantname','tenantphone','hasSeparateContact','contactName','contactPhone','contactEmail','damageSquares','frontOfRiskDirection']
   JOB_FIELDS.forEach(f => { if (ji[f] != null) updateJobInfo(f, ji[f]) })
   if (ji.date != null && ji.claimFileDate == null) updateJobInfo('claimFileDate', ji.date)
   if (ji.preferredContact != null) {
@@ -354,6 +358,9 @@ function applyParsed(parsed, ctx) {
   }
   if (ji.lossType != null) {
     updateJobInfo('lossType', toArray(ji.lossType))
+  }
+  if (ji.frontOfRiskDetection != null && ji.frontOfRiskDirection == null) {
+    updateJobInfo('frontOfRiskDirection', ji.frontOfRiskDetection)
   }
   if (ji.contactPreferredContact != null) {
     updateJobInfo('contactPreferredContact', toArray(ji.contactPreferredContact))
@@ -386,6 +393,7 @@ function applyParsed(parsed, ctx) {
     if (key === 'pitch') val = formatPitch(parsePitchNumerator(val, 0))
     if (key === 'shingleStyle') val = toArray(val)
     if (key === 'valleyStyle') val = toArray(val)
+    if (key === 'edgeFlashingType') val = toArray(val)
     updateRoofField(itemId, label, val)
   })
 
@@ -438,7 +446,7 @@ function applyParsed(parsed, ctx) {
     ev4: new Set(['Style', 'Material', 'Width', 'Painted']),
     ev12: new Set(['Grade', 'Type', 'Glaze', 'Painted']),
     ev5: new Set(['Type', 'Grade']),
-    ev6: new Set(['Grade', 'Painted']),
+    ev6: new Set(['Grade', 'Custom Grade', 'Painted']),
   }
   DIRS.forEach(dir => {
     const dirData = elevations[dir] || {}

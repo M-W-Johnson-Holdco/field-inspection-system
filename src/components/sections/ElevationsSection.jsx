@@ -4,9 +4,12 @@ import { useInspection } from '../../context/InspectionContext'
 import PhotoZone from '../PhotoZone'
 import FieldsGrid from '../FieldsGrid'
 import DamageDescriptionInput from '../DamageDescriptionInput'
+import ItemNotesField from '../ItemNotesField'
 import { ELEV_ITEMS, DIRECTIONS } from '../../data/elevItems'
+import { directionLabel } from '../../utils/elevationCompass'
 import { fieldGroupProps } from '../../utils/fieldLayout'
 import { fieldSelectClass, withSelectPlaceholderClass, ynOptionsForField, optionsForField, visibleFieldsForValues } from '../../utils/fieldGrid'
+import { DECIMAL_INPUT_PROPS, sanitizeDecimalInput } from '../../utils/decimalInput'
 import MeasurementInput, { isLinearMeasurementField } from '../MeasurementInput'
 import DimensionLwInput from '../DimensionLwInput'
 import useExpandedSection from '../../hooks/useExpandedSection'
@@ -248,13 +251,10 @@ function FieldRenderer({ field, value, onChange, subFields, onSubFieldChange }) 
           <input
             className="field-input number-stepper__input"
             style={{ '--field-ch': inputCh }}
-            type="number"
-            inputMode="decimal"
-            min="0"
-            step="any"
+            {...DECIMAL_INPUT_PROPS}
             value={value === '' || value == null ? '' : value}
             placeholder={p || '0'}
-            onChange={e => onChange(e.target.value)}
+            onChange={e => onChange(sanitizeDecimalInput(e.target.value))}
           />
           <button
             type="button"
@@ -419,6 +419,10 @@ function ElevSubCard({
                   />
                 </div>
               )}
+              <ItemNotesField
+                value={sub.fields?._notes || ''}
+                onChange={value => onUpdateField('_notes', value)}
+              />
               <PhotoZone
                 entityId={`${cellKey}__sub_${index}`}
                 photos={sub.photos || []}
@@ -569,6 +573,10 @@ function ElevItem({ itemDef, direction, trigPhoto }) {
                   />
                 </div>
               )}
+              <ItemNotesField
+                value={cell.fields['_notes'] || ''}
+                onChange={val => updateElevField(cellKey, '_notes', val)}
+              />
               <PhotoZone
                 entityId={cellKey}
                 photos={photos}
@@ -586,11 +594,12 @@ function ElevItem({ itemDef, direction, trigPhoto }) {
 
 // ── Main Export ───────────────────────────────────────────────────
 export default function ElevationsSection() {
-  const { addElevPhoto } = useInspection()
+  const { data, addElevPhoto } = useInspection()
   const [activeDir, setActiveDir] = useState('Front')
   const activeCellRef = useRef(null)
   const camRef = useRef(null)
   const galRef = useRef(null)
+  const frontOfRisk = data.jobInfo?.frontOfRiskDirection || ''
 
   function trigPhoto(entityId, mode) {
     activeCellRef.current = entityId
@@ -639,12 +648,12 @@ export default function ElevationsSection() {
                 e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
               }}
             >
-              {dir}
+              {directionLabel(dir, frontOfRisk)}
             </button>
           ))}
         </div>
 
-        <div className="elev-active-label">{activeDir} Elevation</div>
+        <div className="elev-active-label">{directionLabel(activeDir, frontOfRisk)} Elevation</div>
 
         <div key={activeDir} className="elev-items" role="tabpanel">
           {ELEV_ITEMS.map(item => (

@@ -12,6 +12,12 @@ export function isFieldVisible(field, values = {}) {
     }
     return false
   }
+  if (field.showWhen.notEquals != null) {
+    const unexpected = field.showWhen.notEquals
+    if (actual == null || actual === '' || actual === 'Select') return true
+    if (typeof actual === 'string' && actual.startsWith(`${unexpected} - `)) return false
+    return actual !== unexpected
+  }
   const expected = field.showWhen.equals
   if (typeof actual === 'string' && actual.startsWith(`${expected} - `)) return true
   return actual === expected
@@ -31,7 +37,7 @@ function optionColumnStyle(maxSelectCh) {
 
 function isEdgeFlashingFieldsPattern(fields) {
   return fields.length === 4
-    && isOptionSelectField(fields[0]) && fields[0].l === 'Type'
+    && (isOptionSelectField(fields[0]) || fields[0].t === 'multiRadio') && fields[0].l === 'Type'
     && isOptionSelectField(fields[1]) && fields[1].l === 'Material'
     && fields[2].t === 'yn' && fields[2].l === 'Painted'
     && fields[3].t === 'yn' && fields[3].l === 'Damaged'

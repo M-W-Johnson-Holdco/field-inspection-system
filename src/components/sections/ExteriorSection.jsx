@@ -4,10 +4,12 @@ import { useInspection } from '../../context/InspectionContext'
 import PhotoZone from '../PhotoZone'
 import FieldsGrid from '../FieldsGrid'
 import DamageDescriptionInput from '../DamageDescriptionInput'
+import ItemNotesField from '../ItemNotesField'
 import MeasurementInput, { isLinearMeasurementField } from '../MeasurementInput'
 import { EXTERIOR_ITEMS, EXTERIOR_SUBSECTIONS } from '../../data/exteriorItems'
 import { fieldGroupProps } from '../../utils/fieldLayout'
 import { fieldSelectClass, withSelectPlaceholderClass, ynOptionsForField, optionsForField, visibleFieldsForValues } from '../../utils/fieldGrid'
+import { DECIMAL_INPUT_PROPS, sanitizeDecimalInput } from '../../utils/decimalInput'
 import useExpandedSection from '../../hooks/useExpandedSection'
 import { fenceTotalLf } from '../../utils/fenceLength'
 
@@ -165,13 +167,10 @@ function FieldRenderer({ field, value, onChange, allValues }) {
           <input
             className="field-input number-stepper__input"
             style={{ '--field-ch': inputCh }}
-            type="number"
-            inputMode="decimal"
-            min="0"
-            step="any"
+            {...DECIMAL_INPUT_PROPS}
             value={value === '' || value == null ? '' : value}
             placeholder={p || '0'}
-            onChange={e => onChange(e.target.value)}
+            onChange={e => onChange(sanitizeDecimalInput(e.target.value))}
           />
           <button type="button" className="number-stepper__btn" onClick={() => adjustValue(1)} aria-label={`Increase ${l}`}>+</button>
         </div>
@@ -275,6 +274,10 @@ function ExteriorItem({ itemDef, trigPhoto }) {
                 />
               </div>
             )}
+            <ItemNotesField
+              value={item.fields['_notes'] || ''}
+              onChange={val => updateExteriorField(id, '_notes', val)}
+            />
             {hasP && (
               <PhotoZone
                 entityId={id}
