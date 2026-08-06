@@ -43,7 +43,7 @@ export const ROOF_ITEMS = [
     ],
   },
   {
-    id: 'ri2', lbl: 'Underlayment', flags: ['P', 'D'],
+    id: 'ri2', lbl: 'Underlayment', flags: ['P'],
     fields: [
       { t: 'radio', l: 'Grade', o: ['Felt - 15lbs', 'Felt - 30lbs', 'Synthetic', 'Premium Synthetic', 'Unknown'] },
       { t: 'num', l: 'Layers', full: true },
@@ -57,13 +57,13 @@ export const ROOF_ITEMS = [
     ],
   },
   {
-    id: 'ri4', lbl: 'Starter Shingle', flags: ['P', 'D'],
+    id: 'ri4', lbl: 'Starter Shingle', flags: ['P'],
     fields: [
       { t: 'radio', l: 'Style', o: ['3-Tab', 'Starter Strip', 'Double Layer/Premium'] },
     ],
   },
   {
-    id: 'ri5', lbl: 'Valley', flags: ['P', 'D'],
+    id: 'ri5', lbl: 'Valley', flags: ['P'],
     fields: [
       {
         t: 'multiRadio',
@@ -206,12 +206,11 @@ export const ROOF_ITEMS = [
     subItemPhotos: true,
     subItemDamaged: true,
     subItemSizeCounters: {
-      fromMeasuredArea: true,
-      sizes: ['Large', 'X-Large'],
+      field: 'Style',
+      sizes: ['Fixed', 'Tubular', 'Venting'],
       labelSuffix: '',
-      counterLabel: 'size',
-      equalWidth2: true,
-      legend: 'Large ≤16 ft² · X-Large 17+ ft²',
+      counterLabel: 'style',
+      equalWidth: true,
     },
     fields: [],
     subFields: [

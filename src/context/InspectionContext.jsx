@@ -797,6 +797,18 @@ function normalizeRoofSubItem(sub) {
   }
 }
 
+function stripRoofItemDamageFields(roofData, itemId) {
+  const next = { ...roofData }
+  const item = next[itemId]
+  if (!item?.fields) return next
+  if (item.fields.Damaged == null && item.fields._damage == null) return next
+  const fields = { ...item.fields }
+  delete fields.Damaged
+  delete fields._damage
+  next[itemId] = { ...item, fields }
+  return next
+}
+
 function normalizeRoofData(roofData = {}) {
   let next = { ...roofData }
   for (const itemDef of ROOF_ITEMS) {
@@ -807,6 +819,10 @@ function normalizeRoofData(roofData = {}) {
   next = normalizeRi0(next)
   next = normalizeRi1(next)
   next = normalizeRi5(next)
+  // Underlayment / Starter / Valley no longer track Damaged
+  next = stripRoofItemDamageFields(next, 'ri2')
+  next = stripRoofItemDamageFields(next, 'ri4')
+  next = stripRoofItemDamageFields(next, 'ri5')
   next = normalizeRi11(next)
   next = normalizeRi12(next)
   next = normalizeRi14(next)

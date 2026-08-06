@@ -357,10 +357,11 @@ function collapsibleSubPills(itemId, fields = {}) {
     }
   } else if (itemId === 'ri14') {
     const style = selectValue(fields.Style)
-    const bucket = skylightSizeBucket(skylightAreaSqFt(fields))
-    const sizeLabel = skylightSizeLabel(bucket)
     if (style) grey.push(style)
-    if (sizeLabel) grey.push(sizeLabel)
+    if (style && style !== 'Tubular') {
+      const sizeLabel = skylightSizeLabel(skylightSizeBucket(skylightAreaSqFt(fields)))
+      if (sizeLabel) grey.push(sizeLabel)
+    }
     if (fields.Damaged === 'Yes') red.push('Damaged')
   } else if (itemId === 'ri15') {
     const length = selectValue(fields['Length (LF)'])
