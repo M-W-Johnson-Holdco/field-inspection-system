@@ -77,9 +77,10 @@ roof.chimneys[].counterFlashing: "Replace" or "Reuse"
 roof.chimneys[].cricketPresent: "Yes" or "No"
 roof.skylights[].style: "Fixed" or "Tubular" or "Venting"
 roof.skylights[].mount: "Flush Mount" or "Curb Mount"
-roof.skylights[].length: number (feet) or null
-roof.skylights[].width: number (feet) or null
-roof.skylights[].size: legacy — ignored; size bucket is derived from length × width (Large ≤16 ft², X-Large 17+)
+roof.skylights[].length: number (feet) or null — only when style is "Fixed" or "Venting"; otherwise null
+roof.skylights[].width: number (feet) or null — only when style is "Fixed" or "Venting"; otherwise null
+roof.skylights[].diameter: number (inches) or null — only when style is "Tubular"; otherwise null
+roof.skylights[].size: legacy — ignored; size bucket is derived from length × width, or from circle area (πr²) for tubular (Large ≤16 ft², X-Large 17+)
 roof.rainDiverters[].lengthLF: linear feet for that rain diverter (number)
 roof.stepFlashingMaterial: "Galvanized" or "Copper" or "Aluminum" or "N/A"
 roof.counterFlashingMaterial: "Galvanized" or "Copper" or "Aluminum" or "N/A"
@@ -266,7 +267,7 @@ Return this exact structure (use null for any scalar field not mentioned, and []
     "stepFlashingMaterial": null, "stepFlashingPainted": null, "stepFlashingDamaged": null, "stepFlashingDamageDescription": null,
     "counterFlashingMaterial": null, "counterFlashingPainted": null, "counterFlashingDamaged": null, "counterFlashingDamageDescription": null,
     "lFlashingMaterial": null, "lFlashingPainted": null, "lFlashingDamaged": null, "lFlashingDamageDescription": null,
-    "skylights": [{ "style": null, "mount": null, "size": null, "length": null, "width": null, "damaged": null, "damageDescription": null }],
+    "skylights": [{ "style": null, "mount": null, "size": null, "length": null, "width": null, "diameter": null, "damaged": null, "damageDescription": null }],
     "corniceReturnMaterial": null, "corniceReturnStories": null, "corniceReturnQty": null,
     "corniceReturnPainted": null, "corniceReturnDamaged": null, "corniceReturnDamageDescription": null,
     "corniceStripMaterial": null, "corniceStripLF": null, "corniceStripStories": null,

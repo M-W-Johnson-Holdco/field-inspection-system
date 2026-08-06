@@ -97,6 +97,10 @@ function countSubFieldValue(field, subFields, totals) {
     countValue(subFields?.[field.widthKey || 'Width (in)'], totals)
     return
   }
+  if (field.t === 'diameter') {
+    countValue(subFields?.[field.diameterKey || 'Diameter (in)'], totals)
+    return
+  }
   countValue(subFields?.[field.l], totals)
 }
 
@@ -1844,8 +1848,12 @@ function buildSkylightSubItemsFromParsed(roof = {}) {
     fields: {
       ...(sk?.style ? { Style: sk.style } : {}),
       ...(sk?.mount ? { Mount: sk.mount } : {}),
-      ...(sk?.length != null && sk.length !== '' ? { 'Length (ft)': String(sk.length) } : {}),
-      ...(sk?.width != null && sk.width !== '' ? { 'Width (ft)': String(sk.width) } : {}),
+      ...(sk?.style === 'Tubular'
+        ? (sk?.diameter != null && sk.diameter !== '' ? { 'Diameter (in)': String(sk.diameter) } : {})
+        : {
+          ...(sk?.length != null && sk.length !== '' ? { 'Length (ft)': String(sk.length) } : {}),
+          ...(sk?.width != null && sk.width !== '' ? { 'Width (ft)': String(sk.width) } : {}),
+        }),
       ...(sk?.damaged ? { Damaged: sk.damaged } : {}),
       ...(sk?.damaged === 'Yes' && sk?.damageDescription ? { _damage: sk.damageDescription } : {}),
     },
@@ -2150,6 +2158,14 @@ export function InspectionProvider({ children }) {
         if (label === '(Other)') {
           fields['Location'] = value ? `Other - ${value}` : 'Other'
           delete fields['(Other)']
+        }
+        if (itemId === 'ri14' && label === 'Style') {
+          if (value === 'Tubular') {
+            delete fields['Length (ft)']
+            delete fields['Width (ft)']
+          } else {
+            delete fields['Diameter (in)']
+          }
         }
         return { ...sub, fields }
       })

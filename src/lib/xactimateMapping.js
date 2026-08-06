@@ -222,6 +222,29 @@ export const ROOF_SUBITEM_LINE_ITEMS = {
     note: exhaustStackNote(f, parentFields),
   }),
   ri14: (f) => {
+    const style = str(f, 'Style')
+    if (style === 'Tubular') {
+      const diameter = num(f, 'Diameter (in)')
+      const circumference = diameter != null ? Math.round(Math.PI * diameter * 10) / 10 : null
+      const radiusIn = diameter != null ? diameter / 2 : null
+      const area = radiusIn != null ? Math.round(((Math.PI * radiusIn * radiusIn) / 144) * 10) / 10 : null
+      let sizeLabel = null
+      if (area != null) {
+        sizeLabel = area <= 16 ? 'Large (≤16 ft²)' : 'X-Large (17+ ft²)'
+      }
+      return {
+        trade: 'Roofing', category: 'RFG',
+        description: `Skylight - Tubular (${str(f, 'Mount') || '?'})`,
+        unit: 'EA', qty: 1, damaged: yn(f, 'Damaged'),
+        note: [
+          diameter != null ? `Diameter ${diameter}"` : null,
+          circumference != null ? `Circumference ${circumference}"` : null,
+          sizeLabel,
+          area != null ? `${area} ft²` : null,
+        ].filter(Boolean).join('; ') || null,
+      }
+    }
+
     const length = num(f, 'Length (ft)')
     const width = num(f, 'Width (ft)')
     const area = length != null && width != null ? length * width : null
@@ -233,7 +256,7 @@ export const ROOF_SUBITEM_LINE_ITEMS = {
     }
     return {
       trade: 'Roofing', category: 'RFG',
-      description: `Skylight - ${str(f, 'Style') || 'unspecified'} (${str(f, 'Mount') || '?'})`,
+      description: `Skylight - ${style || 'unspecified'} (${str(f, 'Mount') || '?'})`,
       unit: 'EA', qty: 1, damaged: yn(f, 'Damaged'),
       note: [sizeLabel, areaNote].filter(Boolean).join('; ') || null,
     }

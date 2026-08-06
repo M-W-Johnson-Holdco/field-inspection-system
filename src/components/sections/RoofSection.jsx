@@ -6,10 +6,12 @@ import FieldsGrid from '../FieldsGrid'
 import DamageDescriptionInput from '../DamageDescriptionInput'
 import ItemNotesField from '../ItemNotesField'
 import DimensionLwInput from '../DimensionLwInput'
+import DiameterCircInput from '../DiameterCircInput'
 import MeasurementInput, { isLinearMeasurementField } from '../MeasurementInput'
 import { ROOF_ITEMS, SUBSECTIONS } from '../../data/roofItems'
 import { fieldGroupProps } from '../../utils/fieldLayout'
 import { fieldSelectClass, materialOptionColumnStyle, withSelectPlaceholderClass, visibleFieldsForValues, ynOptionsForField, optionsForField } from '../../utils/fieldGrid'
+import { DECIMAL_INPUT_PROPS, sanitizeDecimalInput } from '../../utils/decimalInput'
 import { formatPitch, parsePitchNumerator } from '../../utils/pitch'
 import useExpandedSection from '../../hooks/useExpandedSection'
 import { getRoofItemStatus, isRoofItemActive } from '../../utils/roofItemStatus'
@@ -55,10 +57,7 @@ function PitchInput({ field, value, onChange }) {
           <input
             className="field-input number-stepper__input"
             style={{ '--field-ch': inputCh }}
-            type="number"
-            inputMode="numeric"
-            min="0"
-            step="1"
+            {...DECIMAL_INPUT_PROPS}
             value={displayValue}
             placeholder={placeholder}
             aria-label={field.l}
@@ -68,8 +67,7 @@ function PitchInput({ field, value, onChange }) {
           <div className="number-stepper__pitch-value">
             <input
               className="field-input number-stepper__input number-stepper__pitch-input"
-              type="text"
-              inputMode="numeric"
+              {...DECIMAL_INPUT_PROPS}
               value={displayValue}
               placeholder={placeholder}
               aria-label={field.l}
@@ -112,6 +110,17 @@ function FieldRenderer({ field, value, onChange, subFields, onSubFieldChange }) 
         widthValue={subFields?.[widthKey] ?? ''}
         onLengthChange={val => onSubFieldChange(lengthKey, val)}
         onWidthChange={val => onSubFieldChange(widthKey, val)}
+      />
+    )
+  }
+
+  if (t === 'diameter') {
+    const diameterKey = field.diameterKey || 'Diameter (in)'
+    return (
+      <DiameterCircInput
+        field={field}
+        diameterValue={subFields?.[diameterKey] ?? value ?? ''}
+        onDiameterChange={val => onSubFieldChange(diameterKey, val)}
       />
     )
   }
@@ -295,13 +304,10 @@ function FieldRenderer({ field, value, onChange, subFields, onSubFieldChange }) 
           <input
             className="field-input number-stepper__input"
             style={{ '--field-ch': inputCh }}
-            type="number"
-            inputMode="decimal"
-            min="0"
-            step="any"
+            {...DECIMAL_INPUT_PROPS}
             value={value === '' || value == null ? '' : value}
             placeholder={p || '0'}
-            onChange={e => onChange(e.target.value)}
+            onChange={e => onChange(sanitizeDecimalInput(e.target.value))}
           />
           <button
             type="button"
@@ -663,13 +669,10 @@ function CheckItem({ itemDef, trigPhoto }) {
                 </button>
                 <input
                   className="field-input number-stepper__input"
-                  type="number"
-                  inputMode="numeric"
-                  min="0"
-                  step="1"
+                  {...DECIMAL_INPUT_PROPS}
                   value={sizeCounts[size]}
                   onChange={event => {
-                    const nextCount = Math.max(0, Number(event.target.value) || 0)
+                    const nextCount = Math.max(0, Math.floor(Number(sanitizeDecimalInput(event.target.value)) || 0))
                     adjustRoofSubItemSizeCount(
                       id,
                       subItemSizeCounters.field,

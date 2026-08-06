@@ -12,6 +12,12 @@ export function isFieldVisible(field, values = {}) {
     }
     return false
   }
+  if (field.showWhen.notEquals != null) {
+    const unexpected = field.showWhen.notEquals
+    if (actual == null || actual === '' || actual === 'Select') return true
+    if (typeof actual === 'string' && actual.startsWith(`${unexpected} - `)) return false
+    return actual !== unexpected
+  }
   const expected = field.showWhen.equals
   if (typeof actual === 'string' && actual.startsWith(`${expected} - `)) return true
   return actual === expected

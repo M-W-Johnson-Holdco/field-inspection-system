@@ -41,64 +41,46 @@ function NumberStepper({ label, value, onChange, placeholder = '0' }) {
   )
 }
 
-function formatArea(lengthValue, widthValue) {
-  const length = Number(lengthValue)
-  const width = Number(widthValue)
-  if (!Number.isFinite(length) || !Number.isFinite(width) || length <= 0 || width <= 0) return null
-  const area = length * width
-  return Number.isInteger(area) ? String(area) : area.toFixed(1)
+function formatCircumference(diameterValue) {
+  const diameter = Number(diameterValue)
+  if (!Number.isFinite(diameter) || diameter <= 0) return null
+  return (Math.round(Math.PI * diameter * 10) / 10).toFixed(1)
 }
 
-export default function DimensionLwInput({
+export default function DiameterCircInput({
   field,
-  lengthValue,
-  widthValue,
-  onLengthChange,
-  onWidthChange,
+  diameterValue,
+  onDiameterChange,
 }) {
-  const lengthLabel = field.lengthLabel || 'Length'
-  const widthLabel = field.widthLabel || 'Width'
-  const showArea = Boolean(field.showAreaSqIn || field.showArea)
-  const areaUnit = field.areaUnit || 'in²'
-  const areaLabel = field.areaLabel || 'Total Area'
-  const areaValue = showArea ? formatArea(lengthValue, widthValue) : null
-  // Keep a heading only when it's meaningful (not the generic "Size" used above L/W rows)
-  const showHeading = Boolean(field.l && field.l !== 'Size')
+  const diameterLabel = field.diameterLabel || 'Diameter (Inches)'
+  const showCircumference = field.showCircumference !== false
+  const circumferenceLabel = field.circumferenceLabel || 'Total Circumference'
+  const circumferenceUnit = field.circumferenceUnit ?? '"'
+  const circumferenceValue = showCircumference ? formatCircumference(diameterValue) : null
+  const showHeading = Boolean(field.l && field.l !== 'Diameter')
 
   return (
     <div {...fieldGroupProps(field, 'dimension-lw-input-wrap')}>
       {showHeading && (
         <div className="dimension-lw-input__title-row">
           <label className="form-label">{field.l}</label>
-          {field.areaLegend && (
-            <span className="dimension-lw-input__legend">{field.areaLegend}</span>
-          )}
         </div>
       )}
 
       <div className="field-group field-group--full field-group--stepper-row field-group--inline-stepper dimension-lw-input__row">
-        <label className="form-label">{lengthLabel}</label>
+        <label className="form-label">{diameterLabel}</label>
         <NumberStepper
-          label={lengthLabel}
-          value={lengthValue}
-          onChange={onLengthChange}
+          label={diameterLabel}
+          value={diameterValue}
+          onChange={onDiameterChange}
         />
       </div>
 
-      <div className="field-group field-group--full field-group--stepper-row field-group--inline-stepper dimension-lw-input__row">
-        <label className="form-label">{widthLabel}</label>
-        <NumberStepper
-          label={widthLabel}
-          value={widthValue}
-          onChange={onWidthChange}
-        />
-      </div>
-
-      {showArea && (
+      {showCircumference && (
         <div className="dimension-lw-input__area" aria-live="polite">
-          <span className="dimension-lw-input__area-label">{areaLabel}</span>
+          <span className="dimension-lw-input__area-label">{circumferenceLabel}</span>
           <output className="dimension-lw-input__area-value">
-            {areaValue != null ? `${areaValue} ${areaUnit}` : '—'}
+            {circumferenceValue != null ? `${circumferenceValue}${circumferenceUnit}` : '—'}
           </output>
         </div>
       )}
