@@ -129,7 +129,10 @@ function calculateCompletion(data) {
     const item = data.roofData?.[itemDef.id]
     if (!item || !isRoofItemActive(item)) return
 
-    ;(itemDef.fields || []).forEach(field => countValue(item.fields?.[field.l], totals))
+    ;(itemDef.fields || []).forEach(field => {
+      if (!isFieldVisible(field, item.fields)) return
+      countValue(item.fields?.[field.l], totals)
+    })
     if (itemDef.flags?.includes('D')) countValue(item.fields?._damage, totals)
     else if (item.fields?.Damaged === 'Yes' && (itemDef.fields || []).some(field => field.l === 'Damaged')) {
       countValue(item.fields?._damage, totals)
@@ -175,7 +178,7 @@ function calculateCompletion(data) {
 
   ;(data.interiorData?.rooms || []).forEach(room => {
     countValue(room.name && room.name !== 'Other' ? room.name : null, totals)
-    ;['story', 'sheetrockCompromised', 'ceilingDamage', 'wallDamage', 'floorDamage', 'moldPresent'].forEach(key => {
+    ;['story', 'sheetrockCompromised', 'replaceInsulation', 'ceilingDamage', 'wallDamage', 'floorDamage', 'moldPresent'].forEach(key => {
       countValue(room.fields?.[key], totals)
     })
     if (room.fields?.ceilingDamage === 'Yes') countValue(room.fields?.ceilingNotes, totals)
@@ -2063,13 +2066,17 @@ export function InspectionProvider({ children }) {
             fields: { ...sub.fields, [label]: value },
           }))
         : item.subItems
+      const fields = { ...item.fields, [label]: value }
+      if (itemId === 'ri13' && label === 'Existing' && value !== 'Yes') {
+        delete fields['Existing Kickouts Count']
+      }
       const next = {
         ...prev,
         roofData: {
           ...prev.roofData,
           [itemId]: {
             ...item,
-            fields: { ...item.fields, [label]: value },
+            fields,
             subItems,
           },
         },
@@ -2507,6 +2514,7 @@ export function InspectionProvider({ children }) {
         fields: {
           story: r?.story || '',
           sheetrockCompromised: r?.sheetrockCompromised || '',
+          replaceInsulation: r?.replaceInsulation || '',
           ceilingDamage: r?.ceilingDamage || '', ceilingNotes: r?.ceilingNotes || '',
           wallDamage: r?.wallDamage || '', wallNotes: r?.wallNotes || '',
           floorDamage: r?.floorDamage || '', floorNotes: r?.floorNotes || '',
@@ -2706,7 +2714,7 @@ export function InspectionProvider({ children }) {
         customName: '',
         photos: [],
         fields: {
-          story: '', sheetrockCompromised: '', ceilingDamage: '', ceilingNotes: '',
+          story: '', sheetrockCompromised: '', replaceInsulation: '', ceilingDamage: '', ceilingNotes: '',
           wallDamage: '', wallNotes: '', floorDamage: '', floorNotes: '',
           moldPresent: '', moldNotes: '', notes: '',
         },

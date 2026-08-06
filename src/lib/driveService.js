@@ -310,7 +310,7 @@ export async function saveInspectionToDrive(token, inspectionData, inspectorName
     return parentId
   }
 
-  // ── Upload photos (folder-based names; trash stale files in each leaf) ──
+  // ── Upload photos into photos/ (flat); trash stale files there ──
   const expectedByFolder = new Map() // folderId → Set of keep names
   for (const photo of photos) {
     const folderId = await cachedEnsurePath(photo.path)

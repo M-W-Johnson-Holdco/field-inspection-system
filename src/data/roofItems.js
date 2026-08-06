@@ -195,6 +195,12 @@ export const ROOF_ITEMS = [
     id: 'ri13', lbl: 'Kickouts', flags: ['P'],
     fields: [
       { t: 'yn', l: 'Existing' },
+      {
+        t: 'num',
+        l: 'Existing Kickouts Count',
+        full: true,
+        showWhen: { field: 'Existing', equals: 'Yes' },
+      },
       { t: 'yn', l: 'Needed' },
       { t: 'yn', l: 'Painted' },
     ],

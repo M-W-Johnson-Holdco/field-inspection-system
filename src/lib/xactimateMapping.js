@@ -160,12 +160,27 @@ export const ROOF_LINE_ITEMS = {
     unit: 'EA', qty: num(fields, 'Qty'),
     damaged: yn(fields, 'Damaged'), note: yn(fields, 'Painted') ? 'Painted' : null,
   }],
-  ri13: (fields) => yn(fields, 'Needed') ? [{
-    trade: 'Roofing', category: 'RFG',
-    description: 'Kickout flashing - install (missing)',
-    unit: 'EA', qty: null, damaged: true,
-    note: 'Not currently present; recommend at time of install to prevent siding damage',
-  }] : [],
+  ri13: (fields) => {
+    const lines = []
+    const existingCount = num(fields, 'Existing Kickouts Count')
+    if (yn(fields, 'Existing') && existingCount != null) {
+      lines.push({
+        trade: 'Roofing', category: 'RFG',
+        description: 'Kickout flashing - existing',
+        unit: 'EA', qty: existingCount, damaged: null,
+        note: yn(fields, 'Painted') ? 'Painted' : null,
+      })
+    }
+    if (yn(fields, 'Needed')) {
+      lines.push({
+        trade: 'Roofing', category: 'RFG',
+        description: 'Kickout flashing - install (missing)',
+        unit: 'EA', qty: null, damaged: true,
+        note: 'Not currently present; recommend at time of install to prevent siding damage',
+      })
+    }
+    return lines
+  },
   ri16: (fields) => [{
     trade: 'Roofing', category: 'RFG',
     description: 'Power meter mast - reset',

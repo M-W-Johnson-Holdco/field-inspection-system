@@ -65,6 +65,7 @@ const ROOF_MAP = [
   { key: 'rooftopIntakeVentDamaged', itemId: 'ri27', label: 'Damaged' },
   { key: 'rooftopIntakeVentDamageDescription', itemId: 'ri27', label: '_damage' },
   { key: 'kickoutsExisting',        itemId: 'ri13', label: 'Existing' },
+  { key: 'kickoutsExistingCount',   itemId: 'ri13', label: 'Existing Kickouts Count' },
   { key: 'kickoutsNeeded',          itemId: 'ri13', label: 'Needed' },
   { key: 'kickoutsPainted',         itemId: 'ri13', label: 'Painted' },
   { key: 'rainDiverterPainted',     itemId: 'ri15', label: 'Painted' },

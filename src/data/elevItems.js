@@ -8,7 +8,7 @@ export const ELEV_ITEMS = [
     fields: [
       { t: 'select', l: 'Style', o: ['Select', 'Flat', 'Double Dutch', 'Textured', 'Other'], full: true },
       { t: 'txt', l: '(Other)', showWhen: { field: 'Style', equals: 'Other' }, full: true, p: 'Describe siding style' },
-      { t: 'select', l: 'Grade', o: ['Select', 'Composite', 'Vinyl', 'Wood'], full: true },
+      { t: 'select', l: 'Grade', o: ['Select', 'Composite', 'Fiber Cement', 'Vinyl', 'Wood'], full: true },
       { t: 'num', l: 'Exposure (Inches)', p: '0' },
       { t: 'yn', l: 'Damaged', full: true },
     ],
@@ -16,7 +16,7 @@ export const ELEV_ITEMS = [
   {
     id: 'ev1', lbl: 'Fascia',
     fields: [
-      { t: 'select', l: 'Material', o: ['Select', 'Aluminum', 'Composite', 'Vinyl', 'Wood'], full: true },
+      { t: 'select', l: 'Material', o: ['Select', 'Aluminum', 'Composite', 'Fiber Cement', 'Vinyl', 'Wood'], full: true },
       { t: 'num', l: 'Width (Inches)', p: '6' },
       { t: 'yn', l: 'Painted', full: true },
       { t: 'yn', l: 'Damaged', full: true },
@@ -28,7 +28,7 @@ export const ELEV_ITEMS = [
     addMoreLabel: 'Add Gutter',
     subItemPhotos: true,
     fields: [
-      { t: 'select', l: 'Style', o: ['Select', 'Half Round', 'K-Style'], full: true },
+      { t: 'select', l: 'Style', o: ['Select', 'Half Round', 'K-Style', 'Commercial Box'], full: true },
       { t: 'select', l: 'Material', o: ['Select', 'Aluminum', 'Steel', 'Copper', 'Vinyl'], full: true },
       { t: 'select', l: 'Size (Inches)', o: ['Select', '5"', '6"'], full: true, allowNA: false },
       { t: 'yn', l: 'Painted', full: true },
@@ -58,7 +58,7 @@ export const ELEV_ITEMS = [
     addMoreLabel: 'Add Downspout',
     subItemPhotos: true,
     fields: [
-      { t: 'select', l: 'Style', o: ['Select', 'Round', 'Box'], full: true },
+      { t: 'select', l: 'Style', o: ['Select', 'Rectangular', 'Round', 'Box'], full: true },
       { t: 'select', l: 'Material', o: ['Select', 'Aluminum', 'Copper', 'Galvanized'], full: true },
       { t: 'select', l: 'Width', o: ['Select', '3" Standard', '4" Oversized'], allowNA: false, full: true },
       { t: 'yn', l: 'Painted', full: true },
@@ -76,7 +76,7 @@ export const ELEV_ITEMS = [
     windowSizeCounters: true,
     fields: [
       { t: 'select', l: 'Grade', o: ['Select', 'Vinyl', 'Wood', 'Composite', 'Aluminum'], allowNA: false, full: true },
-      { t: 'select', l: 'Type', o: ['Select', 'Single Hung', 'Double Hung', 'Casement', 'Fixed'], allowNA: false, full: true },
+      { t: 'select', l: 'Type', o: ['Select', 'Single Hung', 'Double Hung', 'Casement', 'Fixed', 'Sliding', 'Awning'], allowNA: false, full: true },
       { t: 'select', l: 'Glaze', o: ['Select', 'Single', 'Double', 'Triple'], allowNA: false, full: true },
       { t: 'yn', l: 'Painted', full: true },
     ],

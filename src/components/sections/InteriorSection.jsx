@@ -76,6 +76,7 @@ function RoomCard({ room, trigPhoto }) {
   const otherNameField = { t: 'txt', l: 'Other Room / Location', full: true }
   const storyField = { t: 'select', l: 'Story', full: true, o: ['Select', ...STORY_OPTS] }
   const sheetrockField = { t: 'yn', l: 'Sheetrock Compromised?', full: true }
+  const replaceInsulationField = { t: 'yn', l: 'Replace Insulation?', full: true }
   const roomSelectValue = room.name?.startsWith('Other - ') ? 'Other' : (room.name || '')
   const showOtherName = room.name === 'Other' || room.name?.startsWith('Other - ')
 
@@ -165,6 +166,20 @@ function RoomCard({ room, trigPhoto }) {
                 >
                   <option value="">Select</option>
                   {ynOptionsForField(sheetrockField).map(opt => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div {...fieldGroupProps(replaceInsulationField)}>
+                <label className="form-label">Replace Insulation?</label>
+                <select
+                  className={withSelectPlaceholderClass(fieldSelectClass(replaceInsulationField), f.replaceInsulation)}
+                  value={f.replaceInsulation || ''}
+                  onChange={e => set('replaceInsulation', e.target.value)}
+                >
+                  <option value="">Select</option>
+                  {ynOptionsForField(replaceInsulationField).map(opt => (
                     <option key={opt} value={opt}>{opt}</option>
                   ))}
                 </select>

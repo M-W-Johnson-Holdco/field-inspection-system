@@ -24,41 +24,41 @@ function sanitizePathSegment(seg) {
   return sanitizePhotoName(seg).replace(/[/\\:*?"<>|]/g, '-').replace(/\s+/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '') || 'item'
 }
 
-// Maps roof item IDs → [section folder name, item folder name]
-const ROOF_ITEM_PATH = {
-  ri0:  ['1a-general_roof',              'shingle_style'],
-  ri1:  ['1a-general_roof',              'edge_flashings'],
-  ri2:  ['1a-general_roof',              'underlayment'],
-  ri3:  ['1a-general_roof',              'ridge_cap'],
-  ri4:  ['1a-general_roof',              'starter_shingle'],
-  ri5:  ['1a-general_roof',              'valley'],
-  ri6:  ['1b-ventilation',               'ridge_vent'],
-  ri7:  ['1b-ventilation',               'box_vents'],
-  ri8:  ['1b-ventilation',               'turbines'],
-  ri9:  ['1b-ventilation',               'power_vents'],
-  ri10: ['1b-ventilation',               'solar_vents'],
-  ri25: ['1b-ventilation',               'off_ridge_vents'],
-  ri26: ['1b-ventilation',               'dome_vents'],
-  ri27: ['1b-ventilation',               'rooftop_intake_vents'],
-  ri11: ['1c-pipe_jacks_and_exhaust',    'pipe_jacks'],
-  ri12: ['1c-pipe_jacks_and_exhaust',    'exhaust_stacks'],
-  ri13: ['1d-kickouts',                  'kickouts'],
-  ri14: ['1e-skylights_and_flashings',   'skylights'],
-  ri15: ['1e-skylights_and_flashings',   'rain_diverter'],
-  ri16: ['1e-skylights_and_flashings',   'power_meter_mast'],
-  ri17: ['1e-skylights_and_flashings',   'chimney_flashing'],
-  ri18: ['1e-skylights_and_flashings',   'step_flashing'],
-  ri19: ['1e-skylights_and_flashings',   'counter_flashing'],
-  ri20: ['1e-skylights_and_flashings',   'l_flashing'],
-  ri21: ['1e-skylights_and_flashings',   'cornice_returns'],
-  ri28: ['1e-skylights_and_flashings',   'cornice_strips'],
-  ri22: ['1f-low_slope_and_other',       'low_slope'],
-  ri23: ['1f-low_slope_and_other',       'other_structures'],
-  ri24: ['1a-general_roof',              'solar_panels'],
+// Maps roof item IDs → leaf name used in photoFileName
+const ROOF_ITEM_LEAF = {
+  ri0:  'shingle_style',
+  ri1:  'edge_flashings',
+  ri2:  'underlayment',
+  ri3:  'ridge_cap',
+  ri4:  'starter_shingle',
+  ri5:  'valley',
+  ri6:  'ridge_vent',
+  ri7:  'box_vents',
+  ri8:  'turbines',
+  ri9:  'power_vents',
+  ri10: 'solar_vents',
+  ri25: 'off_ridge_vents',
+  ri26: 'dome_vents',
+  ri27: 'rooftop_intake_vents',
+  ri11: 'pipe_jacks',
+  ri12: 'exhaust_stacks',
+  ri13: 'kickouts',
+  ri14: 'skylights',
+  ri15: 'rain_diverter',
+  ri16: 'power_meter_mast',
+  ri17: 'chimney_flashing',
+  ri18: 'step_flashing',
+  ri19: 'counter_flashing',
+  ri20: 'l_flashing',
+  ri21: 'cornice_returns',
+  ri28: 'cornice_strips',
+  ri22: 'low_slope',
+  ri23: 'other_structures',
+  ri24: 'solar_panels',
 }
 
-// Maps elevation item IDs → folder name
-const ELEV_ITEM_FOLDER = {
+// Maps elevation item IDs → leaf name used in photoFileName
+const ELEV_ITEM_LEAF = {
   ev0:  'siding',
   ev1:  'fascia',
   ev3:  'gutters',
@@ -73,17 +73,20 @@ const ELEV_ITEM_FOLDER = {
   ev14: 'deck',
 }
 
-// Maps exterior item IDs → [section folder, item folder]
-const EXTERIOR_ITEM_PATH = {
-  ei_fence:   ['4a-fencing_and_gates',           'fence'],
-  ei_gates:   ['4a-fencing_and_gates',           'gates'],
-  ei_pool:    ['4b-pool_and_outdoor_equipment',  'pool'],
-  ei_outdoor: ['4c-outdoor_structures',          'outdoor_items'],
-  ei_site:    ['4d-site_access',                 'site_access'],
+// Maps exterior item IDs → leaf name used in photoFileName
+const EXTERIOR_ITEM_LEAF = {
+  ei_fence:   'fence',
+  ei_gates:   'gates',
+  ei_pool:    'pool',
+  ei_outdoor: 'outdoor_items',
+  ei_site:    'site_access',
 }
 
+const PHOTOS_PATH = ['photos']
+
 /**
- * Collect all inspection photos with Drive-style relative paths.
+ * Collect all inspection photos into a single photos/ folder.
+ * Names keep the existing leaf + index convention (e.g. shingle-style1.jpg).
  * @returns {{ path: string[], name: string, url: string }[]}
  */
 export function collectInspectionPhotos(inspectionData) {
@@ -93,7 +96,7 @@ export function collectInspectionPhotos(inspectionData) {
   ;(ji.frontOfHousePhotos || []).forEach((url, i) => {
     if (!url) return
     photos.push({
-      path: ['photos', '0-property', 'front_of_house'],
+      path: PHOTOS_PATH,
       name: photoFileName('front_of_house', i),
       url,
     })
@@ -101,21 +104,20 @@ export function collectInspectionPhotos(inspectionData) {
   ;(ji.mailboxPhotos || []).forEach((url, i) => {
     if (!url) return
     photos.push({
-      path: ['photos', '0-property', 'mailbox'],
+      path: PHOTOS_PATH,
       name: photoFileName('mailbox', i),
       url,
     })
   })
 
   for (const [itemId, item] of Object.entries(inspectionData?.roofData || {})) {
-    const pathParts = ROOF_ITEM_PATH[itemId]
-    if (!pathParts) continue
-    const [section, itemFolder] = pathParts.map(sanitizePathSegment)
+    const itemFolder = sanitizePathSegment(ROOF_ITEM_LEAF[itemId] || '')
+    if (!itemFolder) continue
 
     ;(item.photos || []).forEach((url, i) => {
       if (!url) return
       photos.push({
-        path: ['photos', '1-roof', section, itemFolder],
+        path: PHOTOS_PATH,
         name: photoFileName(itemFolder, i),
         url,
       })
@@ -128,7 +130,7 @@ export function collectInspectionPhotos(inspectionData) {
           `${subIndex + 1}-${slugify(itemFolder.replace(/s$/, ''))}`,
         )
         photos.push({
-          path: ['photos', '1-roof', section, itemFolder, subFolder],
+          path: PHOTOS_PATH,
           name: photoFileName(subFolder, i),
           url,
         })
@@ -141,12 +143,14 @@ export function collectInspectionPhotos(inspectionData) {
     const itemId = parts[0]
     const dir = parts.slice(1).join('_')
     const dirSlug = slugify(dir)
-    const itemFolder = sanitizePathSegment(ELEV_ITEM_FOLDER[itemId] || slugify(itemId))
+    const itemFolder = sanitizePathSegment(ELEV_ITEM_LEAF[itemId] || slugify(itemId))
+    // Include direction so front/rear of the same item do not collide in photos/
+    const elevLeaf = sanitizePathSegment(`${dirSlug}_${itemFolder}`)
     ;(cell.photos || []).forEach((url, i) => {
       if (!url) return
       photos.push({
-        path: ['photos', '2-elevations', dirSlug, itemFolder],
-        name: photoFileName(itemFolder, i),
+        path: PHOTOS_PATH,
+        name: photoFileName(elevLeaf, i),
         url,
       })
     })
@@ -154,10 +158,10 @@ export function collectInspectionPhotos(inspectionData) {
       ;(sub.photos || []).forEach((url, i) => {
         if (!url) return
         const subFolder = sanitizePathSegment(
-          `${subIndex + 1}-${slugify(itemFolder.replace(/s$/, ''))}`,
+          `${dirSlug}_${subIndex + 1}-${slugify(itemFolder.replace(/s$/, ''))}`,
         )
         photos.push({
-          path: ['photos', '2-elevations', dirSlug, itemFolder, subFolder],
+          path: PHOTOS_PATH,
           name: photoFileName(subFolder, i),
           url,
         })
@@ -166,13 +170,12 @@ export function collectInspectionPhotos(inspectionData) {
   }
 
   for (const [itemId, item] of Object.entries(inspectionData?.exteriorData || {})) {
-    const pathParts = EXTERIOR_ITEM_PATH[itemId]
-    if (!pathParts) continue
-    const [section, itemFolder] = pathParts.map(sanitizePathSegment)
+    const itemFolder = sanitizePathSegment(EXTERIOR_ITEM_LEAF[itemId] || '')
+    if (!itemFolder) continue
     ;(item.photos || []).forEach((url, i) => {
       if (!url) return
       photos.push({
-        path: ['photos', '3-exterior', section, itemFolder],
+        path: PHOTOS_PATH,
         name: photoFileName(itemFolder, i),
         url,
       })
@@ -185,7 +188,7 @@ export function collectInspectionPhotos(inspectionData) {
     ;(room.photos || []).forEach((url, i) => {
       if (!url) return
       photos.push({
-        path: ['photos', '4-interior', roomSlug],
+        path: PHOTOS_PATH,
         name: photoFileName(roomSlug, i),
         url,
       })
