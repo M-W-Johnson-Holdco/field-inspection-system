@@ -1097,6 +1097,12 @@ button:disabled {
   color: #6d28d9;
 }
 
+.app-button--measure {
+  border: 1px solid #99f6e4;
+  background: #f0fdfa;
+  color: #0f766e;
+}
+
 .app-button--access {
   border: 1px solid #cbd5e1;
   background: #f8fafc;
@@ -1688,6 +1694,92 @@ button:disabled {
   padding: 0 16px 16px;
 }
 
+.measure-converter-modal {
+  max-width: 420px;
+}
+
+.measure-converter-modal__body {
+  padding: 0 16px 16px;
+}
+
+.measure-converter-modal__intro {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.measure-converter-modal__inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.measure-converter-modal__units {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.measure-converter-modal__unit-btn {
+  appearance: none;
+  border: 1px solid var(--border, #d1d5db);
+  background: #fff;
+  color: var(--text, #111827);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.measure-converter-modal__unit-btn--active {
+  border-color: #0f766e;
+  background: #f0fdfa;
+  color: #0f766e;
+}
+
+.measure-converter-modal__result {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.measure-converter-modal__result-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.measure-converter-modal__result-value {
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.measure-converter-modal__result-value--empty {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.measure-converter-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 0 16px 16px;
+}
+
 .import-modal {
   max-width: 520px;
 }
@@ -1882,6 +1974,7 @@ button:disabled {
 .image-import-modal__pool-header .app-button,
 .image-import-modal__assign-here.app-button,
 .access-admin-modal__actions .app-button,
+.measure-converter-modal__actions .app-button,
 .modal-confirm__actions .app-button,
 .import-modal__error .app-button,
 .xactimate-export-modal__footer .app-button {
