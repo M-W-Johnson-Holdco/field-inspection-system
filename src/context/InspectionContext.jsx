@@ -2189,6 +2189,7 @@ export function InspectionProvider({ children }) {
             delete fields['Width (ft)']
           } else {
             delete fields['Diameter (in)']
+            delete fields['Circumference (in)']
           }
         }
         return { ...sub, fields }

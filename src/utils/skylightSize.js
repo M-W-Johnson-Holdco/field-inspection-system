@@ -5,8 +5,10 @@ function roundTenths(value) {
   return Number.isInteger(value) ? value : Math.round(value * 10) / 10
 }
 
-/** Circumference in inches from tubular diameter (π × d). */
+/** Circumference in inches — stored value or derived from tubular diameter (π × d). */
 export function skylightCircumferenceIn(fields = {}) {
+  const stored = Number(fields['Circumference (in)'])
+  if (Number.isFinite(stored) && stored > 0) return roundTenths(stored)
   const diameter = Number(fields['Diameter (in)'])
   if (!Number.isFinite(diameter) || diameter <= 0) return null
   return roundTenths(Math.PI * diameter)

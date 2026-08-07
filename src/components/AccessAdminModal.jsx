@@ -29,6 +29,7 @@ export default function AccessAdminModal({ onClose }) {
   )
   const [newEmail, setNewEmail] = useState('')
   const [error, setError] = useState(null)
+  const [saveNotice, setSaveNotice] = useState(null)
   const [saving, setSaving] = useState(false)
 
   const sortedUsers = useMemo(
@@ -39,6 +40,7 @@ export default function AccessAdminModal({ onClose }) {
   function addUser() {
     const email = normalizeEmail(newEmail)
     setError(null)
+    setSaveNotice(null)
     if (!email) {
       setError('Enter an email address.')
       return
@@ -61,6 +63,7 @@ export default function AccessAdminModal({ onClose }) {
       return
     }
     setError(null)
+    setSaveNotice(null)
     setDraftUsers(current =>
       current.map(entry => (entry.email === email ? { ...entry, role } : entry))
     )
@@ -76,6 +79,7 @@ export default function AccessAdminModal({ onClose }) {
       return
     }
     setError(null)
+    setSaveNotice(null)
     setDraftUsers(current => current.filter(entry => entry.email !== email))
   }
 
@@ -83,11 +87,13 @@ export default function AccessAdminModal({ onClose }) {
     const token = await ensureAccessToken()
     if (!token) {
       setError('Google session expired. Sign in again, then save.')
+      setSaveNotice(null)
       return
     }
 
     setSaving(true)
     setError(null)
+    setSaveNotice(null)
     try {
       const selfEmail = normalizeEmail(user?.email)
       let users = draftUsers
@@ -127,7 +133,7 @@ export default function AccessAdminModal({ onClose }) {
         }
         await updatePermissions(withBootstrapAdmins({ users }))
       }
-      onClose()
+      setSaveNotice('Access settings saved')
     } catch (err) {
       console.error('Failed to save access settings:', err)
       const detail = String(err?.message || '').trim()
@@ -181,6 +187,11 @@ export default function AccessAdminModal({ onClose }) {
           </div>
 
           {error && <p className="access-admin-modal__error">{error}</p>}
+          {saveNotice && (
+            <p className="access-admin-modal__success" role="status" aria-live="polite">
+              {saveNotice}
+            </p>
+          )}
 
           <div className="access-admin-modal__list">
             {sortedUsers.length === 0 && (

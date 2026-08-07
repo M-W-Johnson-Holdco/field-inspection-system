@@ -117,11 +117,14 @@ function FieldRenderer({ field, value, onChange, subFields, onSubFieldChange }) 
 
   if (t === 'diameter') {
     const diameterKey = field.diameterKey || 'Diameter (in)'
+    const circumferenceKey = field.circumferenceKey || 'Circumference (in)'
     return (
       <DiameterCircInput
         field={field}
         diameterValue={subFields?.[diameterKey] ?? value ?? ''}
+        circumferenceValue={subFields?.[circumferenceKey] ?? ''}
         onDiameterChange={val => onSubFieldChange(diameterKey, val)}
+        onCircumferenceChange={val => onSubFieldChange(circumferenceKey, val)}
       />
     )
   }

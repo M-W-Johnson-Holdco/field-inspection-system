@@ -240,7 +240,10 @@ export const ROOF_SUBITEM_LINE_ITEMS = {
     const style = str(f, 'Style')
     if (style === 'Tubular') {
       const diameter = num(f, 'Diameter (in)')
-      const circumference = diameter != null ? Math.round(Math.PI * diameter * 10) / 10 : null
+      const storedCirc = num(f, 'Circumference (in)')
+      const circumference = storedCirc != null
+        ? storedCirc
+        : (diameter != null ? Math.round(Math.PI * diameter * 10) / 10 : null)
       const radiusIn = diameter != null ? diameter / 2 : null
       const area = radiusIn != null ? Math.round(((Math.PI * radiusIn * radiusIn) / 144) * 10) / 10 : null
       let sizeLabel = null

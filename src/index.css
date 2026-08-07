@@ -1598,6 +1598,13 @@ button:disabled {
   font-size: 13px;
 }
 
+.access-admin-modal__success {
+  margin: 0 0 12px;
+  color: var(--success, #1a7f37);
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .access-admin-modal__list {
   display: flex;
   flex-direction: column;
