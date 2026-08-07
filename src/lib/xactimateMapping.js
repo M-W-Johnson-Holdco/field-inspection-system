@@ -168,7 +168,11 @@ export const ROOF_LINE_ITEMS = {
     trade: 'Roofing', category: 'RFG',
     description: `Ridge vent - ${str(fields, 'Type') || 'unspecified'} style`,
     unit: 'LF', qty: num(fields, 'Length (LF)'),
-    damaged: yn(fields, 'Damaged'), note: yn(fields, 'Painted') ? 'Painted' : null,
+    damaged: yn(fields, 'Damaged'),
+    note: [
+      num(fields, 'Width (inches)') != null ? `Width: ${num(fields, 'Width (inches)')}"` : null,
+      yn(fields, 'Painted') ? 'Painted' : null,
+    ].filter(Boolean).join('; ') || null,
   }],
   ri7: (fields) => [{
     trade: 'Roofing', category: 'RFG',

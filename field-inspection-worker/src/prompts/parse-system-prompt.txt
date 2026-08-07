@@ -55,6 +55,7 @@ roof.edgeMaterial: "Galvanized" or "Aluminum" or "N/A"
 roof.underlaymentGrade: "Felt - 15lbs" or "Felt - 30lbs" or "Synthetic" or "Premium Synthetic" or "Unknown"
 roof.ridgeCapGrade: "3-Tab" or "H&R" or "Hi Profile" or "Impact Resistant"
 roof.ridgeVentType: "Metal" or "Shingle Over"
+roof.ridgeVentWidth: ridge vent width in inches (number)
 roof.starterStyle: "Starter Strip" or "3-Tab" or "Double Layer/Premium" or "Double Laminate"
 roof.valleyStyle: array (Valley Grade), values from ["Ice & Water","Valley Metal","W-Valley","N/A"] — "N/A" is exclusive (do not combine with other grades)
 roof.valleyChooseOne: "Closed Cut" or "Weaved" or "N/A" — Choose Ice & Water Style; only when valleyStyle includes "Ice & Water"; otherwise null
@@ -278,7 +279,7 @@ Return this exact structure (use null for any scalar field not mentioned, and []
     "windVaneDamaged": null, "windVaneDamageDescription": null,
     "cupolaQty": null, "cupolaDnR": null, "cupolaDamaged": null, "cupolaDamageDescription": null, "cupolaNotes": null,
     "turretQty": null, "turretGrade": null, "turretCapExisting": null, "turretCapGrade": null, "turretCapPainted": null, "turretNotes": null,
-    "ridgeVentLF": null, "ridgeVentType": null, "ridgeVentPainted": null,
+    "ridgeVentLF": null, "ridgeVentWidth": null, "ridgeVentType": null, "ridgeVentPainted": null,
     "ridgeVentDamaged": null, "ridgeVentDamageDescription": null,
     "boxVentQty": null, "boxVentMaterial": null, "boxVentPainted": null,
     "boxVentDamaged": null, "boxVentDamageDescription": null,

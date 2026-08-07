@@ -50,6 +50,7 @@ const ROOF_MAP = [
   { key: 'turretCapPainted',        itemId: 'ri32', label: 'Painted' },
   { key: 'turretNotes',             itemId: 'ri32', label: '_notes' },
   { key: 'ridgeVentLF',             itemId: 'ri6',  label: 'Length (LF)' },
+  { key: 'ridgeVentWidth',          itemId: 'ri6',  label: 'Width (inches)' },
   { key: 'ridgeVentType',           itemId: 'ri6',  label: 'Type' },
   { key: 'ridgeVentPainted',        itemId: 'ri6',  label: 'Painted' },
   { key: 'ridgeVentDamaged',        itemId: 'ri6',  label: 'Damaged' },

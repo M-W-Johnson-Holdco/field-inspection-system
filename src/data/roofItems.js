@@ -137,6 +137,7 @@ export const ROOF_ITEMS = [
       { t: 'radio', l: 'Type', o: ['Metal', 'Shingle Over'] },
       { t: 'yn', l: 'Painted' },
       { t: 'num', l: 'Length (LF)', lfFeetOnly: true },
+      { t: 'num', l: 'Width (inches)', full: true },
       { t: 'yn', l: 'Damaged' },
     ],
   },
