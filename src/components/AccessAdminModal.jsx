@@ -86,7 +86,7 @@ export default function AccessAdminModal({ onClose }) {
   async function handleSave() {
     const token = await ensureAccessToken()
     if (!token) {
-      setError('Google session expired. Sign in again, then save.')
+      setError('Session expired. Sign in again, then save.')
       setSaveNotice(null)
       return
     }
@@ -128,7 +128,7 @@ export default function AccessAdminModal({ onClose }) {
         if (!(err instanceof TokenExpiredError)) throw err
         const recovered = await recoverFromTokenExpiry()
         if (!recovered) {
-          setError('Google session expired. Sign in again, then save.')
+          setError('Session expired. Sign in again, then save.')
           return
         }
         await updatePermissions(withBootstrapAdmins({ users }))

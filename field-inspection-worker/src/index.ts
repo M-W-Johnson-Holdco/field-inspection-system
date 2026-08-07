@@ -2,9 +2,10 @@ import systemPrompt from './prompts/parse-system-prompt.txt'
 import measureFenceSystemPrompt from './prompts/measure-fence-system-prompt.txt'
 import type { Env } from './types'
 import { loadPermissions, savePermissions, withBootstrapAdmins, sanitizePermissions } from './access'
-import { AuthError, authErrorResponse, requireAuthUser } from './auth'
+import { AuthError, authErrorResponse, requireAuthUser, requireGoogleAuthUser } from './auth'
 import { emptyCors, getCorsHeaders, jsonResponse } from './cors'
 import { folderPathParams, getInspection, listInspections, putInspection } from './inspections'
+import { createSessionToken } from './session'
 
 export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
@@ -25,6 +26,9 @@ export default {
 
 		// ── Authenticated inspection / permissions API ──
 		try {
+			if (pathname === '/api/session' && request.method === 'POST') {
+				return await handleCreateSession(request, env, origin)
+			}
 			if (pathname === '/api/permissions') {
 				return await handlePermissions(request, env, origin)
 			}
@@ -61,6 +65,23 @@ export default {
 			return jsonResponse({ error: 'Internal server error' }, origin, 500)
 		}
 	},
+}
+
+async function handleCreateSession(request: Request, env: Env, origin: string): Promise<Response> {
+	const user = await requireGoogleAuthUser(request, env)
+	const session = await createSessionToken(user, env)
+	return jsonResponse({
+		token: session.token,
+		expiresAt: session.expiresAt,
+		expiresIn: session.expiresIn,
+		user: {
+			email: user.email,
+			name: user.name,
+			picture: user.picture || null,
+			role: user.role,
+			org: user.org,
+		},
+	}, origin)
 }
 
 async function handlePermissions(request: Request, env: Env, origin: string): Promise<Response> {

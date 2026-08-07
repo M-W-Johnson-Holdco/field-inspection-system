@@ -1,6 +1,7 @@
 export interface Env {
 	ANTHROPIC_API_KEY: string
 	GOOGLE_CLIENT_ID: string
+	SESSION_SECRET: string
 	INSPECTIONS: R2Bucket
 	PERMISSIONS: KVNamespace
 }
