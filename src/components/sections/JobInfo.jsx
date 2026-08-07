@@ -212,9 +212,13 @@ export default function JobInfo() {
   }
 
   function toggleContact(val) {
-    const cur = ji.preferredContact || []
-    updateJobInfo('preferredContact',
-      cur.includes(val) ? cur.filter(v => v !== val) : [...cur, val]
+    const cur = Array.isArray(ji.preferredContact) ? ji.preferredContact : []
+    const nextSelected = cur.includes(val)
+      ? cur.filter(v => v !== val)
+      : [...cur, val]
+    updateJobInfo(
+      'preferredContact',
+      CONTACT_OPTIONS.filter(option => nextSelected.includes(option)),
     )
   }
 
@@ -277,6 +281,16 @@ export default function JobInfo() {
   const addressErrors = validateAddressParts(addressDraft)
   const showAddressErrors = addressTouched && hasAddressErrors(addressErrors)
   const addressCanComplete = !hasAddressErrors(addressErrors)
+  const preferredContactSelected = Array.isArray(ji.preferredContact) ? ji.preferredContact : []
+  const preferredContactOrdered = CONTACT_OPTIONS.filter(option => preferredContactSelected.includes(option))
+  const preferredContactDisplayValue = preferredContactOrdered.length ? '__selected__' : ''
+  const preferredContactDisplayLabel = preferredContactOrdered.length
+    ? preferredContactOrdered.join(', ')
+    : 'Select'
+  const preferredContactSelectClass = withSelectPlaceholderClass(
+    'field-select compact-select field-select--native-multi-overlay',
+    preferredContactDisplayValue,
+  )
   const lossTypeSelected = Array.isArray(ji.lossType) ? ji.lossType : []
   const lossTypeOrdered = LOSS_TYPE_OPTIONS.filter(option => lossTypeSelected.includes(option))
   const lossTypeDisplayValue = lossTypeOrdered.length ? '__selected__' : ''
@@ -336,28 +350,30 @@ export default function JobInfo() {
                 )}
 
                 <div className="form-field form-field--full">
-                  <label className="form-label">Preferred Contact Method</label>
-                  <details className="multi-select multi-select--field-select">
-                    <summary className={withSelectPlaceholderClass('field-select compact-select', (ji.preferredContact || []).length ? ji.preferredContact.join(', ') : '')}>
-                      {(ji.preferredContact || []).length ? ji.preferredContact.join(', ') : 'Select'}
-                    </summary>
-                    <div
-                      className="multi-select__menu"
-                      onMouseDown={e => e.preventDefault()}
-                      onClick={e => e.stopPropagation()}
+                  <label className="form-label">
+                    Preferred Contact Method
+                    <span className="form-label__hint"> (SELECT ALL THAT APPLY)</span>
+                  </label>
+                  <div className={`native-multi-face${preferredContactOrdered.length ? '' : ' native-multi-face--placeholder'}`}>
+                    <span className="native-multi-face__text">{preferredContactDisplayLabel}</span>
+                    <select
+                      className={preferredContactSelectClass}
+                      value={preferredContactDisplayValue}
+                      aria-label="Preferred Contact Method"
+                      onChange={e => {
+                        const next = e.target.value
+                        if (!next || next === '__selected__') return
+                        toggleContact(next)
+                      }}
                     >
-                      {CONTACT_OPTIONS.map(opt => (
-                        <label key={opt} className="multi-select__option">
-                          <input
-                            type="checkbox"
-                            checked={(ji.preferredContact || []).includes(opt)}
-                            onChange={() => toggleContact(opt)}
-                          />
-                          {opt}
-                        </label>
+                      <option value={preferredContactDisplayValue} hidden>{preferredContactDisplayLabel}</option>
+                      {CONTACT_OPTIONS.map(option => (
+                        <option key={option} value={option}>
+                          {preferredContactOrdered.includes(option) ? `✓ ${option}` : option}
+                        </option>
                       ))}
-                    </div>
-                  </details>
+                    </select>
+                  </div>
                 </div>
               </div>
             </JobInfoGroup>

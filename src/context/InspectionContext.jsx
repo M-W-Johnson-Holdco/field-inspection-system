@@ -1926,7 +1926,8 @@ export function InspectionProvider({ children }) {
   const [expandedSections, setExpandedSectionsState] = useState({})
   const [saveStatus, setSaveStatus] = useState('saved')
   const [driveSaveStatus, setDriveSaveStatus] = useState('unsaved')
-  // Drive folder currently open in the app (null = new / not yet saved to Drive).
+  // Inspection currently open in the app (null = new / not yet saved).
+  // Value is `ORG/folderName` (R2 storage key), persisted in local snapshots.
   const [driveFolderId, setDriveFolderIdState] = useState(null)
   // Lifted out of AIParseSection so the transcript, status, and flags survive switching tabs away and back.
   const [aiParseState, setAiParseState] = useState({ transcript: '', status: 'idle', statusMsg: '', flags: [] })

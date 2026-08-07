@@ -4037,6 +4037,25 @@ summary.field-select.field-select--placeholder {
   text-align: center;
 }
 
+.ri-size-counters.ri-size-counters--equal-4 {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  width: 100%;
+  max-width: 100%;
+}
+
+.ri-size-counters.ri-size-counters--equal-4 .ri-size-counter {
+  width: 100%;
+  min-width: 0;
+  justify-content: center;
+  gap: 6px;
+}
+
+.ri-size-counters.ri-size-counters--equal-4 .ri-size-counter__label,
+.ri-size-counters.ri-size-counters--equal-4 .ri-size-counter__value {
+  text-align: center;
+}
+
 .ri-size-counters.ri-size-counters--equal-2 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -4681,6 +4700,17 @@ summary.field-select.field-select--placeholder {
   }
 
   .ri-size-counters.ri-size-counters--equal-2 .ri-size-counter {
+    flex: none;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .ri-size-counters.ri-size-counters--equal-4 {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .ri-size-counters.ri-size-counters--equal-4 .ri-size-counter {
     flex: none;
     width: 100%;
     justify-content: center;

@@ -199,7 +199,7 @@ export function collectInspectionPhotos(inspectionData) {
 }
 
 /**
- * Strip photo arrays from a deep-cloned inspection payload (for Drive JSON upload).
+ * Strip photo arrays from a deep-cloned inspection payload (for JSON upload).
  * Mutates `clean` in place.
  */
 export function stripPhotosFromInspection(clean) {

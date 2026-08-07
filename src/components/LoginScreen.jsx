@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import tcLogo from '../assets/tc_logo.png'
 import ptLogo from '../assets/pt_logo.png'
 
-const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive'
+const AUTH_SCOPE = 'openid email profile'
 
 export default function LoginScreen() {
   const { login } = useAuth()
@@ -12,7 +12,7 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false)
 
   const googleLogin = useGoogleLogin({
-    scope: `openid email profile ${DRIVE_SCOPE}`,
+    scope: AUTH_SCOPE,
     onSuccess: async (tokenResponse) => {
       try {
         const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {

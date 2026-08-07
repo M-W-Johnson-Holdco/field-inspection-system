@@ -16,7 +16,7 @@ export default function ReAuthModal() {
         <div className="reauth-modal__icon">⚠️</div>
         <h2 className="reauth-modal__title">Session Expired</h2>
         <p className="reauth-modal__msg">
-          Your Google Drive access has expired. Sign in again to continue saving and opening inspections.
+          Your Google session has expired. Sign in again to continue saving and opening inspections.
         </p>
         <button className="reauth-modal__btn" onClick={handleSignIn}>
           <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style={{ flexShrink: 0 }}>

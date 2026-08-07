@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useInspection } from '../context/InspectionContext'
 import { useAuth } from '../context/AuthContext'
-import { saveInspectionToDrive, TokenExpiredError } from '../lib/driveService'
+import { saveInspection, TokenExpiredError } from '../lib/inspectionApi'
 import OpenInspectionModal from './OpenInspectionModal'
 import AccessAdminModal from './AccessAdminModal'
 import ImportChooserModal from './ImportChooserModal'
@@ -241,7 +241,7 @@ export default function ActionBar() {
     scrollToSectionTop()
   }
 
-  async function handleSaveToDrive() {
+  async function handleSaveInspection() {
     const saveError = getJobInfoSaveError(data.jobInfo)
     if (saveError) {
       window.alert(saveError.message)
@@ -256,27 +256,27 @@ export default function ActionBar() {
     setDriveStatus('saving')
     setDriveSaveStatus('saving')
     try {
-      const { folderId, folderName, photoCount } = await saveInspectionToDrive(token, data, user?.fullName, user?.email)
+      const { folderId, folderName, photoCount } = await saveInspection(token, data, user?.fullName, user?.email)
       setDriveFolderId(folderId)
       setDriveStatus('done')
       setDriveSaveStatus('saved')
       setTimeout(() => setDriveStatus('idle'), 3000)
-      console.info(`Saved to Drive: ${folderName} (${photoCount} photos)`)
+      console.info(`Saved inspection: ${folderName} (${photoCount} photos)`)
     } catch (err) {
-      console.error('Drive save failed:', err)
+      console.error('Inspection save failed:', err)
       if (err instanceof TokenExpiredError) {
         const recovered = await recoverFromTokenExpiry()
         if (recovered) {
           try {
-            const { folderId, folderName, photoCount } = await saveInspectionToDrive(recovered, data, user?.fullName, user?.email)
+            const { folderId, folderName, photoCount } = await saveInspection(recovered, data, user?.fullName, user?.email)
             setDriveFolderId(folderId)
             setDriveStatus('done')
             setDriveSaveStatus('saved')
             setTimeout(() => setDriveStatus('idle'), 3000)
-            console.info(`Saved to Drive: ${folderName} (${photoCount} photos)`)
+            console.info(`Saved inspection: ${folderName} (${photoCount} photos)`)
             return
           } catch (retryErr) {
-            console.error('Drive save retry failed:', retryErr)
+            console.error('Inspection save retry failed:', retryErr)
           }
         }
         setDriveStatus('idle')
@@ -445,9 +445,9 @@ export default function ActionBar() {
           <button
             className="app-button app-button--save action-bar__btn--desktop-only"
             type="button"
-            aria-label="Save to Google Drive"
-            title="Save to Google Drive"
-            onClick={handleSaveToDrive}
+            aria-label="Save inspection"
+            title="Save inspection"
+            onClick={handleSaveInspection}
             disabled={driveStatus === 'saving'}
           >
             <SaveIcon className="app-button__icon" aria-hidden="true" />
@@ -517,8 +517,8 @@ export default function ActionBar() {
             <button
               className="app-button app-button--access"
               type="button"
-              aria-label="Drive access settings"
-              title="Drive access settings"
+              aria-label="Access settings"
+              title="Access settings"
               onClick={() => setShowAccessAdmin(true)}
             >
               <Shield className="app-button__icon" aria-hidden="true" />
@@ -543,7 +543,7 @@ export default function ActionBar() {
           driveStatus={driveStatus}
           onSave={() => {
             setShowFileMenu(false)
-            handleSaveToDrive()
+            handleSaveInspection()
           }}
           onOpen={() => {
             setShowFileMenu(false)
@@ -662,8 +662,8 @@ export default function ActionBar() {
               <p><ArrowLeft className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Back:</strong> Go to the previous inspection section.</span></p>
               <p><ArrowRight className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Next:</strong> Go to the next inspection section.</span></p>
               <p><Folder className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>File (mobile):</strong> Opens Save, Open, Import, Export, New, and Reset.</span></p>
-              <p><Save className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Save:</strong> Save the current inspection to Google Drive.</span></p>
-              <p><FolderOpen className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Open:</strong> Open a saved inspection from Google Drive.</span></p>
+              <p><Save className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Save:</strong> Save the current inspection to cloud storage.</span></p>
+              <p><FolderOpen className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Open:</strong> Open a previously saved inspection.</span></p>
               <p><FileInput className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Import:</strong> Choose measurements (EagleView XML) or bulk-assign photos to form categories.</span></p>
               <p><ExternalLink className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Export:</strong> Choose Export Preview (PDF/CSV/JSON) or Save Photos (share to Photos on phone, or download a ZIP on computer).</span></p>
               <p><FilePlus className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>New:</strong> Start a new inspection form.</span></p>

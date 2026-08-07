@@ -15,6 +15,7 @@ import DimensionLwInput from '../DimensionLwInput'
 import useExpandedSection from '../../hooks/useExpandedSection'
 import { countShutterSizeBuckets, shutterAreaSqIn, shutterSizeBucket, SHUTTER_SIZE_LEGEND } from '../../utils/shutterSize'
 import { countScreenSizeBuckets, screenAreaSqFt, screenSizeBucket, SCREEN_SIZE_LEGEND } from '../../utils/screenSize'
+import { sizeCounterLabel } from '../../utils/sizeCounterLabels'
 import { countWindowSizeBuckets, windowAreaSqFt, windowSizeBucket, WINDOW_SIZE_LEGEND } from '../../utils/windowSize'
 
 function elevSizeCounterConfig(itemDef, subItems) {
@@ -38,10 +39,10 @@ function elevSizeCounterConfig(itemDef, subItems) {
   }
   if (itemDef.screenSizeCounters) {
     return {
-      sizes: ['Small', 'Medium', 'Large'],
+      sizes: ['Small', 'Medium', 'Large', 'X-Large'],
       counts: countScreenSizeBuckets(subItems),
       legend: SCREEN_SIZE_LEGEND,
-      gridClass: 'ri-size-counters--equal',
+      gridClass: 'ri-size-counters--equal-4',
       ariaLabel: 'Window screen counts by size',
     }
   }
@@ -491,7 +492,7 @@ function ElevItem({ itemDef, direction, trigPhoto }) {
                   >
                     {sizeCounters.sizes.map(size => (
                       <div key={size} className="ri-size-counter" aria-label={`${size}: ${sizeCounters.counts[size]}`}>
-                        <span className="ri-size-counter__label">{size}</span>
+                        <span className="ri-size-counter__label">{sizeCounterLabel(size)}</span>
                         <span className="ri-size-counter__value">{sizeCounters.counts[size]}</span>
                       </div>
                     ))}

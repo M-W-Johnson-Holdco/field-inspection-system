@@ -9,6 +9,18 @@
 	"rules": [
 		{ "type": "Text", "globs": ["**/*.txt"], "fallthrough": true }
 	],
+	"r2_buckets": [
+		{
+			"binding": "INSPECTIONS",
+			"bucket_name": "field-inspections"
+		}
+	],
+	"kv_namespaces": [
+		{
+			"binding": "PERMISSIONS",
+			"id": "4d5de953acde4363b4b27bc84020afbb"
+		}
+	],
 	"migrations": [
 		{ "tag": "v1", "new_sqlite_classes": ["MyDurableObject"] },
 		{ "tag": "v2", "deleted_classes": ["MyDurableObject"] }

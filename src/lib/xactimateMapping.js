@@ -412,9 +412,10 @@ export const ELEV_LINE_ITEMS = {
     const area = length != null && width != null ? length * width : null
     let sizeLabel = null
     if (area != null) {
-      if (area <= 9) sizeLabel = 'Small (≤9 ft²)'
-      else if (area < 17) sizeLabel = 'Medium (10–16 ft²)'
-      else sizeLabel = 'Large (17+ ft²)'
+      if (area <= 9) sizeLabel = 'Small (1–9 ft²)'
+      else if (area <= 16) sizeLabel = 'Medium (10–16 ft²)'
+      else if (area <= 25) sizeLabel = 'Large (17–25 ft²)'
+      else sizeLabel = 'X-Large (26–32+ ft²)'
     }
     const type = str(fields, 'Type') || str(parentFields, 'Type') || 'unspecified'
     const grade = type === 'Solar'

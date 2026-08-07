@@ -58,7 +58,7 @@ export default function FileMenuModal({
               <span className="import-chooser-modal__option-title">
                 {saving ? 'Saving…' : driveStatus === 'done' ? 'Saved' : driveStatus === 'error' ? 'Save failed' : 'Save'}
               </span>
-              <span className="import-chooser-modal__option-hint">Save to Google Drive</span>
+              <span className="import-chooser-modal__option-hint">Save to cloud storage</span>
             </button>
 
             <button

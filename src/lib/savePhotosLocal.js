@@ -1,6 +1,6 @@
 import JSZip from 'jszip'
 import { collectInspectionPhotos } from './inspectionPhotos'
-import { folderName } from './driveService'
+import { folderName } from './inspectionApi'
 
 function dataUrlToBlob(dataUrl) {
   const [header, b64] = String(dataUrl || '').split(',')

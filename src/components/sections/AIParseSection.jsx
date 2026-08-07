@@ -147,6 +147,7 @@ const ELEV_MAP = [
   { key: 'screenSmallQty',       itemId: 'ev5',  label: '_smallQty' },
   { key: 'screenMediumQty',      itemId: 'ev5',  label: '_mediumQty' },
   { key: 'screenLargeQty',       itemId: 'ev5',  label: '_largeQty' },
+  { key: 'screenXLargeQty',      itemId: 'ev5',  label: '_xLargeQty' },
   { key: 'gableVentQty',         itemId: 'ev13', label: 'Qty' },
   { key: 'gableVentMaterial',    itemId: 'ev13', label: 'Material' },
   { key: 'gableVentDamage',      itemId: 'ev13', label: 'Damaged' },
@@ -303,6 +304,7 @@ function normalizeScreenParseFields(fields = {}) {
   delete next._smallQty
   delete next._mediumQty
   delete next._largeQty
+  delete next._xLargeQty
   return next
 }
 
@@ -494,7 +496,8 @@ function applyParsed(parsed, ctx) {
           const small = Math.floor(Number(fields._smallQty)) || 0
           const medium = Math.floor(Number(fields._mediumQty)) || 0
           const large = Math.floor(Number(fields._largeQty)) || 0
-          const sizeTotal = small + medium + large
+          const xLarge = Math.floor(Number(fields._xLargeQty)) || 0
+          const sizeTotal = small + medium + large + xLarge
           if (sizeTotal > 0) count = sizeTotal
           cardFields = normalizeScreenParseFields(cardFields)
         } else if (cellKey.startsWith('ev6_')) {

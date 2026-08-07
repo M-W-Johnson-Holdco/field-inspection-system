@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Search, X, FolderOpen, FilePlus2, Loader } from 'lucide-react'
-import { listInspectionFolders, loadInspectionFromDrive, TokenExpiredError } from '../lib/driveService'
+import { listInspectionFolders, loadInspection, TokenExpiredError } from '../lib/inspectionApi'
 import { useAuth } from '../context/AuthContext'
 import { usePermissions } from '../context/PermissionsContext'
 import { ROLES, isInspectionOwnedByUser } from '../lib/accessConfig'
@@ -21,12 +21,12 @@ function parseFolder(folder) {
     id: folder.id,
     name: folder.name,
     org: folder.org || '',
-    ownerEmail: folder.ownerEmail || folder.appProperties?.ownerEmail || '',
+    ownerEmail: folder.ownerEmail || '',
     date: parts[0] || '',
     address: parts[1] || '',
     customer: parts[2] || '',
-    inspector: parts[3] || '',
-    createdTime: folder.createdTime,
+    inspector: parts[3] || folder.inspector || '',
+    createdTime: folder.createdTime || folder.savedAt,
   }
 }
 
@@ -80,7 +80,7 @@ export default function OpenInspectionModal({ saveStatus, currentFolderId = null
         }
         let files
         try {
-          files = await listInspectionFolders(token, viewableOrgs)
+          files = await listInspectionFolders(token)
         } catch (err) {
           if (!(err instanceof TokenExpiredError)) throw err
           token = await recoverFromTokenExpiry()
@@ -88,7 +88,7 @@ export default function OpenInspectionModal({ saveStatus, currentFolderId = null
             if (!cancelled) onClose()
             return
           }
-          files = await listInspectionFolders(token, viewableOrgs)
+          files = await listInspectionFolders(token)
         }
         if (cancelled) return
         let next = files.map(parseFolder).sort(sortByNewestInspection)
@@ -162,7 +162,7 @@ export default function OpenInspectionModal({ saveStatus, currentFolderId = null
       }
       let data
       try {
-        data = await loadInspectionFromDrive(token, folder.id)
+        data = await loadInspection(token, folder.id)
       } catch (err) {
         if (!(err instanceof TokenExpiredError)) throw err
         token = await recoverFromTokenExpiry()
@@ -170,7 +170,7 @@ export default function OpenInspectionModal({ saveStatus, currentFolderId = null
           onClose()
           return
         }
-        data = await loadInspectionFromDrive(token, folder.id)
+        data = await loadInspection(token, folder.id)
       }
       onLoad(data, folder.id)
     } catch (err) {
