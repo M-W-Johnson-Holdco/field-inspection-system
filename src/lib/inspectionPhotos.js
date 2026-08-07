@@ -46,6 +46,7 @@ const ROOF_ITEM_LEAF = {
   ri14: 'skylights',
   ri15: 'rain_diverter',
   ri16: 'power_meter_mast',
+  ri29: 'chimney_cover',
   ri17: 'chimney_flashing',
   ri18: 'step_flashing',
   ri19: 'counter_flashing',
@@ -55,6 +56,9 @@ const ROOF_ITEM_LEAF = {
   ri22: 'low_slope',
   ri23: 'other_structures',
   ri24: 'solar_panels',
+  ri30: 'wind_vane',
+  ri31: 'cupola',
+  ri32: 'turret',
 }
 
 // Maps elevation item IDs → leaf name used in photoFileName

@@ -3,7 +3,6 @@ import { useInspection } from '../../context/InspectionContext'
 const NOTES_FIELDS = [
   { key: 'summary',   label: 'Overall Inspection Summary',                              rows: 4, placeholder: 'Overall condition of the property, visible storm damage, initial assessment...' },
   { key: 'concerns',  label: 'Areas of Concern',                                        rows: 3, placeholder: 'Pre-existing damage, active leaks, structural concerns unrelated to storm...' },
-  { key: 'homeage',   label: 'Age of Home',                                             rows: 1, placeholder: 'Estimated or confirmed year built...' },
   { key: 'crosssell', label: 'Cross-Sell Opportunity',                                  rows: 2, placeholder: 'Siding, gutters, windows, solar, other trades observed that may qualify...' },
   { key: 'roof',      label: 'Roof Condition Notes',                                    rows: 3, placeholder: 'Shingle damage, granule loss, bruising pattern, hail size estimate...' },
   { key: 'roofage',   label: 'Age of Roof',                                             rows: 1, placeholder: 'Estimated or confirmed install year...' },

@@ -55,10 +55,14 @@ roof.edgeMaterial: "Galvanized" or "Aluminum" or "N/A"
 roof.underlaymentGrade: "Felt - 15lbs" or "Felt - 30lbs" or "Synthetic" or "Premium Synthetic" or "Unknown"
 roof.ridgeCapGrade: "3-Tab" or "H&R" or "Hi Profile" or "Impact Resistant"
 roof.ridgeVentType: "Metal" or "Shingle Over"
-roof.starterStyle: "Starter Strip" or "3-Tab" or "Double Layer/Premium"
-roof.valleyStyle: array (Valley Material), values from ["Ice & Water","Valley Metal","W-Valley","N/A"] — "N/A" is exclusive (do not combine with other materials)
-roof.valleyChooseOne: "Cut" or "Weaved" or "N/A" — Choose Ice & Water Style; only when valleyStyle includes "Ice & Water"; otherwise null
+roof.ridgeVentWidth: ridge vent width in inches (number)
+roof.starterStyle: "Starter Strip" or "3-Tab" or "Double Layer/Premium" or "Double Laminate"
+roof.valleyStyle: array (Valley Grade), values from ["Ice & Water","Valley Metal","W-Valley","N/A"] — "N/A" is exclusive (do not combine with other grades)
+roof.valleyChooseOne: "Closed Cut" or "Weaved" or "N/A" — Choose Ice & Water Style; only when valleyStyle includes "Ice & Water"; otherwise null
+roof.valleyMetalChooseOne: "Closed Cut" or "Weaved" or "N/A" — Choose Valley Metal Style; only when valleyStyle includes "Valley Metal"; otherwise null
+roof.valleyNAChooseOne: "Closed Cut" or "Weaved" or "N/A" — Choose N/A Style; only when valleyStyle includes "N/A"; otherwise null
 roof.valleyWValleyChooseOne: "Aluminum" or "Copper" or "N/A" — Choose W-Valley Style; only when valleyStyle includes "W-Valley"; otherwise null
+roof.valleyWValleyPainted: "Yes" or "No" or "N/A" — only when valleyStyle includes "W-Valley"; otherwise null
 roof.boxVentMaterial: "Metal" or "Plastic" or "Wood" or "N/A"
 roof.powerVentMaterial: "Metal" or "Plastic" or "N/A"
 roof.kickoutsExisting: "Yes" or "No"
@@ -71,6 +75,30 @@ roof.pipeJacks[].type: "3-in-1/Neoprene" or "Lead" or "Lifetime/Silicone"
 roof.exhaustStackPainted: "Yes" or "No" for whether all exhaust stacks are painted
 roof.exhaustStacks[].size: "Small (3-4\")" or "Medium (5-7\")" or "Large (8\"+)"
 roof.exhaustStacks[].damaged: array containing any mentioned values from "Cap", "Stack", "Flange"
+roof.chimneyCoverType: "Shroud" or "Chase Cover" or "N/A"
+roof.chimneyCoverGrade: "Aluminum" or "Steel" or "Copper" or "N/A"
+roof.chimneyCoverFlue: "Yes" or "No" or "N/A"
+roof.chimneyCoverCondition: free text condition notes
+roof.chimneyCoverPainted: "Yes" or "No" or "N/A"
+roof.chimneyCoverDamaged: array containing any mentioned values from "Cover", "Flue" (empty array when none / N/A)
+roof.chimneyCoverDamageDescription: free text when Cover and/or Flue damaged; otherwise null
+roof.windVaneQty: number of wind vanes
+roof.windVaneMaterial: "Metal" or "Copper" or "N/A"
+roof.windVanePainted: "Yes" or "No" or "N/A"
+roof.windVaneDnR: "Yes" or "No" or "N/A"
+roof.windVaneDamaged: "Yes" or "No" or "N/A"
+roof.windVaneDamageDescription: free text when damaged is Yes
+roof.cupolaQty: number of cupolas
+roof.cupolaDnR: "Yes" or "No" or "N/A"
+roof.cupolaDamaged: "Yes" or "No" or "N/A"
+roof.cupolaDamageDescription: free text when damaged is Yes
+roof.cupolaNotes: free text notes
+roof.turretQty: number of turrets
+roof.turretGrade: "Metal" or "Copper" or "N/A"
+roof.turretCapExisting: "Yes" or "No" or "N/A"
+roof.turretCapGrade: "Metal" or "Copper" or "N/A" — only when turretCapExisting is "Yes"; otherwise null
+roof.turretCapPainted: "Yes" or "No" or "N/A" — only when turretCapExisting is "Yes"; otherwise null
+roof.turretNotes: free text notes
 roof.chimneyPainted: "Yes" or "No" or "N/A" for whether chimney flashing is painted (section-level, not per chimney)
 roof.chimneys[].size: "Small" (width ≤23in) or "Medium" (24-36in) or "Large" (37+in)
 roof.chimneys[].material: "Galvanized" or "Copper" or "Aluminum" or "N/A"
@@ -206,14 +234,18 @@ exterior.outdoorOther: free-text description when outdoorDamagedItems includes "
 
 jobInfo.cust: if multiple customers, separate names with a comma and space (e.g. "John Jones, Mary Jones" or "Tim Cain, Cathy Trip")
 jobInfo.residenceType: "Primary", "Secondary", or "Rental" property type
-jobInfo.hasSeparateContact: "Yes" or "No" (Yes if a separate contact person is mentioned)
+jobInfo.isMainContact: "Yes" or "No" or "N/A" — Yes if a main contact (other than/as the listed customer) should be collected
+jobInfo.contactName: main contact full name — only when isMainContact is "Yes"; otherwise null
+jobInfo.contactRelationship: relationship to property owner (free text) — only when isMainContact is "Yes"; otherwise null
 jobInfo.preferredContact: comma-separated from Phone, Email, Text
-jobInfo.contactPreferredContact: comma-separated from Phone, Email, Text (for the separate contact)
+jobInfo.contactPreferredContact: comma-separated from Phone, Email, Text (for the main contact when isMainContact is "Yes")
 jobInfo.claimFileDate: ISO date YYYY-MM-DD when the insurance claim was filed
 jobInfo.stormDate: ISO date YYYY-MM-DD when the storm or loss event occurred
-jobInfo.lossType: array containing any mentioned values from "Wind", "Hail", "Falling Objects or Debris", "Fire", "Lightning", "Ice/Snow"
+jobInfo.lossType: array containing any mentioned values from "Wind", "Hail", "Water", "Falling Objects or Debris", "Fire", "Lightning", "Ice/Snow"
 jobInfo.damageSquares: free text for damage in squares — only when lossType includes "Wind" and/or "Hail"; otherwise null. Use "N/A" if unknown.
 jobInfo.frontOfRiskDirection: one of "N", "NE", "E", "SE", "S", "SW", "W", "NW"
+jobInfo.gatedCommunity: "Yes" or "No" or "N/A"
+jobInfo.gateCode: free text gate code — only when gatedCommunity is "Yes"; otherwise null
 jobInfo.address1: street number + street name (e.g. "2214 Maple Ridge Court")
 jobInfo.address2: unit/apt/suite, if any
 jobInfo.city: city name only
@@ -228,8 +260,9 @@ Return this exact structure (use null for any scalar field not mentioned, and []
     "pm": null, "insp": null, "ins": null, "claim": null,
     "claimFileDate": null, "stormDate": null, "lossType": [], "damageSquares": null, "frontOfRiskDirection": null, "preferredContact": null, "residenceType": null,
     "tenantname": null, "tenantphone": null,
-    "hasSeparateContact": null, "contactName": null, "contactPhone": null,
-    "contactEmail": null, "contactPreferredContact": null
+    "hasSeparateContact": null, "isMainContact": null, "contactName": null, "contactRelationship": null, "contactPhone": null,
+    "contactEmail": null, "contactPreferredContact": null,
+    "gatedCommunity": null, "gateCode": null
   },
   "roof": {
     "shingleStyle": null, "metalShingleGauge": null, "stories": null, "layers": null, "pitch": null,
@@ -237,12 +270,16 @@ Return this exact structure (use null for any scalar field not mentioned, and []
     "underlaymentGrade": null, "underlaymentLayers": null,
     "ridgeCapGrade": null, "ridgeCapExposure": null, "ridgeCapDamaged": null,
     "starterStyle": null,
-    "valleyStyle": null, "valleyChooseOne": null, "valleyWValleyChooseOne": null,
+    "valleyStyle": null, "valleyChooseOne": null, "valleyMetalChooseOne": null, "valleyNAChooseOne": null, "valleyWValleyChooseOne": null, "valleyWValleyPainted": null,
     "edgeDamageDescription": null,
     "ridgeCapDamageDescription": null,
     "solarPanelQty": null, "solarPanelDamaged": null,
     "solarPanelDamageDescription": null,
-    "ridgeVentLF": null, "ridgeVentType": null, "ridgeVentPainted": null,
+    "windVaneQty": null, "windVaneMaterial": null, "windVanePainted": null, "windVaneDnR": null,
+    "windVaneDamaged": null, "windVaneDamageDescription": null,
+    "cupolaQty": null, "cupolaDnR": null, "cupolaDamaged": null, "cupolaDamageDescription": null, "cupolaNotes": null,
+    "turretQty": null, "turretGrade": null, "turretCapExisting": null, "turretCapGrade": null, "turretCapPainted": null, "turretNotes": null,
+    "ridgeVentLF": null, "ridgeVentWidth": null, "ridgeVentType": null, "ridgeVentPainted": null,
     "ridgeVentDamaged": null, "ridgeVentDamageDescription": null,
     "boxVentQty": null, "boxVentMaterial": null, "boxVentPainted": null,
     "boxVentDamaged": null, "boxVentDamageDescription": null,
@@ -265,6 +302,8 @@ Return this exact structure (use null for any scalar field not mentioned, and []
     "rainDiverterPainted": null,
     "rainDiverters": [{ "lengthLF": null }],
     "powerMeterMastQty": null,
+    "chimneyCoverType": null, "chimneyCoverGrade": null, "chimneyCoverFlue": null, "chimneyCoverCondition": null,
+    "chimneyCoverPainted": null, "chimneyCoverDamaged": [], "chimneyCoverDamageDescription": null,
     "chimneyPainted": null,
     "chimneys": [{ "size": null, "material": null, "counterFlashing": null, "cricketPresent": null, "damaged": null, "damageDescription": null, "conditionNotes": null }],
     "stepFlashingMaterial": null, "stepFlashingPainted": null, "stepFlashingDamaged": null, "stepFlashingDamageDescription": null,
@@ -357,7 +396,7 @@ Return this exact structure (use null for any scalar field not mentioned, and []
     "outdoorDamagedItems": null, "outdoorOther": null, "outdoorDamaged": null, "outdoorNotes": null,
     "deliveryPlacement": null, "landscapingProtect": null,
     "okSaturdayBuild": null, "pestControlFlashing": null, "portapottyNeeded": null,
-    "gateCode": null, "overheadClearanceIssue": null
+    "overheadClearanceIssue": null
   },
   "notes": {
     "summary": null, "concerns": null, "homeage": null, "crosssell": null,

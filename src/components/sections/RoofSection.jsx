@@ -576,13 +576,22 @@ function CheckItem({ itemDef, trigPhoto }) {
         onChange={val => {
           updateRoofField(id, f.l, val)
           if (f.l === 'Damaged') {
-            if (val === 'No' || val === 'N/A') updateRoofField(id, '_damage', 'n/a')
-            else if (val !== 'Yes') updateRoofField(id, '_damage', '')
+            if (Array.isArray(val)) {
+              if (val.length === 0) updateRoofField(id, '_damage', 'n/a')
+              else if ((item.fields['_damage'] || '') === 'n/a') updateRoofField(id, '_damage', '')
+            } else if (val === 'No' || val === 'N/A') {
+              updateRoofField(id, '_damage', 'n/a')
+            } else if (val !== 'Yes') {
+              updateRoofField(id, '_damage', '')
+            }
           }
         }}
       />
     )
   }
+
+  const damagedPartsSelected = Array.isArray(item.fields['Damaged']) && item.fields['Damaged'].length > 0
+  const showMainDamageDescription = item.fields['Damaged'] === 'Yes' || damagedPartsSelected
 
   const sizeCounts = subItemSizeCounters
     ? Object.fromEntries(
@@ -838,7 +847,7 @@ function CheckItem({ itemDef, trigPhoto }) {
                   }}
                 />
               )}
-              {item.fields['Damaged'] === 'Yes' && (
+              {showMainDamageDescription && (
                 <div className="ri-damage-row">
                   <label className="form-label">Damage Description</label>
                   <DamageDescriptionInput
