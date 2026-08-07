@@ -1,10 +1,9 @@
 export const SUBSECTIONS = {
   ri0:  '1A — General Roof',
   ri6:  '1B — Ventilation',
-  ri11: '1C — Pipe Jacks & Exhaust',
-  ri13: '1D — Kickouts',
-  ri14: '1E — Skylights & Flashings',
-  ri22: '1F — Low Slope & Other Structures',
+  ri11: '1C — Flashings',
+  ri14: '1D — Accessories',
+  ri22: '1E — Low Slope & Other Structures',
 }
 
 export const ROOF_ITEMS = [
@@ -59,7 +58,7 @@ export const ROOF_ITEMS = [
   {
     id: 'ri4', lbl: 'Starter Shingle', flags: ['P'],
     fields: [
-      { t: 'radio', l: 'Style', o: ['3-Tab', 'Starter Strip', 'Double Layer/Premium'] },
+      { t: 'radio', l: 'Style', o: ['3-Tab', 'Starter Strip', 'Double Layer/Premium', 'Double Laminate'] },
     ],
   },
   {
@@ -67,7 +66,7 @@ export const ROOF_ITEMS = [
     fields: [
       {
         t: 'multiRadio',
-        l: 'Material',
+        l: 'Grade',
         o: ['Ice & Water', 'Valley Metal', 'W-Valley', 'N/A'],
         allowNA: true,
         nativeMenu: true,
@@ -77,24 +76,59 @@ export const ROOF_ITEMS = [
       {
         t: 'select',
         l: 'Choose Ice & Water Style',
-        o: ['Select', 'Cut', 'Weaved', 'N/A'],
+        o: ['Select', 'Closed Cut', 'Weaved', 'N/A'],
         full: true,
-        showWhen: { field: 'Material', includes: 'Ice & Water' },
+        showWhen: { field: 'Grade', includes: 'Ice & Water' },
+      },
+      {
+        t: 'select',
+        l: 'Choose Valley Metal Style',
+        o: ['Select', 'Closed Cut', 'Weaved', 'N/A'],
+        full: true,
+        showWhen: { field: 'Grade', includes: 'Valley Metal' },
+      },
+      {
+        t: 'select',
+        l: 'Choose N/A Style',
+        o: ['Select', 'Closed Cut', 'Weaved', 'N/A'],
+        full: true,
+        showWhen: { field: 'Grade', includes: 'N/A' },
       },
       {
         t: 'select',
         l: 'Choose W-Valley Style',
         o: ['Select', 'Aluminum', 'Copper', 'N/A'],
         full: true,
-        showWhen: { field: 'Material', includes: 'W-Valley' },
+        showWhen: { field: 'Grade', includes: 'W-Valley' },
+      },
+      {
+        t: 'yn',
+        l: 'W-Valley Painted',
+        allowNA: true,
+        full: true,
+        noTopDivider: true,
+        showWhen: { field: 'Grade', includes: 'W-Valley' },
       },
     ],
   },
   {
-    id: 'ri24', lbl: 'Solar Panels', flags: ['P'],
+    id: 'ri21', lbl: 'Cornice Returns', flags: ['P', 'M'],
     fields: [
-      { t: 'num', l: 'Qty' },
-      { t: 'yn', l: 'Damaged' },
+      { t: 'radio', l: 'Material', o: ['3-Tab', 'Laminate', 'Metal', 'Copper'], full: true },
+      { t: 'num', l: 'Stories', p: '1', full: true },
+      { t: 'num', l: 'Qty', full: true },
+      { t: 'yn', l: 'Painted', full: true },
+      { t: 'yn', l: 'Damaged', full: true },
+    ],
+  },
+  {
+    id: 'ri28', lbl: 'Cornice Strips', flags: ['P', 'M'],
+    fields: [
+      { t: 'radio', l: 'Material', o: ['3-Tab', 'Laminate', 'Metal', 'Copper'], full: true },
+      { t: 'num', l: 'Length (LF)', lfFeetOnly: true, full: true },
+      { t: 'num', l: 'Stories', p: '1', full: true },
+      { t: 'yn', l: 'Painted', full: true },
+      { t: 'yn', l: 'Damaged', full: true },
     ],
   },
   {
@@ -104,6 +138,20 @@ export const ROOF_ITEMS = [
       { t: 'yn', l: 'Painted' },
       { t: 'num', l: 'Length (LF)', lfFeetOnly: true },
       { t: 'yn', l: 'Damaged' },
+    ],
+  },
+  {
+    id: 'ri12', lbl: 'Exhaust Stacks', flags: ['P', 'M'],
+    addMore: true,
+    addMoreLabel: 'Add Exhaust Stack',
+    subItemPhotos: true,
+    subItemDamaged: true,
+    fields: [
+      { t: 'yn', l: 'Painted', allowNA: false },
+    ],
+    subFields: [
+      { t: 'select', l: 'Size', o: ['Select', 'Small (3-4")', 'Medium (5-7")', 'Large (8"+)'], fullRow: true },
+      { t: 'multi', l: 'Damaged', o: ['Cap', 'Stack', 'Flange'], allowNA: false, halfWidthDesktop: true, nativeMenu: true },
     ],
   },
   {
@@ -178,20 +226,6 @@ export const ROOF_ITEMS = [
     ],
   },
   {
-    id: 'ri12', lbl: 'Exhaust Stacks', flags: ['P', 'M'],
-    addMore: true,
-    addMoreLabel: 'Add Exhaust Stack',
-    subItemPhotos: true,
-    subItemDamaged: true,
-    fields: [
-      { t: 'yn', l: 'Painted', allowNA: false },
-    ],
-    subFields: [
-      { t: 'select', l: 'Size', o: ['Select', 'Small (3-4")', 'Medium (5-7")', 'Large (8"+)'], fullRow: true },
-      { t: 'multi', l: 'Damaged', o: ['Cap', 'Stack', 'Flange'], allowNA: false, halfWidthDesktop: true, nativeMenu: true },
-    ],
-  },
-  {
     id: 'ri13', lbl: 'Kickouts', flags: ['P'],
     fields: [
       { t: 'yn', l: 'Existing' },
@@ -203,6 +237,80 @@ export const ROOF_ITEMS = [
       },
       { t: 'yn', l: 'Needed' },
       { t: 'yn', l: 'Painted' },
+    ],
+  },
+  {
+    id: 'ri15', lbl: 'Rain Diverter', flags: ['P', 'M'],
+    addMore: true,
+    addMoreLabel: 'Add Rain Diverter',
+    subItemPhotos: true,
+    fields: [
+      { t: 'yn', l: 'Painted', full: true },
+    ],
+    subFields: [
+      { t: 'num', l: 'Length (LF)', lfFeetOnly: true, full: true },
+    ],
+  },
+  {
+    id: 'ri29', lbl: 'Chimney Cover', flags: ['P', 'D'],
+    fields: [
+      { t: 'select', l: 'Type', o: ['Select', 'Shroud', 'Chase Cover', 'N/A'], full: true },
+      { t: 'select', l: 'Grade', o: ['Select', 'Aluminum', 'Steel', 'Copper', 'N/A'], full: true },
+      { t: 'yn', l: 'Flue', allowNA: true, full: true },
+      { t: 'txt', l: 'Condition', full: true, p: 'Describe condition...' },
+      { t: 'yn', l: 'Painted', allowNA: true, full: true },
+      {
+        t: 'multi',
+        l: 'Damaged',
+        o: ['Cover', 'Flue'],
+        allowNA: false,
+        nativeMenu: true,
+        wrapSelected: true,
+        full: true,
+        labelHint: 'SELECT ALL THAT APPLY',
+      },
+    ],
+  },
+  {
+    id: 'ri17', lbl: 'Chimney Flashing', flags: ['P', 'M'],
+    addMore: true,
+    addMoreLabel: 'Add Chimney',
+    subItemPhotos: true,
+    subItemDamaged: true,
+    subItemSizeCounters: { field: 'Size / Width', sizes: ['Small', 'Medium', 'Large'], labelSuffix: '', counterLabel: 'size', matchPrefix: true, equalWidth: true },
+    fields: [
+      { t: 'yn', l: 'Painted', full: true },
+    ],
+    subFields: [
+      { t: 'select', l: 'Size / Width', fullRow: true, o: ['Select', 'Small (width ≤23")', 'Medium (width 24"–36")', 'Large (width 37+")'] },
+      { t: 'radio', l: 'Material', o: ['Galvanized', 'Copper', 'Aluminum'], full: true },
+      { t: 'radio', l: 'Counter Flashing', o: ['Replace', 'Reuse'], full: true },
+      { t: 'yn', l: 'Cricket Present', full: true },
+      { t: 'yn', l: 'Damaged', full: true },
+    ],
+  },
+  {
+    id: 'ri18', lbl: 'Step Flashing', flags: ['P', 'M'],
+    fields: [
+      { t: 'radio', l: 'Material', o: ['Galvanized', 'Copper', 'Aluminum'], full: true },
+      { t: 'yn', l: 'Painted' },
+      { t: 'yn', l: 'Damaged' },
+    ],
+  },
+  {
+    id: 'ri19', lbl: 'Counter Flashing', flags: ['P', 'M'],
+    fields: [
+      { t: 'radio', l: 'Material', o: ['Galvanized', 'Copper', 'Aluminum'], full: true },
+      { t: 'yn', l: 'Painted' },
+      { t: 'yn', l: 'Damaged' },
+    ],
+  },
+  {
+    id: 'ri20', lbl: 'L Flashing', flags: ['P', 'M'],
+    fields: [
+      { t: 'radio', l: 'Material', o: ['Galvanized', 'Copper', 'Aluminum'], full: true },
+      { t: 'yn', l: 'Painted' },
+      { t: 'yn', l: 'Damaged' },
     ],
   },
   {
@@ -249,83 +357,56 @@ export const ROOF_ITEMS = [
     ],
   },
   {
-    id: 'ri15', lbl: 'Rain Diverter', flags: ['P', 'M'],
-    addMore: true,
-    addMoreLabel: 'Add Rain Diverter',
-    subItemPhotos: true,
-    fields: [
-      { t: 'yn', l: 'Painted', full: true },
-    ],
-    subFields: [
-      { t: 'num', l: 'Length (LF)', lfFeetOnly: true, full: true },
-    ],
-  },
-  {
     id: 'ri16', lbl: 'Power Meter Mast', flags: ['P'],
     fields: [
       { t: 'num', l: 'Qty' },
     ],
   },
   {
-    id: 'ri17', lbl: 'Chimney Flashing', flags: ['P', 'M'],
-    addMore: true,
-    addMoreLabel: 'Add Chimney',
-    subItemPhotos: true,
-    subItemDamaged: true,
-    subItemSizeCounters: { field: 'Size / Width', sizes: ['Small', 'Medium', 'Large'], labelSuffix: '', counterLabel: 'size', matchPrefix: true, equalWidth: true },
+    id: 'ri24', lbl: 'Solar Panels', flags: ['P'],
     fields: [
-      { t: 'yn', l: 'Painted', full: true },
-    ],
-    subFields: [
-      { t: 'select', l: 'Size / Width', fullRow: true, o: ['Select', 'Small (width ≤23")', 'Medium (width 24"–36")', 'Large (width 37+")'] },
-      { t: 'radio', l: 'Material', o: ['Galvanized', 'Copper', 'Aluminum'], full: true },
-      { t: 'radio', l: 'Counter Flashing', o: ['Replace', 'Reuse'], full: true },
-      { t: 'yn', l: 'Cricket Present', full: true },
-      { t: 'yn', l: 'Damaged', full: true },
-    ],
-  },
-  {
-    id: 'ri18', lbl: 'Step Flashing', flags: ['P', 'M'],
-    fields: [
-      { t: 'radio', l: 'Material', o: ['Galvanized', 'Copper', 'Aluminum'], full: true },
-      { t: 'yn', l: 'Painted' },
+      { t: 'num', l: 'Qty' },
       { t: 'yn', l: 'Damaged' },
     ],
   },
   {
-    id: 'ri19', lbl: 'Counter Flashing', flags: ['P', 'M'],
+    id: 'ri30', lbl: 'Wind Vane', flags: ['P', 'D'],
     fields: [
-      { t: 'radio', l: 'Material', o: ['Galvanized', 'Copper', 'Aluminum'], full: true },
-      { t: 'yn', l: 'Painted' },
-      { t: 'yn', l: 'Damaged' },
+      { t: 'num', l: 'Qty' },
+      { t: 'radio', l: 'Material', o: ['Metal', 'Copper'], full: true },
+      { t: 'yn', l: 'Painted', allowNA: true },
+      { t: 'yn', l: 'DnR', allowNA: true },
+      { t: 'yn', l: 'Damaged', allowNA: true },
     ],
   },
   {
-    id: 'ri20', lbl: 'L Flashing', flags: ['P', 'M'],
+    id: 'ri31', lbl: 'Cupola', flags: ['P', 'D'],
     fields: [
-      { t: 'radio', l: 'Material', o: ['Galvanized', 'Copper', 'Aluminum'], full: true },
-      { t: 'yn', l: 'Painted' },
-      { t: 'yn', l: 'Damaged' },
+      { t: 'num', l: 'Qty' },
+      { t: 'yn', l: 'DnR', allowNA: true },
+      { t: 'yn', l: 'Damaged', allowNA: true },
     ],
   },
   {
-    id: 'ri21', lbl: 'Cornice Returns', flags: ['P', 'M'],
+    id: 'ri32', lbl: 'Turret', flags: ['P'],
     fields: [
-      { t: 'radio', l: 'Material', o: ['3-Tab', 'Laminate', 'Metal', 'Copper'], full: true },
-      { t: 'num', l: 'Stories', p: '1', full: true },
-      { t: 'num', l: 'Qty', full: true },
-      { t: 'yn', l: 'Painted', full: true },
-      { t: 'yn', l: 'Damaged', full: true },
-    ],
-  },
-  {
-    id: 'ri28', lbl: 'Cornice Strips', flags: ['P', 'M'],
-    fields: [
-      { t: 'radio', l: 'Material', o: ['3-Tab', 'Laminate', 'Metal', 'Copper'], full: true },
-      { t: 'num', l: 'Length (LF)', lfFeetOnly: true, full: true },
-      { t: 'num', l: 'Stories', p: '1', full: true },
-      { t: 'yn', l: 'Painted', full: true },
-      { t: 'yn', l: 'Damaged', full: true },
+      { t: 'num', l: 'Qty' },
+      { t: 'radio', l: 'Grade', o: ['Metal', 'Copper'], full: true },
+      { t: 'yn', l: 'Turret Cap Existing', allowNA: true, full: true },
+      {
+        t: 'radio',
+        l: 'Cap Grade',
+        o: ['Metal', 'Copper'],
+        full: true,
+        showWhen: { field: 'Turret Cap Existing', equals: 'Yes' },
+      },
+      {
+        t: 'yn',
+        l: 'Painted',
+        allowNA: true,
+        full: true,
+        showWhen: { field: 'Turret Cap Existing', equals: 'Yes' },
+      },
     ],
   },
   {

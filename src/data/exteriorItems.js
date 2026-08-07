@@ -62,7 +62,6 @@ export const EXTERIOR_ITEMS = [
       { t: 'yn', l: 'OK Saturday Build', full: true },
       { t: 'yn', l: 'Pest Control Flashing', full: true },
       { t: 'yn', l: 'Portapotty Needed?', full: true },
-      { t: 'txt', l: 'Gate Code', p: 'If applicable', full: true },
       { t: 'yn', l: 'Overhead Clearance Issue', full: true },
     ],
   },

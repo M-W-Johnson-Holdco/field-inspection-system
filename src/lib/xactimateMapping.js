@@ -87,22 +87,35 @@ export const ROOF_LINE_ITEMS = {
   ri5: (fields) => [{
     trade: 'Roofing', category: 'RFG',
     description: (() => {
-      const materials = Array.isArray(fields?.Material)
-        ? fields.Material
-        : (fields?.Material ? [String(fields.Material)] : [])
-      const materialLabel = materials.join('/') || 'unspecified'
+      const grades = Array.isArray(fields?.Grade)
+        ? fields.Grade
+        : (fields?.Grade ? [String(fields.Grade)] : (
+            Array.isArray(fields?.Material)
+              ? fields.Material
+              : (fields?.Material ? [String(fields.Material)] : [])
+          ))
+      const gradeLabel = grades.join('/') || 'unspecified'
       const details = []
-      if (materials.includes('Ice & Water')) {
+      if (grades.includes('Ice & Water')) {
         const choose = str(fields, 'Choose Ice & Water Style')
         if (choose) details.push(choose)
       }
-      if (materials.includes('W-Valley')) {
-        const choose = str(fields, 'Choose W-Valley Style')
+      if (grades.includes('Valley Metal')) {
+        const choose = str(fields, 'Choose Valley Metal Style')
         if (choose) details.push(choose)
       }
+      if (grades.includes('N/A')) {
+        const choose = str(fields, 'Choose N/A Style')
+        if (choose) details.push(choose)
+      }
+      if (grades.includes('W-Valley')) {
+        const choose = str(fields, 'Choose W-Valley Style')
+        if (choose) details.push(choose)
+        if (yn(fields, 'W-Valley Painted')) details.push('Painted')
+      }
       return details.length
-        ? `Valley - ${materialLabel} (${details.join('; ')})`
-        : `Valley - ${materialLabel}`
+        ? `Valley - ${gradeLabel} (${details.join('; ')})`
+        : `Valley - ${gradeLabel}`
     })(),
     unit: 'LF', qty: null, damaged: null, note: null,
   }],
@@ -111,6 +124,45 @@ export const ROOF_LINE_ITEMS = {
     description: 'Solar panel - remove & reset',
     unit: 'EA', qty: num(fields, 'Qty'),
     damaged: yn(fields, 'Damaged'), note: null,
+  }],
+  ri30: (fields) => [{
+    trade: 'Roofing', category: 'RFG',
+    description: `Wind vane${str(fields, 'Material') ? ` - ${str(fields, 'Material')}` : ''}`,
+    unit: 'EA', qty: num(fields, 'Qty'),
+    damaged: yn(fields, 'Damaged'),
+    note: [
+      yn(fields, 'Painted') ? 'Painted' : null,
+      fields?.DnR && fields.DnR !== 'Select' ? `DnR: ${fields.DnR}` : null,
+    ].filter(Boolean).join('; ') || null,
+  }],
+  ri31: (fields) => [{
+    trade: 'Roofing', category: 'RFG',
+    description: 'Cupola',
+    unit: 'EA', qty: num(fields, 'Qty'),
+    damaged: yn(fields, 'Damaged'),
+    note: [
+      fields?.DnR && fields.DnR !== 'Select' ? `DnR: ${fields.DnR}` : null,
+      fields?._notes || null,
+      fields?._damage && fields._damage !== 'n/a' ? fields._damage : null,
+    ].filter(Boolean).join('; ') || null,
+  }],
+  ri32: (fields) => [{
+    trade: 'Roofing', category: 'RFG',
+    description: `Turret${str(fields, 'Grade') ? ` - ${str(fields, 'Grade')}` : ''}`,
+    unit: 'EA', qty: num(fields, 'Qty'),
+    damaged: null,
+    note: [
+      fields?.['Turret Cap Existing'] && fields['Turret Cap Existing'] !== 'Select'
+        ? `Cap existing: ${fields['Turret Cap Existing']}`
+        : null,
+      fields?.['Turret Cap Existing'] === 'Yes' && str(fields, 'Cap Grade')
+        ? `Cap grade: ${str(fields, 'Cap Grade')}`
+        : null,
+      fields?.['Turret Cap Existing'] === 'Yes' && yn(fields, 'Painted')
+        ? 'Cap painted'
+        : null,
+      fields?._notes || null,
+    ].filter(Boolean).join('; ') || null,
   }],
   ri6: (fields) => [{
     trade: 'Roofing', category: 'RFG',
@@ -186,6 +238,27 @@ export const ROOF_LINE_ITEMS = {
     description: 'Power meter mast - reset',
     unit: 'EA', qty: num(fields, 'Qty'), damaged: null, note: null,
   }],
+  ri29: (fields) => {
+    const damagedParts = Array.isArray(fields?.Damaged) ? fields.Damaged : []
+    return [{
+      trade: 'Roofing', category: 'RFG',
+      description: [
+        'Chimney cover',
+        str(fields, 'Type'),
+        str(fields, 'Grade'),
+      ].filter(Boolean).join(' - '),
+      unit: 'EA',
+      qty: 1,
+      damaged: damagedParts.length > 0,
+      note: [
+        fields?.Flue && fields.Flue !== 'Select' ? `Flue: ${fields.Flue}` : null,
+        str(fields, 'Condition'),
+        yn(fields, 'Painted') ? 'Painted' : null,
+        damagedParts.length ? `Damaged: ${damagedParts.join(', ')}` : null,
+        fields?._damage && fields._damage !== 'n/a' ? fields._damage : null,
+      ].filter(Boolean).join('; ') || null,
+    }]
+  },
   ri18: (fields) => [{
     trade: 'Roofing', category: 'RFG',
     description: `Step flashing${str(fields, 'Material') ? ` - ${str(fields, 'Material')}` : ''}`,

@@ -23,12 +23,32 @@ const ROOF_MAP = [
   { key: 'ridgeCapDamaged',         itemId: 'ri3',  label: 'Damaged' },
   { key: 'ridgeCapDamageDescription', itemId: 'ri3', label: '_damage' },
   { key: 'starterStyle',            itemId: 'ri4',  label: 'Style' },
-  { key: 'valleyStyle',             itemId: 'ri5',  label: 'Material' },
+  { key: 'valleyStyle',             itemId: 'ri5',  label: 'Grade' },
   { key: 'valleyChooseOne',         itemId: 'ri5',  label: 'Choose Ice & Water Style' },
+  { key: 'valleyMetalChooseOne',    itemId: 'ri5',  label: 'Choose Valley Metal Style' },
+  { key: 'valleyNAChooseOne',       itemId: 'ri5',  label: 'Choose N/A Style' },
   { key: 'valleyWValleyChooseOne',  itemId: 'ri5',  label: 'Choose W-Valley Style' },
+  { key: 'valleyWValleyPainted',    itemId: 'ri5',  label: 'W-Valley Painted' },
   { key: 'solarPanelQty',           itemId: 'ri24', label: 'Qty' },
   { key: 'solarPanelDamaged',       itemId: 'ri24', label: 'Damaged' },
   { key: 'solarPanelDamageDescription', itemId: 'ri24', label: '_damage' },
+  { key: 'windVaneQty',             itemId: 'ri30', label: 'Qty' },
+  { key: 'windVaneMaterial',        itemId: 'ri30', label: 'Material' },
+  { key: 'windVanePainted',         itemId: 'ri30', label: 'Painted' },
+  { key: 'windVaneDnR',             itemId: 'ri30', label: 'DnR' },
+  { key: 'windVaneDamaged',         itemId: 'ri30', label: 'Damaged' },
+  { key: 'windVaneDamageDescription', itemId: 'ri30', label: '_damage' },
+  { key: 'cupolaQty',               itemId: 'ri31', label: 'Qty' },
+  { key: 'cupolaDnR',               itemId: 'ri31', label: 'DnR' },
+  { key: 'cupolaDamaged',           itemId: 'ri31', label: 'Damaged' },
+  { key: 'cupolaDamageDescription', itemId: 'ri31', label: '_damage' },
+  { key: 'cupolaNotes',             itemId: 'ri31', label: '_notes' },
+  { key: 'turretQty',               itemId: 'ri32', label: 'Qty' },
+  { key: 'turretGrade',             itemId: 'ri32', label: 'Grade' },
+  { key: 'turretCapExisting',       itemId: 'ri32', label: 'Turret Cap Existing' },
+  { key: 'turretCapGrade',          itemId: 'ri32', label: 'Cap Grade' },
+  { key: 'turretCapPainted',        itemId: 'ri32', label: 'Painted' },
+  { key: 'turretNotes',             itemId: 'ri32', label: '_notes' },
   { key: 'ridgeVentLF',             itemId: 'ri6',  label: 'Length (LF)' },
   { key: 'ridgeVentType',           itemId: 'ri6',  label: 'Type' },
   { key: 'ridgeVentPainted',        itemId: 'ri6',  label: 'Painted' },
@@ -70,6 +90,13 @@ const ROOF_MAP = [
   { key: 'kickoutsPainted',         itemId: 'ri13', label: 'Painted' },
   { key: 'rainDiverterPainted',     itemId: 'ri15', label: 'Painted' },
   { key: 'powerMeterMastQty',       itemId: 'ri16', label: 'Qty' },
+  { key: 'chimneyCoverType',        itemId: 'ri29', label: 'Type' },
+  { key: 'chimneyCoverGrade',       itemId: 'ri29', label: 'Grade' },
+  { key: 'chimneyCoverFlue',        itemId: 'ri29', label: 'Flue' },
+  { key: 'chimneyCoverCondition',   itemId: 'ri29', label: 'Condition' },
+  { key: 'chimneyCoverPainted',     itemId: 'ri29', label: 'Painted' },
+  { key: 'chimneyCoverDamaged',     itemId: 'ri29', label: 'Damaged' },
+  { key: 'chimneyCoverDamageDescription', itemId: 'ri29', label: '_damage' },
   { key: 'corniceReturnMaterial',   itemId: 'ri21', label: 'Material' },
   { key: 'corniceReturnStories',    itemId: 'ri21', label: 'Stories' },
   { key: 'corniceReturnQty',        itemId: 'ri21', label: 'Qty' },
@@ -231,7 +258,6 @@ const EXTERIOR_MAP = [
   { key: 'okSaturdayBuild',        itemId: 'ei_site',    label: 'OK Saturday Build' },
   { key: 'pestControlFlashing',    itemId: 'ei_site',    label: 'Pest Control Flashing' },
   { key: 'portapottyNeeded',       itemId: 'ei_site',    label: 'Portapotty Needed?' },
-  { key: 'gateCode',               itemId: 'ei_site',    label: 'Gate Code' },
   { key: 'overheadClearanceIssue', itemId: 'ei_site',    label: 'Overhead Clearance Issue' },
 ]
 
@@ -347,8 +373,12 @@ function applyParsed(parsed, ctx) {
 
   // Job info
   const ji = parsed.jobInfo || {}
-  const JOB_FIELDS = ['cust','phone','email','pm','insp','ins','claim','claimFileDate','stormDate','residenceType','tenantname','tenantphone','hasSeparateContact','contactName','contactPhone','contactEmail','damageSquares','frontOfRiskDirection']
+  const JOB_FIELDS = ['cust','phone','email','pm','insp','ins','claim','claimFileDate','stormDate','residenceType','tenantname','tenantphone','isMainContact','contactName','contactRelationship','contactPhone','contactEmail','gatedCommunity','gateCode','damageSquares','frontOfRiskDirection']
   JOB_FIELDS.forEach(f => { if (ji[f] != null) updateJobInfo(f, ji[f]) })
+  if (ji.isMainContact == null && ji.hasSeparateContact != null) {
+    // Legacy AI key shared the same Yes/No meaning for collecting contact fields
+    updateJobInfo('isMainContact', ji.hasSeparateContact)
+  }
   if (ji.date != null && ji.claimFileDate == null) updateJobInfo('claimFileDate', ji.date)
   if (ji.preferredContact != null) {
     updateJobInfo('preferredContact', toArray(ji.preferredContact))
@@ -390,7 +420,11 @@ function applyParsed(parsed, ctx) {
     if (key === 'pitch') val = formatPitch(parsePitchNumerator(val, 0))
     if (key === 'shingleStyle') val = toArray(val)
     if (key === 'valleyStyle') val = toArray(val)
+    if (key === 'valleyChooseOne' && val === 'Cut') val = 'Closed Cut'
+    if (key === 'valleyMetalChooseOne' && val === 'Cut') val = 'Closed Cut'
+    if (key === 'valleyNAChooseOne' && val === 'Cut') val = 'Closed Cut'
     if (key === 'edgeFlashingType') val = toArray(val)
+    if (key === 'chimneyCoverDamaged') val = toArray(val)
     updateRoofField(itemId, label, val)
   })
 
@@ -409,11 +443,19 @@ function applyParsed(parsed, ctx) {
     { itemId: 'ri25', key: 'offRidgeVentDamaged' },
     { itemId: 'ri26', key: 'domeVentDamaged' },
     { itemId: 'ri27', key: 'rooftopIntakeVentDamaged' },
+    { itemId: 'ri30', key: 'windVaneDamaged' },
+    { itemId: 'ri31', key: 'cupolaDamaged' },
   ]
   DAMAGE_FLAG_ITEMS.forEach(({ itemId, key }) => {
     const val = roof[key]
     if (val === 'No' || val === 'N/A') updateRoofField(itemId, '_damage', 'n/a')
   })
+  {
+    const parts = toArray(roof.chimneyCoverDamaged)
+    if (roof.chimneyCoverDamaged != null && parts.length === 0) {
+      updateRoofField('ri29', '_damage', 'n/a')
+    }
+  }
 
   importRoofPipeJacks(roof)
   importRoofExhaustStacks(roof)

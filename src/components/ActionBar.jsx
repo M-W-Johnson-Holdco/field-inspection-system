@@ -107,15 +107,18 @@ function getJobInfoSaveError(jobInfo) {
   if (!isValidAddressParts(jobInfo?.addrParts)) {
     return { field: 'addr', message: 'Property address is required before saving.' }
   }
-  if (jobInfo?.hasSeparateContact === 'Yes') {
+  if (jobInfo?.isMainContact === 'Yes') {
     if (!String(jobInfo?.contactName || '').trim()) {
-      return { field: 'contactName', message: 'Contact name is required when separate contact is enabled.' }
+      return { field: 'contactName', message: 'Main contact name is required when Main Contact is Yes.' }
+    }
+    if (!String(jobInfo?.contactRelationship || '').trim()) {
+      return { field: 'contactRelationship', message: 'Relationship to property owner is required when Main Contact is Yes.' }
     }
     if (phoneDigits(jobInfo?.contactPhone).length !== 10) {
-      return { field: 'contactPhone', message: 'Enter a 10-digit contact phone when separate contact is enabled.' }
+      return { field: 'contactPhone', message: 'Enter a 10-digit main contact phone when Main Contact is Yes.' }
     }
     if (!isValidEmail(jobInfo?.contactEmail)) {
-      return { field: 'contactEmail', message: 'Enter a valid contact email when separate contact is enabled.' }
+      return { field: 'contactEmail', message: 'Enter a valid main contact email when Main Contact is Yes.' }
     }
   }
   return null

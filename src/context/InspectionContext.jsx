@@ -52,7 +52,10 @@ const INITIAL_STATE = {
     addrParts: { address1: '', address2: '', city: '', state: '', zipcode: '' },
     tenantname: '', tenantphone: '',
     hasSeparateContact: '',
-    contactName: '', contactPhone: '', contactEmail: '', contactPreferredContact: [],
+    isMainContact: '',
+    contactName: '', contactRelationship: '', contactPhone: '', contactEmail: '', contactPreferredContact: [],
+    gatedCommunity: '',
+    gateCode: '',
   },
   roofData: INITIAL_ROOF_DATA,
   elevData: INITIAL_ELEV_DATA,
@@ -123,6 +126,17 @@ function calculateCompletion(data) {
   if (ji.residenceType === 'Rental') {
     countValue(ji.tenantname, totals)
     countValue(ji.tenantphone, totals, isValidPhone)
+  }
+  countValue(ji.isMainContact, totals)
+  if (ji.isMainContact === 'Yes') {
+    countValue(ji.contactName, totals)
+    countValue(ji.contactRelationship, totals)
+    countValue(ji.contactPhone, totals, isValidPhone)
+    countValue(ji.contactEmail, totals, isValidEmail)
+  }
+  countValue(ji.gatedCommunity, totals)
+  if (ji.gatedCommunity === 'Yes') {
+    countValue(ji.gateCode, totals)
   }
 
   ROOF_ITEMS.forEach(itemDef => {
@@ -718,6 +732,12 @@ function normalizeJobInfo(jobInfo = {}) {
   }
   delete next.frontOfRiskDetection
 
+  // Legacy "Separate Contact?" Yes meant collect another contact → Main Contact? Yes
+  if ((next.isMainContact == null || next.isMainContact === '') && next.hasSeparateContact) {
+    next.isMainContact = next.hasSeparateContact
+  }
+  if (next.contactRelationship == null) next.contactRelationship = ''
+
   return next
 }
 
@@ -885,20 +905,27 @@ function normalizeRi5(roofData) {
   if (!ri5) return next
 
   const fields = { ...(ri5.fields || {}) }
-  if (fields.Style != null && fields.Material == null) {
+  if (fields.Style != null && fields.Material == null && fields.Grade == null) {
     fields.Material = fields.Style
   }
   delete fields.Style
+  if (fields.Material != null && (fields.Grade == null || fields.Grade === '')) {
+    fields.Grade = fields.Material
+  }
+  delete fields.Material
   if (fields['Choose One'] != null && fields['Choose Ice & Water Style'] == null) {
     fields['Choose Ice & Water Style'] = fields['Choose One']
   }
   delete fields['Choose One']
+  if (fields['Choose Ice & Water Style'] === 'Cut') {
+    fields['Choose Ice & Water Style'] = 'Closed Cut'
+  }
   if (fields['Choose One (W-Valley)'] != null && fields['Choose W-Valley Style'] == null) {
     fields['Choose W-Valley Style'] = fields['Choose One (W-Valley)']
   }
   delete fields['Choose One (W-Valley)']
-  if (fields.Material != null && fields.Material !== '' && !Array.isArray(fields.Material)) {
-    fields.Material = [String(fields.Material)]
+  if (fields.Grade != null && fields.Grade !== '' && !Array.isArray(fields.Grade)) {
+    fields.Grade = [String(fields.Grade)]
   }
   next.ri5 = { ...ri5, fields }
   return next

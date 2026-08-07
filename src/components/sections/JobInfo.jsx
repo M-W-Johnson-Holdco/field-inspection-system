@@ -10,6 +10,7 @@ const CONTACT_OPTIONS = ['Phone', 'Email', 'Text']
 const LOSS_TYPE_OPTIONS = [
   'Wind',
   'Hail',
+  'Water',
   'Falling Objects or Debris',
   'Fire',
   'Lightning',
@@ -151,7 +152,7 @@ function JobInfoGroup({ title, headingId, defaultOpen = true, children }) {
 }
 
 export default function JobInfo() {
-  const { data, updateJobInfo, addJobPhoto } = useInspection()
+  const { data, updateJobInfo, addJobPhoto, updateNote } = useInspection()
   const ji = data.jobInfo
   const [addressOpen, setAddressOpen] = useState(false)
   const [addressDraft, setAddressDraft] = useState({ ...EMPTY_ADDRESS, ...(ji.addrParts || {}) })
@@ -229,10 +230,11 @@ export default function JobInfo() {
     )
   }
 
-  function setSeparateContact(val) {
-    updateJobInfo('hasSeparateContact', val)
+  function setMainContact(val) {
+    updateJobInfo('isMainContact', val)
     if (val !== 'Yes') {
       updateJobInfo('contactName', '')
+      updateJobInfo('contactRelationship', '')
       updateJobInfo('contactPhone', '')
       updateJobInfo('contactEmail', '')
     }
@@ -328,24 +330,25 @@ export default function JobInfo() {
                 {field('email', 'Customer Email', { type: 'email', placeholder: 'john@email.com', validation: 'email', required: true })}
 
                 <div className="form-field form-field--full">
-                  <label className="form-label">Separate Contact?</label>
+                  <label className="form-label">Main Contact?</label>
                   <select
-                    className={withSelectPlaceholderClass('field-select compact-select', ji.hasSeparateContact)}
-                    value={ji.hasSeparateContact || ''}
-                    onChange={e => setSeparateContact(e.target.value)}
+                    className={withSelectPlaceholderClass('field-select compact-select', ji.isMainContact)}
+                    value={ji.isMainContact || ''}
+                    onChange={e => setMainContact(e.target.value)}
                   >
                     <option value="">Select</option>
-                    <option value="No">No</option>
                     <option value="Yes">Yes</option>
+                    <option value="No">No</option>
                     <option value="N/A">N/A</option>
                   </select>
                 </div>
 
-                {(ji.hasSeparateContact === 'Yes') && (
+                {(ji.isMainContact === 'Yes') && (
                   <>
-                    {field('contactName', 'Contact Name', { full: true, placeholder: 'Full name', required: true })}
-                    {field('contactPhone', 'Contact Phone', { type: 'tel', inputMode: 'tel', placeholder: '(214) 555-0101', validation: 'phone', required: true })}
-                    {field('contactEmail', 'Contact Email', { type: 'email', placeholder: 'contact@email.com', validation: 'email', required: true })}
+                    {field('contactName', 'Main Contact Name', { full: true, placeholder: 'Full name', required: true })}
+                    {field('contactRelationship', 'Relationship to Property Owner', { full: true, placeholder: 'e.g. Spouse, Property manager', required: true })}
+                    {field('contactPhone', 'Main Contact Phone', { type: 'tel', inputMode: 'tel', placeholder: '(214) 555-0101', validation: 'phone', required: true })}
+                    {field('contactEmail', 'Main Contact Email', { type: 'email', placeholder: 'contact@email.com', validation: 'email', required: true })}
                   </>
                 )}
 
@@ -436,6 +439,54 @@ export default function JobInfo() {
                     {ji.addr || 'Tap to enter property address'}
                   </button>
                 </div>
+
+                <div className="form-field form-field--full">
+                  <label className="form-label" htmlFor="homeage">Age of Home (estimated/confirmed year built)</label>
+                  <input
+                    id="homeage"
+                    className="form-input"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    autoComplete="off"
+                    value={data.notesData?.homeage || ''}
+                    placeholder="2013"
+                    onChange={e => updateNote('homeage', e.target.value.replace(/\D/g, ''))}
+                  />
+                </div>
+
+                <div className="form-field form-field--full">
+                  <label className="form-label">Gated Community</label>
+                  <select
+                    className={withSelectPlaceholderClass('field-select compact-select', ji.gatedCommunity)}
+                    value={ji.gatedCommunity || ''}
+                    onChange={e => {
+                      const val = e.target.value
+                      updateJobInfo('gatedCommunity', val)
+                      if (val !== 'Yes') updateJobInfo('gateCode', '')
+                    }}
+                  >
+                    <option value="">Select</option>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                    <option value="N/A">N/A</option>
+                  </select>
+                </div>
+
+                {ji.gatedCommunity === 'Yes' && (
+                  <div className="form-field form-field--full">
+                    <label className="form-label" htmlFor="gateCode">Gate Code</label>
+                    <input
+                      id="gateCode"
+                      className="form-input"
+                      type="text"
+                      autoComplete="off"
+                      value={ji.gateCode || ''}
+                      placeholder="Enter gate code"
+                      onChange={e => updateJobInfo('gateCode', e.target.value)}
+                    />
+                  </div>
+                )}
 
                 {ji.residenceType === 'Rental' && (
                   <>
