@@ -43,7 +43,7 @@ export const ROLE_DESCRIPTIONS = {
   admin: 'Both companies + Access settings',
 }
 
-// First admins who can open Access Settings before permissions.json exists on Drive.
+// First admins who can open Access Settings before permissions.json exists in storage.
 export const BOOTSTRAP_ACCESS_ADMINS = [
   'j.gil@peachtreerestorations.com',
   'k.liss@peachtreerestorations.com',

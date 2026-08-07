@@ -18,20 +18,14 @@ const ROOF_MAP = [
   { key: 'edgeDamageDescription',   itemId: 'ri1',  label: '_damage' },
   { key: 'underlaymentGrade',       itemId: 'ri2',  label: 'Grade' },
   { key: 'underlaymentLayers',      itemId: 'ri2',  label: 'Layers' },
-  { key: 'underlaymentDamaged',     itemId: 'ri2',  label: 'Damaged' },
-  { key: 'underlaymentDamageDescription', itemId: 'ri2', label: '_damage' },
   { key: 'ridgeCapGrade',           itemId: 'ri3',  label: 'Grade' },
   { key: 'ridgeCapExposure',        itemId: 'ri3',  label: 'Exposure (inches)' },
   { key: 'ridgeCapDamaged',         itemId: 'ri3',  label: 'Damaged' },
   { key: 'ridgeCapDamageDescription', itemId: 'ri3', label: '_damage' },
   { key: 'starterStyle',            itemId: 'ri4',  label: 'Style' },
-  { key: 'starterDamaged',          itemId: 'ri4',  label: 'Damaged' },
-  { key: 'starterDamageDescription', itemId: 'ri4', label: '_damage' },
   { key: 'valleyStyle',             itemId: 'ri5',  label: 'Material' },
   { key: 'valleyChooseOne',         itemId: 'ri5',  label: 'Choose Ice & Water Style' },
   { key: 'valleyWValleyChooseOne',  itemId: 'ri5',  label: 'Choose W-Valley Style' },
-  { key: 'valleyDamaged',           itemId: 'ri5',  label: 'Damaged' },
-  { key: 'valleyDamageDescription', itemId: 'ri5',  label: '_damage' },
   { key: 'solarPanelQty',           itemId: 'ri24', label: 'Qty' },
   { key: 'solarPanelDamaged',       itemId: 'ri24', label: 'Damaged' },
   { key: 'solarPanelDamageDescription', itemId: 'ri24', label: '_damage' },
@@ -71,6 +65,7 @@ const ROOF_MAP = [
   { key: 'rooftopIntakeVentDamaged', itemId: 'ri27', label: 'Damaged' },
   { key: 'rooftopIntakeVentDamageDescription', itemId: 'ri27', label: '_damage' },
   { key: 'kickoutsExisting',        itemId: 'ri13', label: 'Existing' },
+  { key: 'kickoutsExistingCount',   itemId: 'ri13', label: 'Existing Kickouts Count' },
   { key: 'kickoutsNeeded',          itemId: 'ri13', label: 'Needed' },
   { key: 'kickoutsPainted',         itemId: 'ri13', label: 'Painted' },
   { key: 'rainDiverterPainted',     itemId: 'ri15', label: 'Painted' },
@@ -152,6 +147,7 @@ const ELEV_MAP = [
   { key: 'screenSmallQty',       itemId: 'ev5',  label: '_smallQty' },
   { key: 'screenMediumQty',      itemId: 'ev5',  label: '_mediumQty' },
   { key: 'screenLargeQty',       itemId: 'ev5',  label: '_largeQty' },
+  { key: 'screenXLargeQty',      itemId: 'ev5',  label: '_xLargeQty' },
   { key: 'gableVentQty',         itemId: 'ev13', label: 'Qty' },
   { key: 'gableVentMaterial',    itemId: 'ev13', label: 'Material' },
   { key: 'gableVentDamage',      itemId: 'ev13', label: 'Damaged' },
@@ -308,6 +304,7 @@ function normalizeScreenParseFields(fields = {}) {
   delete next._smallQty
   delete next._mediumQty
   delete next._largeQty
+  delete next._xLargeQty
   return next
 }
 
@@ -403,10 +400,7 @@ function applyParsed(parsed, ctx) {
   // that here for AI-driven updates, or these fields would cap completion forever.
   const DAMAGE_FLAG_ITEMS = [
     { itemId: 'ri1',  key: 'edgeDamaged' },
-    { itemId: 'ri2',  key: 'underlaymentDamaged' },
     { itemId: 'ri3',  key: 'ridgeCapDamaged' },
-    { itemId: 'ri4',  key: 'starterDamaged' },
-    { itemId: 'ri5',  key: 'valleyDamaged' },
     { itemId: 'ri6',  key: 'ridgeVentDamaged' },
     { itemId: 'ri7',  key: 'boxVentDamaged' },
     { itemId: 'ri8',  key: 'turbineDamaged' },
@@ -502,7 +496,8 @@ function applyParsed(parsed, ctx) {
           const small = Math.floor(Number(fields._smallQty)) || 0
           const medium = Math.floor(Number(fields._mediumQty)) || 0
           const large = Math.floor(Number(fields._largeQty)) || 0
-          const sizeTotal = small + medium + large
+          const xLarge = Math.floor(Number(fields._xLargeQty)) || 0
+          const sizeTotal = small + medium + large + xLarge
           if (sizeTotal > 0) count = sizeTotal
           cardFields = normalizeScreenParseFields(cardFields)
         } else if (cellKey.startsWith('ev6_')) {

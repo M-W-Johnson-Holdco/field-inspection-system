@@ -129,7 +129,10 @@ function calculateCompletion(data) {
     const item = data.roofData?.[itemDef.id]
     if (!item || !isRoofItemActive(item)) return
 
-    ;(itemDef.fields || []).forEach(field => countValue(item.fields?.[field.l], totals))
+    ;(itemDef.fields || []).forEach(field => {
+      if (!isFieldVisible(field, item.fields)) return
+      countValue(item.fields?.[field.l], totals)
+    })
     if (itemDef.flags?.includes('D')) countValue(item.fields?._damage, totals)
     else if (item.fields?.Damaged === 'Yes' && (itemDef.fields || []).some(field => field.l === 'Damaged')) {
       countValue(item.fields?._damage, totals)
@@ -175,7 +178,7 @@ function calculateCompletion(data) {
 
   ;(data.interiorData?.rooms || []).forEach(room => {
     countValue(room.name && room.name !== 'Other' ? room.name : null, totals)
-    ;['story', 'sheetrockCompromised', 'ceilingDamage', 'wallDamage', 'floorDamage', 'moldPresent'].forEach(key => {
+    ;['story', 'sheetrockCompromised', 'replaceInsulation', 'ceilingDamage', 'wallDamage', 'floorDamage', 'moldPresent'].forEach(key => {
       countValue(room.fields?.[key], totals)
     })
     if (room.fields?.ceilingDamage === 'Yes') countValue(room.fields?.ceilingNotes, totals)
@@ -797,6 +800,18 @@ function normalizeRoofSubItem(sub) {
   }
 }
 
+function stripRoofItemDamageFields(roofData, itemId) {
+  const next = { ...roofData }
+  const item = next[itemId]
+  if (!item?.fields) return next
+  if (item.fields.Damaged == null && item.fields._damage == null) return next
+  const fields = { ...item.fields }
+  delete fields.Damaged
+  delete fields._damage
+  next[itemId] = { ...item, fields }
+  return next
+}
+
 function normalizeRoofData(roofData = {}) {
   let next = { ...roofData }
   for (const itemDef of ROOF_ITEMS) {
@@ -807,6 +822,10 @@ function normalizeRoofData(roofData = {}) {
   next = normalizeRi0(next)
   next = normalizeRi1(next)
   next = normalizeRi5(next)
+  // Underlayment / Starter / Valley no longer track Damaged
+  next = stripRoofItemDamageFields(next, 'ri2')
+  next = stripRoofItemDamageFields(next, 'ri4')
+  next = stripRoofItemDamageFields(next, 'ri5')
   next = normalizeRi11(next)
   next = normalizeRi12(next)
   next = normalizeRi14(next)
@@ -1907,7 +1926,8 @@ export function InspectionProvider({ children }) {
   const [expandedSections, setExpandedSectionsState] = useState({})
   const [saveStatus, setSaveStatus] = useState('saved')
   const [driveSaveStatus, setDriveSaveStatus] = useState('unsaved')
-  // Drive folder currently open in the app (null = new / not yet saved to Drive).
+  // Inspection currently open in the app (null = new / not yet saved).
+  // Value is `ORG/folderName` (R2 storage key), persisted in local snapshots.
   const [driveFolderId, setDriveFolderIdState] = useState(null)
   // Lifted out of AIParseSection so the transcript, status, and flags survive switching tabs away and back.
   const [aiParseState, setAiParseState] = useState({ transcript: '', status: 'idle', statusMsg: '', flags: [] })
@@ -2047,13 +2067,17 @@ export function InspectionProvider({ children }) {
             fields: { ...sub.fields, [label]: value },
           }))
         : item.subItems
+      const fields = { ...item.fields, [label]: value }
+      if (itemId === 'ri13' && label === 'Existing' && value !== 'Yes') {
+        delete fields['Existing Kickouts Count']
+      }
       const next = {
         ...prev,
         roofData: {
           ...prev.roofData,
           [itemId]: {
             ...item,
-            fields: { ...item.fields, [label]: value },
+            fields,
             subItems,
           },
         },
@@ -2165,6 +2189,7 @@ export function InspectionProvider({ children }) {
             delete fields['Width (ft)']
           } else {
             delete fields['Diameter (in)']
+            delete fields['Circumference (in)']
           }
         }
         return { ...sub, fields }
@@ -2491,6 +2516,7 @@ export function InspectionProvider({ children }) {
         fields: {
           story: r?.story || '',
           sheetrockCompromised: r?.sheetrockCompromised || '',
+          replaceInsulation: r?.replaceInsulation || '',
           ceilingDamage: r?.ceilingDamage || '', ceilingNotes: r?.ceilingNotes || '',
           wallDamage: r?.wallDamage || '', wallNotes: r?.wallNotes || '',
           floorDamage: r?.floorDamage || '', floorNotes: r?.floorNotes || '',
@@ -2690,7 +2716,7 @@ export function InspectionProvider({ children }) {
         customName: '',
         photos: [],
         fields: {
-          story: '', sheetrockCompromised: '', ceilingDamage: '', ceilingNotes: '',
+          story: '', sheetrockCompromised: '', replaceInsulation: '', ceilingDamage: '', ceilingNotes: '',
           wallDamage: '', wallNotes: '', floorDamage: '', floorNotes: '',
           moldPresent: '', moldNotes: '', notes: '',
         },

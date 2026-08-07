@@ -16,6 +16,7 @@ import { formatPitch, parsePitchNumerator } from '../../utils/pitch'
 import useExpandedSection from '../../hooks/useExpandedSection'
 import { getRoofItemStatus, isRoofItemActive } from '../../utils/roofItemStatus'
 import { skylightAreaSqFt, skylightSizeBucket, skylightSizeLabel } from '../../utils/skylightSize'
+import { sizeCounterLabel } from '../../utils/sizeCounterLabels'
 
 // ── Field Renderer ─────────────────────────────────────────────────
 function PitchInput({ field, value, onChange }) {
@@ -116,11 +117,14 @@ function FieldRenderer({ field, value, onChange, subFields, onSubFieldChange }) 
 
   if (t === 'diameter') {
     const diameterKey = field.diameterKey || 'Diameter (in)'
+    const circumferenceKey = field.circumferenceKey || 'Circumference (in)'
     return (
       <DiameterCircInput
         field={field}
         diameterValue={subFields?.[diameterKey] ?? value ?? ''}
+        circumferenceValue={subFields?.[circumferenceKey] ?? ''}
         onDiameterChange={val => onSubFieldChange(diameterKey, val)}
+        onCircumferenceChange={val => onSubFieldChange(circumferenceKey, val)}
       />
     )
   }
@@ -357,10 +361,11 @@ function collapsibleSubPills(itemId, fields = {}) {
     }
   } else if (itemId === 'ri14') {
     const style = selectValue(fields.Style)
-    const bucket = skylightSizeBucket(skylightAreaSqFt(fields))
-    const sizeLabel = skylightSizeLabel(bucket)
     if (style) grey.push(style)
-    if (sizeLabel) grey.push(sizeLabel)
+    if (style && style !== 'Tubular') {
+      const sizeLabel = skylightSizeLabel(skylightSizeBucket(skylightAreaSqFt(fields)))
+      if (sizeLabel) grey.push(sizeLabel)
+    }
     if (fields.Damaged === 'Yes') red.push('Damaged')
   } else if (itemId === 'ri15') {
     const length = selectValue(fields['Length (LF)'])
@@ -623,9 +628,12 @@ function CheckItem({ itemDef, trigPhoto }) {
       <div className={counterClass} aria-label={`${lbl} counts by ${subItemSizeCounters.counterLabel || 'size'}`}>
         {subItemSizeCounters.sizes.map(size => {
           const suffix = subItemSizeCounters.labelSuffix ?? '"'
+          const label = sizeCounterLabel(size)
+          // Abbreviated S/M/L/XL labels don't use the default inch suffix.
+          const shownSuffix = label !== size ? '' : suffix
           return (
             <div key={size} className="ri-size-counter" aria-label={`${size}${suffix}: ${sizeCounts[size]}`}>
-              <span className="ri-size-counter__label">{size}{suffix}</span>
+              <span className="ri-size-counter__label">{label}{shownSuffix}</span>
               <span className="ri-size-counter__value">{sizeCounts[size]}</span>
             </div>
           )

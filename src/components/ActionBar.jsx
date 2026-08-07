@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useInspection } from '../context/InspectionContext'
 import { useAuth } from '../context/AuthContext'
-import { saveInspectionToDrive, TokenExpiredError } from '../lib/driveService'
+import { saveInspection, TokenExpiredError } from '../lib/inspectionApi'
 import OpenInspectionModal from './OpenInspectionModal'
 import AccessAdminModal from './AccessAdminModal'
 import ImportChooserModal from './ImportChooserModal'
@@ -13,6 +13,7 @@ import { usePermissions } from '../context/PermissionsContext'
 import { isRoofItemActive } from '../utils/roofItemStatus'
 import { buildXactimateExport } from '../lib/xactimateExport'
 import { savePhotosLocal } from '../lib/savePhotosLocal'
+import MeasurementConverterModal from './MeasurementConverterModal'
 import XactimateExportModal from './XactimateExportModal'
 import {
   ArrowLeft,
@@ -29,6 +30,7 @@ import {
   Shield,
   MoveHorizontal,
   Folder,
+  Ruler,
 } from 'lucide-react'
 
 const TOTAL_TABS = 6
@@ -128,6 +130,7 @@ export default function ActionBar() {
   const [showOpen, setShowOpen] = useState(false)
   const [showAccessAdmin, setShowAccessAdmin] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
+  const [showMeasureConverter, setShowMeasureConverter] = useState(false)
   const [showImportChooser, setShowImportChooser] = useState(false)
   const [showImportXml, setShowImportXml] = useState(false)
   const [showImportImages, setShowImportImages] = useState(false)
@@ -241,7 +244,7 @@ export default function ActionBar() {
     scrollToSectionTop()
   }
 
-  async function handleSaveToDrive() {
+  async function handleSaveInspection() {
     const saveError = getJobInfoSaveError(data.jobInfo)
     if (saveError) {
       window.alert(saveError.message)
@@ -256,27 +259,27 @@ export default function ActionBar() {
     setDriveStatus('saving')
     setDriveSaveStatus('saving')
     try {
-      const { folderId, folderName, photoCount } = await saveInspectionToDrive(token, data, user?.fullName, user?.email)
+      const { folderId, folderName, photoCount } = await saveInspection(token, data, user?.fullName, user?.email)
       setDriveFolderId(folderId)
       setDriveStatus('done')
       setDriveSaveStatus('saved')
       setTimeout(() => setDriveStatus('idle'), 3000)
-      console.info(`Saved to Drive: ${folderName} (${photoCount} photos)`)
+      console.info(`Saved inspection: ${folderName} (${photoCount} photos)`)
     } catch (err) {
-      console.error('Drive save failed:', err)
+      console.error('Inspection save failed:', err)
       if (err instanceof TokenExpiredError) {
         const recovered = await recoverFromTokenExpiry()
         if (recovered) {
           try {
-            const { folderId, folderName, photoCount } = await saveInspectionToDrive(recovered, data, user?.fullName, user?.email)
+            const { folderId, folderName, photoCount } = await saveInspection(recovered, data, user?.fullName, user?.email)
             setDriveFolderId(folderId)
             setDriveStatus('done')
             setDriveSaveStatus('saved')
             setTimeout(() => setDriveStatus('idle'), 3000)
-            console.info(`Saved to Drive: ${folderName} (${photoCount} photos)`)
+            console.info(`Saved inspection: ${folderName} (${photoCount} photos)`)
             return
           } catch (retryErr) {
-            console.error('Drive save retry failed:', retryErr)
+            console.error('Inspection save retry failed:', retryErr)
           }
         }
         setDriveStatus('idle')
@@ -445,9 +448,9 @@ export default function ActionBar() {
           <button
             className="app-button app-button--save action-bar__btn--desktop-only"
             type="button"
-            aria-label="Save to Google Drive"
-            title="Save to Google Drive"
-            onClick={handleSaveToDrive}
+            aria-label="Save inspection"
+            title="Save inspection"
+            onClick={handleSaveInspection}
             disabled={driveStatus === 'saving'}
           >
             <SaveIcon className="app-button__icon" aria-hidden="true" />
@@ -504,6 +507,16 @@ export default function ActionBar() {
             <span className="app-button__label">Reset</span>
           </button>
           <button
+            className="app-button app-button--measure"
+            type="button"
+            aria-label="Convert measurements"
+            title="Convert feet and inches"
+            onClick={() => setShowMeasureConverter(true)}
+          >
+            <Ruler className="app-button__icon" aria-hidden="true" />
+            <span className="app-button__label">Convert</span>
+          </button>
+          <button
             className="app-button app-button--help"
             type="button"
             aria-label="Help"
@@ -517,8 +530,8 @@ export default function ActionBar() {
             <button
               className="app-button app-button--access"
               type="button"
-              aria-label="Drive access settings"
-              title="Drive access settings"
+              aria-label="Access settings"
+              title="Access settings"
               onClick={() => setShowAccessAdmin(true)}
             >
               <Shield className="app-button__icon" aria-hidden="true" />
@@ -543,7 +556,7 @@ export default function ActionBar() {
           driveStatus={driveStatus}
           onSave={() => {
             setShowFileMenu(false)
-            handleSaveToDrive()
+            handleSaveInspection()
           }}
           onOpen={() => {
             setShowFileMenu(false)
@@ -648,6 +661,10 @@ export default function ActionBar() {
         <AccessAdminModal onClose={() => setShowAccessAdmin(false)} />
       )}
 
+      {showMeasureConverter && (
+        <MeasurementConverterModal onClose={() => setShowMeasureConverter(false)} />
+      )}
+
       {showHelp && (
         <>
           <div className="modal-backdrop modal-backdrop--top" onClick={() => setShowHelp(false)} />
@@ -662,12 +679,13 @@ export default function ActionBar() {
               <p><ArrowLeft className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Back:</strong> Go to the previous inspection section.</span></p>
               <p><ArrowRight className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Next:</strong> Go to the next inspection section.</span></p>
               <p><Folder className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>File (mobile):</strong> Opens Save, Open, Import, Export, New, and Reset.</span></p>
-              <p><Save className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Save:</strong> Save the current inspection to Google Drive.</span></p>
-              <p><FolderOpen className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Open:</strong> Open a saved inspection from Google Drive.</span></p>
+              <p><Save className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Save:</strong> Save the current inspection to cloud storage.</span></p>
+              <p><FolderOpen className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Open:</strong> Open a previously saved inspection.</span></p>
               <p><FileInput className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Import:</strong> Choose measurements (EagleView XML) or bulk-assign photos to form categories.</span></p>
               <p><ExternalLink className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Export:</strong> Choose Export Preview (PDF/CSV/JSON) or Save Photos (share to Photos on phone, or download a ZIP on computer).</span></p>
               <p><FilePlus className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>New:</strong> Start a new inspection form.</span></p>
               <p><RotateCcw className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Reset:</strong> Clear all current inspection data.</span></p>
+              <p><Ruler className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Convert:</strong> Convert feet &amp; inches into total inches or feet.</span></p>
               <p><CircleHelp className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Help:</strong> Show this toolbar guide.</span></p>
               <p><Shield className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Access:</strong> Manage who can sign in and their role — Sales, Supervisor, or Admin (admins only).</span></p>
               <p><MoveHorizontal className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Scroll:</strong> Swipe the toolbar left or right to see more buttons.</span></p>

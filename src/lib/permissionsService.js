@@ -1,5 +1,4 @@
 import {
-  CONFIG_FOLDER_NAME,
   DEFAULT_PERMISSIONS,
   isAllowedDomainEmail,
   normalizeEmail,
@@ -7,9 +6,7 @@ import {
   ROLES,
   withBootstrapAdmins,
 } from './accessConfig'
-import { ensureSharedDriveMembers, loadJsonFromDrive, saveJsonToDrive } from './driveService'
-
-const PERMISSIONS_FILE_NAME = 'permissions.json'
+import { fetchPermissions, putPermissions } from './inspectionApi'
 
 /** Migrate legacy permissions.json shapes into the users list. */
 function migrateLegacyPermissions(raw) {
@@ -20,7 +17,6 @@ function migrateLegacyPermissions(raw) {
     const nextRole = normalizeRole(role)
     if (!normalized || !nextRole || !isAllowedDomainEmail(normalized)) return
     const existing = byEmail.get(normalized)
-    // Prefer higher privilege when merging duplicates: admin > supervisor > sales
     const rank = { [ROLES.sales]: 1, [ROLES.supervisor]: 2, [ROLES.admin]: 3 }
     if (!existing || rank[nextRole] > rank[existing.role]) {
       byEmail.set(normalized, { email: normalized, role: nextRole })
@@ -31,7 +27,6 @@ function migrateLegacyPermissions(raw) {
     raw.users.forEach(entry => upsert(entry?.email, entry?.role))
   }
 
-  // Legacy: cross-org viewers and access admins become Admin.
   ;(raw?.crossOrgViewers || []).forEach(email => upsert(email, ROLES.admin))
   ;(raw?.accessAdmins || []).forEach(email => upsert(email, ROLES.admin))
 
@@ -49,26 +44,22 @@ export function sanitizePermissions(raw) {
 
 export async function loadPermissions(token) {
   try {
-    const raw = await loadJsonFromDrive(token, CONFIG_FOLDER_NAME, PERMISSIONS_FILE_NAME)
+    const raw = await fetchPermissions(token)
     if (!raw) return withBootstrapAdmins({ ...DEFAULT_PERMISSIONS })
     return sanitizePermissions(raw)
-  } catch {
+  } catch (err) {
+    // Re-throw auth expiry so callers can recover; soft-fail other errors at login.
+    if (err?.name === 'TokenExpiredError') throw err
     return withBootstrapAdmins({ ...DEFAULT_PERMISSIONS })
   }
 }
 
 export async function savePermissions(token, permissions) {
   const clean = withBootstrapAdmins(sanitizePermissions(permissions))
-  // Drop legacy keys so Drive file stays on the new shape.
-  await saveJsonToDrive(token, CONFIG_FOLDER_NAME, PERMISSIONS_FILE_NAME, clean)
-
-  // Also invite allowlisted users onto the Shared Drive so they can read permissions.json.
-  const inviteResults = await ensureSharedDriveMembers(
-    token,
-    clean.users.map(entry => entry.email),
-    'writer',
-  )
-  const inviteFailures = inviteResults.filter(result => result.status === 'error')
-
-  return { permissions: clean, inviteResults, inviteFailures }
+  const saved = await putPermissions(token, clean)
+  return {
+    permissions: sanitizePermissions(saved),
+    inviteResults: [],
+    inviteFailures: [],
+  }
 }

@@ -5,8 +5,7 @@ import { loadPermissions } from '../lib/permissionsService'
 
 const AuthContext = createContext(null)
 
-const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive'
-const AUTH_SCOPE = `openid email profile ${DRIVE_SCOPE}`
+const AUTH_SCOPE = 'openid email profile'
 /** Refresh this many ms before the token actually expires. */
 const REFRESH_BUFFER_MS = 5 * 60 * 1000
 /** Treat token as expired if less than this remains. */
@@ -78,7 +77,7 @@ export function AuthProvider({ children }) {
     try {
       permissions = await loadPermissions(token)
     } catch {
-      return { error: 'Could not verify Drive access permissions. Try again.' }
+      return { error: 'Could not verify access permissions. Try again.' }
     }
 
     if (!hasAppAccess(email, permissions)) {
@@ -104,7 +103,7 @@ export function AuthProvider({ children }) {
     const token = tokenResponse.access_token
     const expiresIn = tokenResponse.expires_in
 
-    // Already signed into the app — just rotate the Drive access token.
+    // Already signed into the app — just rotate the Google access token.
     if (userRef.current) {
       applyAccessToken(token, expiresIn)
       return { success: true }
@@ -226,7 +225,7 @@ export function AuthProvider({ children }) {
   }, [])
 
   /**
-   * After a Drive 401: try one quiet refresh; only then show re-auth.
+   * After a 401: try one quiet refresh; only then show re-auth.
    * @returns {Promise<string|null>} fresh token if recovered
    */
   const recoverFromTokenExpiry = useCallback(async () => {
@@ -265,7 +264,7 @@ export function AuthProvider({ children }) {
     setTokenExpired(false)
   }
 
-  // Returning visitor: restore Drive token without forcing a login screen.
+  // Returning visitor: restore Google token without forcing a login screen.
   useEffect(() => {
     if (!user || !scriptLoadedSuccessfully) return
     if (bootstrapDoneRef.current) return

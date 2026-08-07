@@ -160,12 +160,27 @@ export const ROOF_LINE_ITEMS = {
     unit: 'EA', qty: num(fields, 'Qty'),
     damaged: yn(fields, 'Damaged'), note: yn(fields, 'Painted') ? 'Painted' : null,
   }],
-  ri13: (fields) => yn(fields, 'Needed') ? [{
-    trade: 'Roofing', category: 'RFG',
-    description: 'Kickout flashing - install (missing)',
-    unit: 'EA', qty: null, damaged: true,
-    note: 'Not currently present; recommend at time of install to prevent siding damage',
-  }] : [],
+  ri13: (fields) => {
+    const lines = []
+    const existingCount = num(fields, 'Existing Kickouts Count')
+    if (yn(fields, 'Existing') && existingCount != null) {
+      lines.push({
+        trade: 'Roofing', category: 'RFG',
+        description: 'Kickout flashing - existing',
+        unit: 'EA', qty: existingCount, damaged: null,
+        note: yn(fields, 'Painted') ? 'Painted' : null,
+      })
+    }
+    if (yn(fields, 'Needed')) {
+      lines.push({
+        trade: 'Roofing', category: 'RFG',
+        description: 'Kickout flashing - install (missing)',
+        unit: 'EA', qty: null, damaged: true,
+        note: 'Not currently present; recommend at time of install to prevent siding damage',
+      })
+    }
+    return lines
+  },
   ri16: (fields) => [{
     trade: 'Roofing', category: 'RFG',
     description: 'Power meter mast - reset',
@@ -225,7 +240,10 @@ export const ROOF_SUBITEM_LINE_ITEMS = {
     const style = str(f, 'Style')
     if (style === 'Tubular') {
       const diameter = num(f, 'Diameter (in)')
-      const circumference = diameter != null ? Math.round(Math.PI * diameter * 10) / 10 : null
+      const storedCirc = num(f, 'Circumference (in)')
+      const circumference = storedCirc != null
+        ? storedCirc
+        : (diameter != null ? Math.round(Math.PI * diameter * 10) / 10 : null)
       const radiusIn = diameter != null ? diameter / 2 : null
       const area = radiusIn != null ? Math.round(((Math.PI * radiusIn * radiusIn) / 144) * 10) / 10 : null
       let sizeLabel = null
@@ -397,9 +415,10 @@ export const ELEV_LINE_ITEMS = {
     const area = length != null && width != null ? length * width : null
     let sizeLabel = null
     if (area != null) {
-      if (area <= 9) sizeLabel = 'Small (≤9 ft²)'
-      else if (area < 17) sizeLabel = 'Medium (10–16 ft²)'
-      else sizeLabel = 'Large (17+ ft²)'
+      if (area <= 9) sizeLabel = 'Small (1–9 ft²)'
+      else if (area <= 16) sizeLabel = 'Medium (10–16 ft²)'
+      else if (area <= 25) sizeLabel = 'Large (17–25 ft²)'
+      else sizeLabel = 'X-Large (26–32+ ft²)'
     }
     const type = str(fields, 'Type') || str(parentFields, 'Type') || 'unspecified'
     const grade = type === 'Solar'

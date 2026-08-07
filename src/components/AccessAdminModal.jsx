@@ -13,7 +13,7 @@ import {
   withBootstrapAdmins,
 } from '../lib/accessConfig'
 import { usePermissions } from '../context/PermissionsContext'
-import { TokenExpiredError } from '../lib/driveService'
+import { TokenExpiredError } from '../lib/inspectionApi'
 import { useAuth } from '../context/AuthContext'
 
 const ROLE_OPTIONS = [ROLES.sales, ROLES.supervisor, ROLES.admin]
@@ -29,6 +29,7 @@ export default function AccessAdminModal({ onClose }) {
   )
   const [newEmail, setNewEmail] = useState('')
   const [error, setError] = useState(null)
+  const [saveNotice, setSaveNotice] = useState(null)
   const [saving, setSaving] = useState(false)
 
   const sortedUsers = useMemo(
@@ -39,6 +40,7 @@ export default function AccessAdminModal({ onClose }) {
   function addUser() {
     const email = normalizeEmail(newEmail)
     setError(null)
+    setSaveNotice(null)
     if (!email) {
       setError('Enter an email address.')
       return
@@ -61,6 +63,7 @@ export default function AccessAdminModal({ onClose }) {
       return
     }
     setError(null)
+    setSaveNotice(null)
     setDraftUsers(current =>
       current.map(entry => (entry.email === email ? { ...entry, role } : entry))
     )
@@ -76,18 +79,21 @@ export default function AccessAdminModal({ onClose }) {
       return
     }
     setError(null)
+    setSaveNotice(null)
     setDraftUsers(current => current.filter(entry => entry.email !== email))
   }
 
   async function handleSave() {
     const token = await ensureAccessToken()
     if (!token) {
-      setError('Google Drive session expired. Sign in again, then save.')
+      setError('Google session expired. Sign in again, then save.')
+      setSaveNotice(null)
       return
     }
 
     setSaving(true)
     setError(null)
+    setSaveNotice(null)
     try {
       const selfEmail = normalizeEmail(user?.email)
       let users = draftUsers
@@ -117,35 +123,17 @@ export default function AccessAdminModal({ onClose }) {
       }
 
       try {
-        const result = await updatePermissions(withBootstrapAdmins({ users }))
-        const failures = result?.inviteFailures || []
-        if (failures.length) {
-          const names = failures.map(f => f.email).join(', ')
-          setError(
-            `Access list saved, but could not add to the Shared Drive: ${names}. `
-            + 'Your Google account needs Manager access on the Field Inspection Shared Drive, then Save again.'
-          )
-          return
-        }
+        await updatePermissions(withBootstrapAdmins({ users }))
       } catch (err) {
         if (!(err instanceof TokenExpiredError)) throw err
         const recovered = await recoverFromTokenExpiry()
         if (!recovered) {
-          setError('Google Drive session expired. Sign in again, then save.')
+          setError('Google session expired. Sign in again, then save.')
           return
         }
-        const result = await updatePermissions(withBootstrapAdmins({ users }))
-        const failures = result?.inviteFailures || []
-        if (failures.length) {
-          const names = failures.map(f => f.email).join(', ')
-          setError(
-            `Access list saved, but could not add to the Shared Drive: ${names}. `
-            + 'Your Google account needs Manager access on the Field Inspection Shared Drive, then Save again.'
-          )
-          return
-        }
+        await updatePermissions(withBootstrapAdmins({ users }))
       }
-      onClose()
+      setSaveNotice('Access settings saved')
     } catch (err) {
       console.error('Failed to save access settings:', err)
       const detail = String(err?.message || '').trim()
@@ -164,7 +152,7 @@ export default function AccessAdminModal({ onClose }) {
       <div className="modal-backdrop" onClick={onClose} />
       <div className="modal-sheet access-admin-modal" role="dialog" aria-modal="true" aria-labelledby="access-admin-title">
         <div className="modal-sheet__header">
-          <h2 id="access-admin-title" className="modal-sheet__title">Drive Access</h2>
+          <h2 id="access-admin-title" className="modal-sheet__title">Access Settings</h2>
           <button className="modal-sheet__close" onClick={onClose} aria-label="Close">
             <X size={20} />
           </button>
@@ -172,8 +160,7 @@ export default function AccessAdminModal({ onClose }) {
 
         <div className="access-admin-modal__body">
           <p className="access-admin-modal__intro">
-            Only people on this list can sign in. Saving also invites them to the Field Inspection
-            Shared Drive (Content manager) so they can open the app.
+            Only people on this list can sign in.
             Choose a role for each user:
             <strong> Sales</strong> (own inspections),
             <strong> Supervisor</strong> (their company),
@@ -200,6 +187,11 @@ export default function AccessAdminModal({ onClose }) {
           </div>
 
           {error && <p className="access-admin-modal__error">{error}</p>}
+          {saveNotice && (
+            <p className="access-admin-modal__success" role="status" aria-live="polite">
+              {saveNotice}
+            </p>
+          )}
 
           <div className="access-admin-modal__list">
             {sortedUsers.length === 0 && (

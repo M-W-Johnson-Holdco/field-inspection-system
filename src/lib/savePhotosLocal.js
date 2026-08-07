@@ -1,6 +1,6 @@
 import JSZip from 'jszip'
 import { collectInspectionPhotos } from './inspectionPhotos'
-import { folderName } from './driveService'
+import { folderName } from './inspectionApi'
 
 function dataUrlToBlob(dataUrl) {
   const [header, b64] = String(dataUrl || '').split(',')
@@ -44,11 +44,7 @@ async function photosToFiles(photos) {
   const files = []
   for (const photo of photos) {
     const blob = dataUrlToBlob(photo.url)
-    const flatBase = ensureExt(
-      [...photo.path.slice(1), photo.name.replace(/\.[^.]+$/, '')].join('-') + '.jpg',
-      blob.type,
-    )
-    const name = uniqueShareName(flatBase, used)
+    const name = uniqueShareName(ensureExt(photo.name, blob.type), used)
     files.push(new File([blob], name, { type: blob.type || 'image/jpeg' }))
   }
   return files
