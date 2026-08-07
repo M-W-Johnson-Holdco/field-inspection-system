@@ -7,6 +7,7 @@ import {
 	roleForEmail,
 } from './access'
 import { jsonResponse } from './cors'
+import { looksLikeJwt, verifySessionToken } from './session'
 
 export class AuthError extends Error {
 	status: number
@@ -22,33 +23,12 @@ function bearerToken(request: Request): string | null {
 	return match?.[1]?.trim() || null
 }
 
-/** Verify a Google OAuth access token and return the signed-in user + app role. */
-export async function requireAuthUser(request: Request, env: Env): Promise<AuthUser> {
-	const token = bearerToken(request)
-	if (!token) throw new AuthError('Missing Authorization bearer token')
-
-	const userinfoResp = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-		headers: { Authorization: `Bearer ${token}` },
-	})
-	if (!userinfoResp.ok) {
-		throw new AuthError('Invalid or expired Google token', 401)
-	}
-
-	const profile = await userinfoResp.json() as {
-		email?: string
-		email_verified?: boolean | string
-		name?: string
-		picture?: string
-		aud?: string
-	}
-
+async function authUserFromEmail(
+	env: Env,
+	profile: { email: string; name?: string; picture?: string },
+): Promise<AuthUser> {
 	const email = normalizeEmail(profile.email)
-	if (!email) throw new AuthError('Google account has no email')
-
-	// Prefer verified emails when the claim is present.
-	if (profile.email_verified === false || profile.email_verified === 'false') {
-		throw new AuthError('Google email is not verified', 403)
-	}
+	if (!email) throw new AuthError('Account has no email')
 
 	const org = orgForEmail(email)
 	if (!org) throw new AuthError('Email domain is not allowed', 403)
@@ -68,6 +48,60 @@ export async function requireAuthUser(request: Request, env: Env): Promise<AuthU
 		role,
 		org,
 	}
+}
+
+/** Verify a Google OAuth access token (used to mint app sessions). */
+export async function requireGoogleAuthUser(request: Request, env: Env): Promise<AuthUser> {
+	const token = bearerToken(request)
+	if (!token) throw new AuthError('Missing Authorization bearer token')
+	if (looksLikeJwt(token)) {
+		throw new AuthError('A Google access token is required to create a session', 401)
+	}
+
+	const userinfoResp = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+		headers: { Authorization: `Bearer ${token}` },
+	})
+	if (!userinfoResp.ok) {
+		throw new AuthError('Invalid or expired Google token', 401)
+	}
+
+	const profile = await userinfoResp.json() as {
+		email?: string
+		email_verified?: boolean | string
+		name?: string
+		picture?: string
+	}
+
+	if (profile.email_verified === false || profile.email_verified === 'false') {
+		throw new AuthError('Google email is not verified', 403)
+	}
+
+	return authUserFromEmail(env, {
+		email: profile.email || '',
+		name: profile.name,
+		picture: profile.picture,
+	})
+}
+
+/**
+ * Accept either an app session JWT or a Google access token.
+ * Prefer session JWTs for normal API calls after sign-in.
+ */
+export async function requireAuthUser(request: Request, env: Env): Promise<AuthUser> {
+	const token = bearerToken(request)
+	if (!token) throw new AuthError('Missing Authorization bearer token')
+
+	if (looksLikeJwt(token)) {
+		const claims = await verifySessionToken(token, env)
+		if (!claims) throw new AuthError('Session expired or invalid', 401)
+		return authUserFromEmail(env, {
+			email: claims.email,
+			name: claims.name,
+			picture: claims.picture,
+		})
+	}
+
+	return requireGoogleAuthUser(request, env)
 }
 
 export function authErrorResponse(err: unknown, origin: string) {

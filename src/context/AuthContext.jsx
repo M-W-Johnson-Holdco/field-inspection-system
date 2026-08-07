@@ -1,17 +1,53 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { useGoogleLogin, useGoogleOAuth } from '@react-oauth/google'
 import { hasAppAccess, isAllowedDomainEmail, normalizeEmail } from '../lib/accessConfig'
+import { createAppSession } from '../lib/inspectionApi'
 import { loadPermissions } from '../lib/permissionsService'
 
 const AuthContext = createContext(null)
 
 const AUTH_SCOPE = 'openid email profile'
-/** Refresh this many ms before the token actually expires. */
-const REFRESH_BUFFER_MS = 5 * 60 * 1000
-/** Treat token as expired if less than this remains. */
+const SESSION_STORAGE_KEY = 'tc_session'
+/** Treat session as expired if less than this remains. */
 const MIN_VALID_MS = 60 * 1000
-/** Give up on a silent token request after this long. */
-const SILENT_TIMEOUT_MS = 12_000
+
+function readStoredSession() {
+  try {
+    const raw = localStorage.getItem(SESSION_STORAGE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    if (!parsed?.token || !parsed?.expiresAt) return null
+    if (Date.now() >= Number(parsed.expiresAt) - MIN_VALID_MS) {
+      localStorage.removeItem(SESSION_STORAGE_KEY)
+      return null
+    }
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+function writeStoredSession(session) {
+  localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
+    token: session.token,
+    expiresAt: session.expiresAt,
+  }))
+}
+
+function clearStoredSession() {
+  localStorage.removeItem(SESSION_STORAGE_KEY)
+}
+
+function toUserData(profile) {
+  const fullName = profile?.name || profile?.fullName || profile?.email || ''
+  const given = profile?.given_name || profile?.name || fullName.split(/\s+/)[0] || ''
+  return {
+    name: given,
+    fullName,
+    email: profile?.email || '',
+    picture: profile?.picture || null,
+  }
+}
 
 export function AuthProvider({ children }) {
   const { scriptLoadedSuccessfully } = useGoogleOAuth()
@@ -23,27 +59,18 @@ export function AuthProvider({ children }) {
       return null
     }
   })
-  // Access token is kept in memory only — it expires and must not persist
   const [accessToken, setAccessToken] = useState(null)
   const [tokenExpired, setTokenExpired] = useState(false)
 
   const userRef = useRef(user)
   const accessTokenRef = useRef(accessToken)
   const expiresAtRef = useRef(0)
-  const refreshTimerRef = useRef(null)
   const pendingTokenRef = useRef(null)
   const requestTokenRef = useRef(null)
   const bootstrapDoneRef = useRef(false)
 
   userRef.current = user
   accessTokenRef.current = accessToken
-
-  function clearRefreshTimer() {
-    if (refreshTimerRef.current != null) {
-      clearTimeout(refreshTimerRef.current)
-      refreshTimerRef.current = null
-    }
-  }
 
   function resolvePending(ok, token = null) {
     const pending = pendingTokenRef.current
@@ -53,29 +80,31 @@ export function AuthProvider({ children }) {
     pending.resolve(ok ? token : null)
   }
 
-  function applyAccessToken(token, expiresInSec) {
-    const seconds = Number(expiresInSec)
-    const safeSeconds = Number.isFinite(seconds) && seconds > 0 ? seconds : 3600
-    expiresAtRef.current = Date.now() + safeSeconds * 1000
-    accessTokenRef.current = token
-    setAccessToken(token)
+  function applySession(session, userData) {
+    expiresAtRef.current = Number(session.expiresAt) || 0
+    accessTokenRef.current = session.token
+    setAccessToken(session.token)
     setTokenExpired(false)
-    clearRefreshTimer()
-    const delay = Math.max(safeSeconds * 1000 - REFRESH_BUFFER_MS, 30_000)
-    refreshTimerRef.current = setTimeout(() => {
-      requestTokenQuietly().catch(() => {})
-    }, delay)
+    writeStoredSession(session)
+
+    if (userData) {
+      localStorage.setItem('tc_user', JSON.stringify(userData))
+      userRef.current = userData
+      setUser(userData)
+    }
   }
 
-  async function authorizeUser(userInfo, token, expiresInSec) {
-    const email = normalizeEmail(userInfo.email)
+  async function establishSessionFromGoogle(googleAccessToken) {
+    const session = await createAppSession(googleAccessToken)
+    const userData = toUserData(session.user)
+    const email = normalizeEmail(userData.email)
     if (!isAllowedDomainEmail(email)) {
       return { error: 'This Google account is not authorized. Contact your administrator.' }
     }
 
     let permissions
     try {
-      permissions = await loadPermissions(token)
+      permissions = await loadPermissions(session.token)
     } catch {
       return { error: 'Could not verify access permissions. Try again.' }
     }
@@ -86,35 +115,12 @@ export function AuthProvider({ children }) {
       }
     }
 
-    const userData = {
-      name: userInfo.given_name,
-      fullName: userInfo.name,
-      email: userInfo.email,
-      picture: userInfo.picture,
-    }
-    localStorage.setItem('tc_user', JSON.stringify(userData))
-    userRef.current = userData
-    setUser(userData)
-    applyAccessToken(token, expiresInSec)
+    applySession(session, userData)
     return { success: true, permissions }
   }
 
   async function handleTokenResponse(tokenResponse) {
-    const token = tokenResponse.access_token
-    const expiresIn = tokenResponse.expires_in
-
-    // Already signed into the app — just rotate the Google access token.
-    if (userRef.current) {
-      applyAccessToken(token, expiresIn)
-      return { success: true }
-    }
-
-    const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    if (!res.ok) throw new Error('Failed to fetch user info')
-    const userInfo = await res.json()
-    return authorizeUser(userInfo, token, expiresIn)
+    return establishSessionFromGoogle(tokenResponse.access_token)
   }
 
   const requestToken = useGoogleLogin({
@@ -126,7 +132,7 @@ export function AuthProvider({ children }) {
             resolvePending(false)
             return
           }
-          resolvePending(true, tokenResponse.access_token)
+          resolvePending(true, accessTokenRef.current)
         })
         .catch((err) => {
           console.error('Token handling failed:', err)
@@ -143,42 +149,6 @@ export function AuthProvider({ children }) {
   })
 
   requestTokenRef.current = requestToken
-
-  function requestTokenQuietly() {
-    if (pendingTokenRef.current) return pendingTokenRef.current.promise
-
-    let resolve
-    const promise = new Promise((res) => {
-      resolve = res
-    })
-    const timeoutId = setTimeout(() => {
-      resolvePending(false)
-    }, SILENT_TIMEOUT_MS)
-
-    pendingTokenRef.current = { resolve, timeoutId, promise }
-
-    const tryStart = () => {
-      try {
-        if (!requestTokenRef.current) return false
-        // Empty prompt: reuse prior consent when possible (closest to silent refresh).
-        requestTokenRef.current({ prompt: '' })
-        return true
-      } catch (err) {
-        console.error('Silent token request failed to start:', err)
-        resolvePending(false)
-        return true
-      }
-    }
-
-    if (!tryStart()) {
-      const startRetry = setInterval(() => {
-        if (!pendingTokenRef.current || tryStart()) clearInterval(startRetry)
-      }, 100)
-      setTimeout(() => clearInterval(startRetry), SILENT_TIMEOUT_MS)
-    }
-
-    return promise
-  }
 
   function requestTokenInteractive() {
     if (pendingTokenRef.current) return pendingTokenRef.current.promise
@@ -203,46 +173,50 @@ export function AuthProvider({ children }) {
     return promise
   }
 
-  function isTokenFresh() {
+  function isSessionFresh() {
     return Boolean(
       accessTokenRef.current
+      && expiresAtRef.current
       && Date.now() < expiresAtRef.current - MIN_VALID_MS,
     )
   }
 
   /**
-   * Returns a usable access token, silently refreshing when needed.
-   * Shows the re-auth modal only if silent refresh fails.
+   * Returns the app session token when still valid.
+   * Shows the re-auth modal only when the session has expired.
    */
   const ensureAccessToken = useCallback(async () => {
-    if (isTokenFresh()) return accessTokenRef.current
+    if (isSessionFresh()) return accessTokenRef.current
 
-    const token = await requestTokenQuietly()
-    if (token) return token
+    const stored = readStoredSession()
+    if (stored?.token) {
+      accessTokenRef.current = stored.token
+      expiresAtRef.current = Number(stored.expiresAt) || 0
+      setAccessToken(stored.token)
+      if (isSessionFresh()) return stored.token
+    }
 
-    setTokenExpired(true)
+    clearStoredSession()
+    accessTokenRef.current = null
+    expiresAtRef.current = 0
+    setAccessToken(null)
+    setTokenExpired(Boolean(userRef.current))
     return null
   }, [])
 
-  /**
-   * After a 401: try one quiet refresh; only then show re-auth.
-   * @returns {Promise<string|null>} fresh token if recovered
-   */
   const recoverFromTokenExpiry = useCallback(async () => {
+    clearStoredSession()
     accessTokenRef.current = null
     setAccessToken(null)
     expiresAtRef.current = 0
-    clearRefreshTimer()
-
-    const token = await requestTokenQuietly()
-    if (token) return token
-
     setTokenExpired(true)
     return null
   }, [])
 
-  async function login(userInfo, token, expiresInSec) {
-    return authorizeUser(userInfo, token, expiresInSec)
+  async function login(userInfo, googleAccessToken) {
+    // Prefer Google access token exchange; userInfo is ignored once Worker returns profile.
+    void userInfo
+    return establishSessionFromGoogle(googleAccessToken)
   }
 
   function reLogin() {
@@ -253,8 +227,8 @@ export function AuthProvider({ children }) {
   }
 
   function logout() {
-    clearRefreshTimer()
     resolvePending(false)
+    clearStoredSession()
     localStorage.removeItem('tc_user')
     userRef.current = null
     accessTokenRef.current = null
@@ -264,16 +238,26 @@ export function AuthProvider({ children }) {
     setTokenExpired(false)
   }
 
-  // Returning visitor: restore Google token without forcing a login screen.
+  // Returning visitor: restore app session without Google until they sign out.
   useEffect(() => {
-    if (!user || !scriptLoadedSuccessfully) return
+    if (!user) return
     if (bootstrapDoneRef.current) return
     bootstrapDoneRef.current = true
-    requestTokenQuietly().catch(() => {})
+
+    const stored = readStoredSession()
+    if (stored?.token) {
+      accessTokenRef.current = stored.token
+      expiresAtRef.current = Number(stored.expiresAt) || 0
+      setAccessToken(stored.token)
+      setTokenExpired(false)
+      return
+    }
+
+    // User profile cached but session gone — force sign-in.
+    setTokenExpired(true)
   }, [user, scriptLoadedSuccessfully])
 
   useEffect(() => () => {
-    clearRefreshTimer()
     resolvePending(false)
   }, [])
 

@@ -11,7 +11,7 @@ export const WORKER_URL =
 
 export class TokenExpiredError extends Error {
   constructor() {
-    super('Google session expired. Please sign in again.')
+    super('Session expired. Please sign in again.')
     this.name = 'TokenExpiredError'
   }
 }
@@ -65,6 +65,20 @@ async function apiFetch(path, token, opts = {}) {
     throw new Error(message)
   }
   return payload
+}
+
+/** Exchange a short-lived Google access token for a long-lived app session JWT. */
+export async function createAppSession(googleAccessToken) {
+  const data = await apiFetch('/api/session', googleAccessToken, { method: 'POST' })
+  if (!data?.token || !data?.expiresAt) {
+    throw new Error('Could not create app session')
+  }
+  return {
+    token: data.token,
+    expiresAt: data.expiresAt,
+    expiresIn: data.expiresIn,
+    user: data.user || null,
+  }
 }
 
 export async function listInspectionFolders(token) {

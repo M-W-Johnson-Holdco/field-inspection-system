@@ -20,7 +20,7 @@ export default function LoginScreen() {
         })
         if (!res.ok) throw new Error('Failed to fetch user info')
         const userInfo = await res.json()
-        const result = await login(userInfo, tokenResponse.access_token, tokenResponse.expires_in)
+        const result = await login(userInfo, tokenResponse.access_token)
         if (result?.error) setError(result.error)
       } catch {
         setError('Sign-in failed. Please try again.')
