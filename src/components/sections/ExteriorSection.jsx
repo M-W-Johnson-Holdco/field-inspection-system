@@ -219,7 +219,11 @@ function ExteriorItem({ itemDef, trigPhoto }) {
   }
 
   return (
-    <div className={`ri-item${excluded ? ' ri-item--excluded' : ''}`}>
+    <div
+      id={`nav-${id}`}
+      data-nav-anchor={id}
+      className={`ri-item${excluded ? ' ri-item--excluded' : ''}`}
+    >
       <div className="ri-item__top">
         <button
           type="button"

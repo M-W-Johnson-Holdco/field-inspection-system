@@ -589,7 +589,11 @@ function ElevItem({ itemDef, direction, trigPhoto }) {
   }
 
   return (
-    <div className={`ri-item${excluded ? ' ri-item--excluded' : ''}`}>
+    <div
+      id={`nav-${itemDef.id}`}
+      data-nav-anchor={itemDef.id}
+      className={`ri-item${excluded ? ' ri-item--excluded' : ''}`}
+    >
       <div className="ri-item__top">
         <button
           type="button"

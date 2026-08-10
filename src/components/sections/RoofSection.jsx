@@ -778,7 +778,11 @@ function CheckItem({ itemDef, trigPhoto }) {
   }
 
   return (
-    <div className={`ri-item${status === 'na' ? ' ri-item--excluded' : ''}${status === 'supplement' ? ' ri-item--supplement' : ''}`}>
+    <div
+      id={`nav-${id}`}
+      data-nav-anchor={id}
+      className={`ri-item${status === 'na' ? ' ri-item--excluded' : ''}${status === 'supplement' ? ' ri-item--supplement' : ''}`}
+    >
       <div className="ri-item__top">
         <button
           type="button"
