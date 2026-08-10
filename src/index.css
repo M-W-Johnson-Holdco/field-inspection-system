@@ -483,6 +483,15 @@ button:disabled {
   gap: 12px;
 }
 
+.elev-field-groups {
+  display: grid;
+  gap: 10px;
+}
+
+.elev-field-groups > .ri-fields-grid {
+  margin-top: 2px;
+}
+
 .job-info-group {
   padding: 14px;
   border: 1px solid rgba(148, 163, 184, 0.28);
@@ -3862,6 +3871,40 @@ summary.field-select.field-select--placeholder {
   width: max-content;
   max-width: 100%;
   flex: 0 0 auto;
+}
+
+.meas-picker-mount {
+  width: 100%;
+  min-width: 0;
+}
+
+.meas-inline {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.meas-inline__col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.meas-inline__col-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.meas-inline__select {
+  width: 100%;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
 }
 
 .dimension-lw-input-wrap {

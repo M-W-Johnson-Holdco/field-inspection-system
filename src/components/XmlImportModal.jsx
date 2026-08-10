@@ -16,7 +16,7 @@ function buildPreviewRows(parsed, existing) {
   }
   if (lineLengths?.RIDGE > 0) {
     rows.push({
-      label: 'Ridge Vent — Length (LF)',
+      label: 'Ridge Vent — Length',
       value: `${lineLengths.RIDGE} LF`,
       overwrite: Boolean(existing?.ridgeLF),
     })

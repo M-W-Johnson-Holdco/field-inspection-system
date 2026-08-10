@@ -7,7 +7,7 @@ import DamageDescriptionInput from '../DamageDescriptionInput'
 import ItemNotesField from '../ItemNotesField'
 import DimensionLwInput from '../DimensionLwInput'
 import DiameterCircInput from '../DiameterCircInput'
-import MeasurementInput, { isLinearMeasurementField } from '../MeasurementInput'
+import MeasurementInput, { isMeasurementField } from '../MeasurementInput'
 import { ROOF_ITEMS, SUBSECTIONS } from '../../data/roofItems'
 import { fieldGroupProps } from '../../utils/fieldLayout'
 import { fieldSelectClass, materialOptionColumnStyle, withSelectPlaceholderClass, visibleFieldsForValues, ynOptionsForField, optionsForField } from '../../utils/fieldGrid'
@@ -278,7 +278,7 @@ function FieldRenderer({ field, value, onChange, subFields, onSubFieldChange }) 
 
   const inputCh = Math.max(String(value || p || '').length, 3)
 
-  if (isLinearMeasurementField(field)) {
+  if (isMeasurementField(field)) {
     return <MeasurementInput field={field} value={value} onChange={onChange} />
   }
 
@@ -368,7 +368,7 @@ function collapsibleSubPills(itemId, fields = {}) {
     }
     if (fields.Damaged === 'Yes') red.push('Damaged')
   } else if (itemId === 'ri15') {
-    const length = selectValue(fields['Length (LF)'])
+    const length = selectValue(fields['Length'])
     if (length) grey.push(`${length} LF`)
   } else if (itemId === 'ri17') {
     const size = String(fields['Size / Width'] || '').match(/^(Small|Medium|Large)/)?.[1]

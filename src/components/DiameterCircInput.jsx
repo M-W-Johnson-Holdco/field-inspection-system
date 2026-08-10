@@ -1,5 +1,6 @@
 import { fieldGroupProps } from '../utils/fieldLayout'
-import { DECIMAL_INPUT_PROPS, sanitizeDecimalInput } from '../utils/decimalInput'
+import { measurementToDecimalInches } from '../utils/measurement'
+import MeasurementInput from './MeasurementInput'
 
 function roundTenths(value) {
   return Math.round(value * 10) / 10
@@ -12,56 +13,15 @@ function formatTenths(value) {
 }
 
 function circumferenceFromDiameter(diameterValue) {
-  const diameter = Number(diameterValue)
-  if (!Number.isFinite(diameter) || diameter <= 0) return ''
+  const diameter = measurementToDecimalInches(diameterValue, { unitHint: 'inches' })
+  if (diameter == null || diameter <= 0) return ''
   return formatTenths(Math.PI * diameter)
 }
 
 function diameterFromCircumference(circumferenceValue) {
-  const circumference = Number(circumferenceValue)
-  if (!Number.isFinite(circumference) || circumference <= 0) return ''
+  const circumference = measurementToDecimalInches(circumferenceValue, { unitHint: 'inches' })
+  if (circumference == null || circumference <= 0) return ''
   return formatTenths(circumference / Math.PI)
-}
-
-function NumberStepper({ label, value, onChange, placeholder = '0', step = 1 }) {
-  const current = value === '' || value == null ? 0 : Number(value)
-  const inputCh = Math.max(String(value || placeholder || '').length, 3)
-
-  function adjust(delta) {
-    const base = Number.isFinite(current) ? current : 0
-    const next = Math.max(0, base + delta)
-    onChange(formatTenths(next) || '0')
-  }
-
-  return (
-    <div className="number-stepper">
-      <button
-        type="button"
-        className="number-stepper__btn"
-        aria-label={`Decrease ${label}`}
-        onClick={() => adjust(-step)}
-      >
-        −
-      </button>
-      <input
-        className="field-input number-stepper__input"
-        style={{ '--field-ch': inputCh }}
-        {...DECIMAL_INPUT_PROPS}
-        value={value || ''}
-        placeholder={placeholder}
-        aria-label={label}
-        onChange={e => onChange(sanitizeDecimalInput(e.target.value))}
-      />
-      <button
-        type="button"
-        className="number-stepper__btn"
-        aria-label={`Increase ${label}`}
-        onClick={() => adjust(step)}
-      >
-        +
-      </button>
-    </div>
-  )
 }
 
 export default function DiameterCircInput({
@@ -76,7 +36,6 @@ export default function DiameterCircInput({
   const circumferenceLabel = field.circumferenceLabel || 'Total Circumference'
   const showHeading = Boolean(field.l && field.l !== 'Diameter')
 
-  // Prefer stored circumference; fall back to derived so older saves still show C.
   const circDisplay = (() => {
     if (circumferenceValue !== '' && circumferenceValue != null) return circumferenceValue
     return circumferenceFromDiameter(diameterValue)
@@ -102,23 +61,26 @@ export default function DiameterCircInput({
         </div>
       )}
 
-      <div className="field-group field-group--full field-group--stepper-row field-group--inline-stepper dimension-lw-input__row">
+      <div className="field-group field-group--full field-group--measurement dimension-lw-input__row">
         <label className="form-label">{diameterLabel}</label>
-        <NumberStepper
+        <MeasurementInput
+          field={{ l: diameterLabel, t: 'num' }}
           label={diameterLabel}
           value={diameterValue}
           onChange={handleDiameterChange}
+          hideLabel
         />
       </div>
 
       {showCircumference && (
-        <div className="field-group field-group--full field-group--stepper-row field-group--inline-stepper dimension-lw-input__row">
+        <div className="field-group field-group--full field-group--measurement dimension-lw-input__row">
           <label className="form-label">{circumferenceLabel}</label>
-          <NumberStepper
+          <MeasurementInput
+            field={{ l: circumferenceLabel, t: 'num' }}
             label={circumferenceLabel}
             value={circDisplay}
             onChange={handleCircumferenceChange}
-            step={0.1}
+            hideLabel
           />
         </div>
       )}

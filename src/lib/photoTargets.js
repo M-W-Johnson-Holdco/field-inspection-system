@@ -126,6 +126,22 @@ function buildElevationsBranch(elevData, frontOfRisk = '') {
           }]
         }
 
+        if (itemDef.groupPhotos && Array.isArray(itemDef.fieldGroups) && itemDef.fieldGroups.length) {
+          const leaves = itemDef.fieldGroups.map(group => ({
+            id: `${cellKey}__group_${group.id}`,
+            label: group.title || group.id,
+            kind: 'elev',
+            target: `${cellKey}__group_${group.id}`,
+            photoCount: Array.isArray(cell?.groupPhotos?.[group.id]) ? cell.groupPhotos[group.id].length : 0,
+            leaf: true,
+          }))
+          return [{
+            id: cellKey,
+            label: itemDef.lbl,
+            children: leaves,
+          }]
+        }
+
         return [{
           id: cellKey,
           label: itemDef.lbl,
@@ -248,6 +264,12 @@ export function getLeafPhotos(data = {}, leaf) {
   }
 
   if (leaf.kind === 'elev') {
+    const groupMatch = String(leaf.target).match(/^(.+)__group_([A-Za-z0-9-]+)$/)
+    if (groupMatch) {
+      const cell = data.elevData?.[groupMatch[1]]
+      const photos = cell?.groupPhotos?.[groupMatch[2]]
+      return Array.isArray(photos) ? photos : []
+    }
     const match = String(leaf.target).match(/^(.+)__sub_(\d+)$/)
     if (match) {
       const cell = data.elevData?.[match[1]]

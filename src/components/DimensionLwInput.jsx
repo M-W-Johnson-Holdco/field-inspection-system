@@ -1,50 +1,21 @@
 import { fieldGroupProps } from '../utils/fieldLayout'
-import { DECIMAL_INPUT_PROPS, sanitizeDecimalInput } from '../utils/decimalInput'
+import {
+  measurementToDecimalFeet,
+  measurementToDecimalInches,
+  measurementUnitHint,
+} from '../utils/measurement'
+import MeasurementInput from './MeasurementInput'
 
-function NumberStepper({ label, value, onChange, placeholder = '0' }) {
-  const current = value === '' || value == null ? 0 : Number(value)
-  const inputCh = Math.max(String(value || placeholder || '').length, 3)
-
-  function adjust(delta) {
-    const base = Number.isFinite(current) ? current : 0
-    onChange(String(Math.max(0, base + delta)))
-  }
-
-  return (
-    <div className="number-stepper">
-      <button
-        type="button"
-        className="number-stepper__btn"
-        aria-label={`Decrease ${label}`}
-        onClick={() => adjust(-1)}
-      >
-        −
-      </button>
-      <input
-        className="field-input number-stepper__input"
-        style={{ '--field-ch': inputCh }}
-        {...DECIMAL_INPUT_PROPS}
-        value={value || ''}
-        placeholder={placeholder}
-        aria-label={label}
-        onChange={e => onChange(sanitizeDecimalInput(e.target.value))}
-      />
-      <button
-        type="button"
-        className="number-stepper__btn"
-        aria-label={`Increase ${label}`}
-        onClick={() => adjust(1)}
-      >
-        +
-      </button>
-    </div>
-  )
-}
-
-function formatArea(lengthValue, widthValue) {
-  const length = Number(lengthValue)
-  const width = Number(widthValue)
-  if (!Number.isFinite(length) || !Number.isFinite(width) || length <= 0 || width <= 0) return null
+function formatArea(lengthValue, widthValue, areaUnit = 'ft²') {
+  const unit = String(areaUnit || '')
+  const useInches = /in/i.test(unit)
+  const length = useInches
+    ? measurementToDecimalInches(lengthValue, { unitHint: measurementUnitHint('Inches') })
+    : measurementToDecimalFeet(lengthValue, { unitHint: measurementUnitHint('Feet') })
+  const width = useInches
+    ? measurementToDecimalInches(widthValue, { unitHint: measurementUnitHint('Inches') })
+    : measurementToDecimalFeet(widthValue, { unitHint: measurementUnitHint('Feet') })
+  if (length == null || width == null || length <= 0 || width <= 0) return null
   const area = length * width
   return Number.isInteger(area) ? String(area) : area.toFixed(1)
 }
@@ -61,8 +32,7 @@ export default function DimensionLwInput({
   const showArea = Boolean(field.showAreaSqIn || field.showArea)
   const areaUnit = field.areaUnit || 'in²'
   const areaLabel = field.areaLabel || 'Total Area'
-  const areaValue = showArea ? formatArea(lengthValue, widthValue) : null
-  // Keep a heading only when it's meaningful (not the generic "Size" used above L/W rows)
+  const areaValue = showArea ? formatArea(lengthValue, widthValue, areaUnit) : null
   const showHeading = Boolean(field.l && field.l !== 'Size')
 
   return (
@@ -76,21 +46,25 @@ export default function DimensionLwInput({
         </div>
       )}
 
-      <div className="field-group field-group--full field-group--stepper-row field-group--inline-stepper dimension-lw-input__row">
+      <div className="field-group field-group--full field-group--measurement dimension-lw-input__row">
         <label className="form-label">{lengthLabel}</label>
-        <NumberStepper
+        <MeasurementInput
+          field={{ l: lengthLabel, t: 'num' }}
           label={lengthLabel}
           value={lengthValue}
           onChange={onLengthChange}
+          hideLabel
         />
       </div>
 
-      <div className="field-group field-group--full field-group--stepper-row field-group--inline-stepper dimension-lw-input__row">
+      <div className="field-group field-group--full field-group--measurement dimension-lw-input__row">
         <label className="form-label">{widthLabel}</label>
-        <NumberStepper
+        <MeasurementInput
+          field={{ l: widthLabel, t: 'num' }}
           label={widthLabel}
           value={widthValue}
           onChange={onWidthChange}
+          hideLabel
         />
       </div>
 

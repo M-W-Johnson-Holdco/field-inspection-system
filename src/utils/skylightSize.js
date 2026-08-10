@@ -1,4 +1,6 @@
 /** Skylight area size buckets (square feet). */
+import { measurementToDecimalFeet, measurementToDecimalInches } from './measurement'
+
 export const SKYLIGHT_SIZE_LEGEND = 'Large ≤16 ft² · X-Large 17+ ft²'
 
 function roundTenths(value) {
@@ -7,26 +9,26 @@ function roundTenths(value) {
 
 /** Circumference in inches — stored value or derived from tubular diameter (π × d). */
 export function skylightCircumferenceIn(fields = {}) {
-  const stored = Number(fields['Circumference (in)'])
-  if (Number.isFinite(stored) && stored > 0) return roundTenths(stored)
-  const diameter = Number(fields['Diameter (in)'])
-  if (!Number.isFinite(diameter) || diameter <= 0) return null
+  const stored = measurementToDecimalInches(fields['Circumference (in)'], { unitHint: 'inches' })
+  if (stored != null && stored > 0) return roundTenths(stored)
+  const diameter = measurementToDecimalInches(fields['Diameter (in)'], { unitHint: 'inches' })
+  if (diameter == null || diameter <= 0) return null
   return roundTenths(Math.PI * diameter)
 }
 
 /** Area in sq ft — L×W for fixed/venting, πr² for tubular (diameter inches → sq ft). */
 export function skylightAreaSqFt(fields = {}) {
   if (fields.Style === 'Tubular') {
-    const diameter = Number(fields['Diameter (in)'])
-    if (!Number.isFinite(diameter) || diameter <= 0) return null
+    const diameter = measurementToDecimalInches(fields['Diameter (in)'], { unitHint: 'inches' })
+    if (diameter == null || diameter <= 0) return null
     const radiusIn = diameter / 2
     const areaSqFt = (Math.PI * radiusIn * radiusIn) / 144
     return roundTenths(areaSqFt)
   }
 
-  const length = Number(fields['Length (ft)'])
-  const width = Number(fields['Width (ft)'])
-  if (!Number.isFinite(length) || !Number.isFinite(width) || length <= 0 || width <= 0) return null
+  const length = measurementToDecimalFeet(fields['Length (ft)'], { unitHint: 'feet' })
+  const width = measurementToDecimalFeet(fields['Width (ft)'], { unitHint: 'feet' })
+  if (length == null || width == null || length <= 0 || width <= 0) return null
   return roundTenths(length * width)
 }
 

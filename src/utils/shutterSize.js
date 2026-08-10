@@ -1,4 +1,6 @@
 /** Shutter area size buckets (square inches). */
+import { measurementToDecimalInches } from './measurement'
+
 export const SHUTTER_SIZE_BUCKETS = [
   { key: 'Small', label: 'Small', min: 0, max: 770, inclusiveMax: true },
   { key: 'Medium', label: 'Medium', min: 771, max: 1120, inclusiveMax: true },
@@ -8,9 +10,9 @@ export const SHUTTER_SIZE_BUCKETS = [
 export const SHUTTER_SIZE_LEGEND = 'Small ≤770 in² · Medium 771–1,120 in² · Large 1,121+ in²'
 
 export function shutterAreaSqIn(fields = {}) {
-  const length = Number(fields['Length (in)'])
-  const width = Number(fields['Width (in)'])
-  if (!Number.isFinite(length) || !Number.isFinite(width) || length <= 0 || width <= 0) return null
+  const length = measurementToDecimalInches(fields['Length (in)'], { unitHint: 'inches' })
+  const width = measurementToDecimalInches(fields['Width (in)'], { unitHint: 'inches' })
+  if (length == null || width == null || length <= 0 || width <= 0) return null
   return length * width
 }
 

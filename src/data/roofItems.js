@@ -144,7 +144,7 @@ export const ROOF_ITEMS = [
       { t: 'yn', l: 'Painted', full: true },
     ],
     subFields: [
-      { t: 'num', l: 'Length (LF)', lfFeetOnly: true, full: true },
+      { t: 'num', l: 'Length', lfFeetOnly: true, full: true },
       { t: 'num', l: 'Stories', p: '1', full: true },
       { t: 'yn', l: 'Damaged', full: true },
     ],
@@ -161,7 +161,7 @@ export const ROOF_ITEMS = [
     fields: [
       { t: 'radio', l: 'Type', o: ['Metal', 'Shingle Over'] },
       { t: 'yn', l: 'Painted' },
-      { t: 'num', l: 'Length (LF)', lfFeetOnly: true },
+      { t: 'num', l: 'Length', lfFeetOnly: true },
       { t: 'num', l: 'Width (inches)', full: true },
       { t: 'yn', l: 'Damaged' },
     ],
@@ -274,7 +274,7 @@ export const ROOF_ITEMS = [
       { t: 'yn', l: 'Painted', full: true },
     ],
     subFields: [
-      { t: 'num', l: 'Length (LF)', lfFeetOnly: true, full: true },
+      { t: 'num', l: 'Length', lfFeetOnly: true, full: true },
     ],
   },
   {
@@ -465,7 +465,7 @@ export const ROOF_ITEMS = [
       { t: 'yn', l: 'Gutter Apron Existing?', full: true },
       {
         t: 'num',
-        l: 'Gutter Apron Width (LF)',
+        l: 'Gutter Apron Width',
         lfFeetOnly: true,
         full: true,
         noTopDivider: true,
