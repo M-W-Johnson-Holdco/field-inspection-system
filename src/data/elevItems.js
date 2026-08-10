@@ -1,14 +1,24 @@
 export const DIRECTIONS = ['Front', 'Right', 'Rear', 'Left']
 
-export const ELEV_ADDMORE_IDS = new Set(['ev3', 'ev11', 'ev4', 'ev12', 'ev5', 'ev6', 'ev7', 'ev8', 'ev14'])
+export const ELEV_ADDMORE_IDS = new Set(['ev3', 'ev11', 'ev4', 'ev12', 'ev5', 'ev6', 'ev7', 'ev8'])
+
+export const DECK_MATERIAL_OPTIONS = ['Select', 'Cedar', 'Pine', 'Redwood', 'Composite', 'Treated Wood', 'N/A']
+
+function deckSectionStatusFields(prefix) {
+  return [
+    { t: 'yn', l: `${prefix} Painted or Stained`, displayL: 'Painted or Stained', full: true },
+    { t: 'yn', l: `${prefix} Replace`, displayL: 'Replace', full: true },
+    { t: 'yn', l: `${prefix} Damaged`, displayL: 'Damaged', full: true },
+  ]
+}
 
 export const ELEV_ITEMS = [
   {
     id: 'ev0', lbl: 'Siding',
     fields: [
+      { t: 'select', l: 'Grade', o: ['Select', 'Composite', 'Fiber Cement', 'Vinyl', 'Wood'], full: true },
       { t: 'select', l: 'Style', o: ['Select', 'Flat', 'Double Dutch', 'Textured', 'Other'], full: true },
       { t: 'txt', l: '(Other)', showWhen: { field: 'Style', equals: 'Other' }, full: true, p: 'Describe siding style' },
-      { t: 'select', l: 'Grade', o: ['Select', 'Composite', 'Fiber Cement', 'Vinyl', 'Wood'], full: true },
       { t: 'num', l: 'Exposure (Inches)', p: '0' },
       { t: 'yn', l: 'Damaged', full: true },
     ],
@@ -34,7 +44,7 @@ export const ELEV_ITEMS = [
       { t: 'yn', l: 'Painted', full: true },
     ],
     subFields: [
-      { t: 'num', l: 'Length (LF)', lfFeetOnly: true },
+      { t: 'num', l: 'Length', lfFeetOnly: true },
       { t: 'yn', l: 'Damaged', full: true },
     ],
   },
@@ -44,11 +54,10 @@ export const ELEV_ITEMS = [
     addMoreLabel: 'Add Gutter Guard',
     subItemPhotos: true,
     fields: [
-      { t: 'select', l: 'Style', o: ['Select', 'Screen', 'Micro-Mesh', 'Reverse Curve', 'Proprietary', 'None'], full: true },
-      { t: 'select', l: 'Material', o: ['Select', 'Plastic', 'Metal'], allowNA: true, full: true },
+      { t: 'select', l: 'Style', o: ['Select', 'Screen', 'Plastic Screen', 'Micro-Mesh', 'Reverse Curve', 'Proprietary', 'None'], full: true },
     ],
     subFields: [
-      { t: 'num', l: 'Length (LF)', lfFeetOnly: true },
+      { t: 'num', l: 'Length', lfFeetOnly: true },
       { t: 'yn', l: 'Damaged', full: true },
     ],
   },
@@ -64,7 +73,7 @@ export const ELEV_ITEMS = [
       { t: 'yn', l: 'Painted', full: true },
     ],
     subFields: [
-      { t: 'num', l: 'Length (LF)', lfFeetOnly: true },
+      { t: 'num', l: 'Length', lfFeetOnly: true },
       { t: 'yn', l: 'Damaged', full: true },
     ],
   },
@@ -75,7 +84,8 @@ export const ELEV_ITEMS = [
     subItemPhotos: true,
     windowSizeCounters: true,
     fields: [
-      { t: 'select', l: 'Grade', o: ['Select', 'Vinyl', 'Wood', 'Composite', 'Aluminum'], allowNA: false, full: true },
+      { t: 'select', l: 'Material', o: ['Select', 'Vinyl', 'Wood', 'Composite', 'Aluminum'], allowNA: false, full: true },
+      { t: 'select', l: 'Grade', o: ['Select', 'Standard', 'High', 'Premium', 'N/A'], full: true },
       { t: 'select', l: 'Type', o: ['Select', 'Single Hung', 'Double Hung', 'Casement', 'Fixed', 'Sliding', 'Awning'], allowNA: false, full: true },
       { t: 'select', l: 'Glaze', o: ['Select', 'Single', 'Double', 'Triple'], allowNA: false, full: true },
       { t: 'yn', l: 'Painted', full: true },
@@ -102,7 +112,7 @@ export const ELEV_ITEMS = [
     subItemPhotos: true,
     screenSizeCounters: true,
     fields: [
-      { t: 'select', l: 'Type', o: ['Select', 'Standard', 'Solar'], full: true, allowNA: false },
+      { t: 'select', l: 'Type', o: ['Select', 'Standard', 'Aluminum Mesh', 'Solar'], full: true, allowNA: false },
       { t: 'select', l: 'Grade', o: ['Select', 'Medium', 'High'], full: true, allowNA: true, showWhen: { field: 'Type', equals: 'Solar' } },
     ],
     subFields: [
@@ -127,7 +137,7 @@ export const ELEV_ITEMS = [
     subItemPhotos: true,
     shutterSizeCounters: true,
     fields: [
-      { t: 'select', l: 'Grade', o: ['Select', 'Vinyl', 'Wood', 'Custom'], full: true },
+      { t: 'select', l: 'Grade', o: ['Select', 'Vinyl', 'Wood', 'Aluminum', 'Custom'], full: true },
       { t: 'txt', l: 'Custom Grade', showWhen: { field: 'Grade', equals: 'Custom' }, full: true, p: 'Type N/A if unknown' },
       { t: 'select', l: 'Painted', o: ['Select', 'Yes', 'No', 'Stained', 'N/A'], full: true },
     ],
@@ -143,6 +153,7 @@ export const ELEV_ITEMS = [
         showAreaSqIn: true,
         areaUnit: 'in²',
       },
+      { t: 'select', l: 'Action', o: ['Select', 'Sand', 'Repaint', 'Replace', 'None'], full: true },
       { t: 'yn', l: 'Damaged', full: true },
     ],
   },
@@ -161,36 +172,11 @@ export const ELEV_ITEMS = [
     subItemPhotos: true,
     fields: [],
     subFields: [
-      { t: 'select', l: 'Grade', o: ['Select', 'Wood', 'Aluminum', 'Steel', 'Composite', 'Fiberglass', 'None'], full: true, allowNA: false },
-      { t: 'select', l: 'Style', o: ['Select', 'Hinge', 'French', 'Sliding', 'Storm Door'], full: true, allowNA: false },
+      { t: 'select', l: 'Material', o: ['Select', 'Wood', 'Aluminum', 'Steel', 'Composite', 'Fiberglass', 'Insulated Metal', 'Wood Paneled', 'None'], full: true, allowNA: false },
+      { t: 'select', l: 'Style', o: ['Select', 'Hinge', 'French', 'Sliding', 'Storm Door', 'Standard', 'High Grade', 'Dutch'], full: true, allowNA: false },
+      { t: 'yn', l: 'Glass', allowNA: true, full: true },
       { t: 'select', l: 'Configuration', o: ['Select', 'Single', 'Double'], full: true, allowNA: false },
       { t: 'yn', l: 'Painted', full: true, allowNA: false },
-      {
-        t: 'lwxw',
-        l: 'Size',
-        full: true,
-        lengthKey: 'Length (in)',
-        widthKey: 'Width (in)',
-        lengthLabel: 'Length (Inches)',
-        widthLabel: 'Width (Inches)',
-        showAreaSqIn: true,
-      },
-      { t: 'select', l: 'Action', o: ['Select', 'Replace', 'Repair', 'None'], full: true, allowNA: false },
-      { t: 'yn', l: 'Damaged', full: true },
-    ],
-  },
-  {
-    id: 'ev8', lbl: 'Garage Doors',
-    addMore: true,
-    addMoreLabel: 'Add Garage Door',
-    subItemPhotos: true,
-    fields: [],
-    subFields: [
-      { t: 'select', l: 'Type', o: ['Select', 'Single', 'Double'], full: true, allowNA: false },
-      { t: 'select', l: 'Grade', o: ['Select', 'Aluminum', 'Wood Paint', 'Stain Grade', 'Composite'], full: true, allowNA: false },
-      { t: 'yn', l: 'Insulated', full: true, allowNA: false },
-      { t: 'yn', l: 'Windows', full: true, allowNA: false },
-      { t: 'num', l: 'Window Qty', showWhen: { field: 'Windows', equals: 'Yes' } },
       {
         t: 'lwxw',
         l: 'Size',
@@ -202,47 +188,111 @@ export const ELEV_ITEMS = [
         showArea: true,
         areaUnit: 'ft²',
       },
-      { t: 'yn', l: 'Painted', full: true },
+      { t: 'select', l: 'Action', o: ['Select', 'Replace', 'Repair', 'None'], full: true, allowNA: false },
+      { t: 'yn', l: 'Damaged', full: true },
+    ],
+  },
+  {
+    id: 'ev8', lbl: 'Garage Doors',
+    addMore: true,
+    addMoreLabel: 'Add Garage Door',
+    subItemPhotos: true,
+    preserveFieldOrder: true,
+    fields: [],
+    subFields: [
+      { t: 'select', l: 'Type', o: ['Select', 'Single', 'Double'], full: true, allowNA: false },
+      { t: 'select', l: 'Grade', o: ['Select', 'Aluminum', 'Wood Paint', 'Stain Grade', 'Composite', 'Aluminum Insulated', 'Steel Insulated', 'Wood Paneled'], full: true, allowNA: false },
+      { t: 'yn', l: 'Insulated', full: true, allowNA: false },
+      { t: 'yn', l: 'Windows', full: true, allowNA: false },
+      { t: 'num', l: 'Window Qty', showWhen: { field: 'Windows', equals: 'Yes' }, noTopDivider: true },
+      {
+        t: 'lwxw',
+        l: 'Size',
+        full: true,
+        lengthKey: 'Length (ft)',
+        widthKey: 'Width (ft)',
+        lengthLabel: 'Length (Feet)',
+        widthLabel: 'Width (Feet)',
+        showArea: true,
+        areaUnit: 'ft²',
+      },
+      { t: 'yn', l: 'Painted or Stained', full: true },
+      {
+        t: 'multi',
+        l: 'Accessories',
+        o: ['Jamb', 'Keypad', 'Weather Stop', 'Door Astragal', 'N/A'],
+        allowNA: true,
+        full: true,
+        labelHint: 'SELECT ALL THAT APPLY',
+      },
       { t: 'yn', l: 'Damaged', full: true },
     ],
   },
   {
     id: 'ev14', lbl: 'Deck',
-    addMore: true,
-    addMoreLabel: 'Add Deck',
-    subItemPhotos: true,
     preserveFieldOrder: true,
-    fields: [],
-    subFields: [
-      { t: 'select', l: 'Material', o: ['Select', 'Treated Wood', 'Wood', 'Composite'], full: true, allowNA: false },
-      { t: 'num', l: 'Handrail Height (Inches)', p: '36', full: true },
-      { t: 'num', l: 'Steps', p: '0', full: true },
+    groupPhotos: true,
+    fieldGroups: [
       {
-        t: 'lwxw',
-        l: 'Deck Size',
-        full: true,
-        lengthKey: 'Deck Length (ft)',
-        widthKey: 'Deck Width (ft)',
-        lengthLabel: 'Length (Feet)',
-        widthLabel: 'Width (Feet)',
-        showArea: true,
-        areaUnit: 'ft²',
-        areaLabel: 'Total Deck Area',
+        id: 'surface',
+        title: 'Deck Surface',
+        keyPrefix: 'Surface',
+        fields: [
+          { t: 'select', l: 'Surface Material', o: DECK_MATERIAL_OPTIONS, full: true, allowNA: false },
+          {
+            t: 'lwxw',
+            l: 'Deck Size',
+            full: true,
+            lengthKey: 'Deck Length (ft)',
+            widthKey: 'Deck Width (ft)',
+            lengthLabel: 'Length (Feet)',
+            widthLabel: 'Width (Feet)',
+            showArea: true,
+            areaUnit: 'ft²',
+            areaLabel: 'Total Deck Area',
+          },
+          ...deckSectionStatusFields('Surface'),
+        ],
       },
       {
-        t: 'lwxw',
-        l: 'Tread Size',
-        full: true,
-        lengthKey: 'Tread Length (in)',
-        widthKey: 'Tread Width (in)',
-        lengthLabel: 'Length (Inches)',
-        widthLabel: 'Width (Inches)',
-        showArea: true,
-        areaUnit: 'in²',
-        areaLabel: 'Total Tread Area',
+        id: 'railing',
+        title: 'Railing',
+        keyPrefix: 'Railing',
+        fields: [
+          { t: 'select', l: 'Railing Material', o: DECK_MATERIAL_OPTIONS, full: true, allowNA: false },
+          { t: 'num', l: 'Handrail Height (Inches)', p: '36', full: true },
+          { t: 'yn', l: 'Baluster Existing?', full: true },
+          {
+            t: 'select',
+            l: 'Baluster Type',
+            o: ['Select', 'Pine', 'Cedar', 'Redwood', 'Vinyl', 'Aluminum', 'Composite'],
+            full: true,
+            allowNA: false,
+            showWhen: { field: 'Baluster Existing?', equals: 'Yes' },
+            noTopDivider: true,
+          },
+          {
+            t: 'num',
+            l: 'Baluster Qty',
+            p: '0',
+            full: true,
+            showWhen: { field: 'Baluster Existing?', equals: 'Yes' },
+            noTopDivider: true,
+          },
+          ...deckSectionStatusFields('Railing'),
+        ],
       },
-      { t: 'yn', l: 'Painted', full: true },
-      { t: 'yn', l: 'Damaged', full: true },
+      {
+        id: 'stairs',
+        title: 'Stairs',
+        keyPrefix: 'Stairs',
+        fields: [
+          { t: 'select', l: 'Stairs Material', o: DECK_MATERIAL_OPTIONS, full: true, allowNA: false },
+          { t: 'num', l: 'Treads Qty', p: '0', full: true },
+          ...deckSectionStatusFields('Stairs'),
+        ],
+      },
     ],
+    fields: [],
   },
 ]

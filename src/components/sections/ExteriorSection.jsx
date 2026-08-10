@@ -5,7 +5,7 @@ import PhotoZone from '../PhotoZone'
 import FieldsGrid from '../FieldsGrid'
 import DamageDescriptionInput from '../DamageDescriptionInput'
 import ItemNotesField from '../ItemNotesField'
-import MeasurementInput, { isLinearMeasurementField } from '../MeasurementInput'
+import MeasurementInput, { isMeasurementField } from '../MeasurementInput'
 import { EXTERIOR_ITEMS, EXTERIOR_SUBSECTIONS } from '../../data/exteriorItems'
 import { fieldGroupProps } from '../../utils/fieldLayout'
 import { fieldSelectClass, withSelectPlaceholderClass, ynOptionsForField, optionsForField, visibleFieldsForValues } from '../../utils/fieldGrid'
@@ -39,7 +39,7 @@ function FieldRenderer({ field, value, onChange, allValues }) {
     )
   }
 
-  if (t === 'num' && isLinearMeasurementField(field)) {
+  if (t === 'num' && isMeasurementField(field)) {
     return <MeasurementInput field={field} value={value} onChange={onChange} />
   }
 
@@ -219,7 +219,11 @@ function ExteriorItem({ itemDef, trigPhoto }) {
   }
 
   return (
-    <div className={`ri-item${excluded ? ' ri-item--excluded' : ''}`}>
+    <div
+      id={`nav-${id}`}
+      data-nav-anchor={id}
+      className={`ri-item${excluded ? ' ri-item--excluded' : ''}`}
+    >
       <div className="ri-item__top">
         <button
           type="button"

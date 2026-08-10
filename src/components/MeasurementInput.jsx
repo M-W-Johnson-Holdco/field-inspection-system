@@ -1,95 +1,103 @@
 import { fieldGroupProps } from '../utils/fieldLayout'
-import { formatMeasurement, isLinearMeasurementField, parseMeasurement } from '../utils/measurement'
-import { DECIMAL_INPUT_PROPS, sanitizeDecimalInput } from '../utils/decimalInput'
+import {
+  MEASUREMENT_FRACTIONS,
+  formatFractionDisplay,
+  formatMeasurementParts,
+  isLinearMeasurementField,
+  isMeasurementField,
+  measurementUnitHint,
+  parseMeasurementParts,
+} from '../utils/measurement'
 
-function MeasurementStepper({ label, value, onChange, placeholder = '0' }) {
-  const current = value === '' || value == null ? 0 : Number(value)
-  const inputCh = Math.max(String(value || placeholder || '').length, 3)
+const FEET_OPTIONS = Array.from({ length: 101 }, (_, i) => i)
+const INCH_OPTIONS = Array.from({ length: 101 }, (_, i) => i)
 
-  function adjust(delta) {
-    const base = Number.isFinite(current) ? current : 0
-    onChange(String(Math.max(0, base + delta)))
-  }
-
+function InlineSelect({
+  label,
+  options,
+  value,
+  onChange,
+  formatOption,
+}) {
   return (
-    <div className="number-stepper">
-      <button
-        type="button"
-        className="number-stepper__btn"
-        aria-label={`Decrease ${label}`}
-        onClick={() => adjust(-1)}
-      >
-        −
-      </button>
-      <input
-        className="field-input number-stepper__input"
-        style={{ '--field-ch': inputCh }}
-        {...DECIMAL_INPUT_PROPS}
-        value={value || ''}
-        placeholder={placeholder}
+    <label className="meas-inline__col">
+      <span className="meas-inline__col-label">{label}</span>
+      <select
+        className="field-select meas-inline__select"
+        value={String(value)}
+        onChange={e => {
+          const raw = e.target.value
+          if (raw === '') {
+            onChange('')
+            return
+          }
+          const asNum = Number(raw)
+          onChange(Number.isFinite(asNum) && String(asNum) === raw ? asNum : raw)
+        }}
         aria-label={label}
-        onChange={e => onChange(sanitizeDecimalInput(e.target.value))}
-      />
-      <button
-        type="button"
-        className="number-stepper__btn"
-        aria-label={`Increase ${label}`}
-        onClick={() => adjust(1)}
       >
-        +
-      </button>
-    </div>
+        {options.map(opt => (
+          <option key={String(opt)} value={String(opt)}>
+            {formatOption(opt)}
+          </option>
+        ))}
+      </select>
+    </label>
   )
 }
 
-export default function MeasurementInput({ field, value, onChange }) {
-  if (field.lfFeetOnly) {
-    const { feet } = parseMeasurement(value)
-    const display = feet !== '' ? feet : String(value || '').replace(/[^\d.]/g, '')
+export default function MeasurementInput({
+  field,
+  value,
+  onChange,
+  label,
+  hideLabel = false,
+  className,
+}) {
+  const labelText = label || field?.displayL || field?.l || 'Measurement'
+  const unitHint = measurementUnitHint(label || field)
+  const parts = parseMeasurementParts(value, { unitHint })
 
-    return (
-      <div {...fieldGroupProps(field)}>
-        <label className="form-label">{field.l}</label>
-        <MeasurementStepper
-          label={`${field.l} feet`}
-          value={display}
-          placeholder={field.p || '0'}
-          onChange={onChange}
-        />
-      </div>
-    )
+  function commit(next) {
+    onChange(formatMeasurementParts(next))
   }
 
-  const { feet, inches } = parseMeasurement(value)
+  const body = (
+    <div className="meas-inline">
+      <InlineSelect
+        label="Feet"
+        options={FEET_OPTIONS}
+        value={parts.feet}
+        onChange={feet => commit({ ...parts, feet })}
+        formatOption={n => `${n}'`}
+      />
+      <InlineSelect
+        label="Inches"
+        options={INCH_OPTIONS}
+        value={parts.inches}
+        onChange={inches => commit({ ...parts, inches })}
+        formatOption={n => `${n}"`}
+      />
+      <InlineSelect
+        label="Fraction"
+        options={MEASUREMENT_FRACTIONS}
+        value={parts.fraction || ''}
+        onChange={fraction => commit({ ...parts, fraction })}
+        formatOption={opt => `${formatFractionDisplay(opt)}"`}
+      />
+    </div>
+  )
 
-  function update(part, nextValue) {
-    onChange(formatMeasurement(
-      part === 'feet' ? nextValue : feet,
-      part === 'inches' ? nextValue : inches,
-    ))
+  if (hideLabel) {
+    return <div className={className || 'meas-picker-mount'}>{body}</div>
   }
 
   return (
-    <div {...fieldGroupProps(field)}>
-      <label className="form-label">{field.l}</label>
-      <div className="measurement-input">
-        <div className="measurement-input__part">
-          <MeasurementStepper
-            label={`${field.l} feet`}
-            value={feet}
-            onChange={nextValue => update('feet', nextValue)}
-          />
-        </div>
-        <div className="measurement-input__part">
-          <MeasurementStepper
-            label={`${field.l} inches`}
-            value={inches}
-            onChange={nextValue => update('inches', nextValue)}
-          />
-        </div>
-      </div>
+    <div {...fieldGroupProps(field, className)}>
+      <label className="form-label">{labelText}</label>
+      {body}
     </div>
   )
 }
 
-export { isLinearMeasurementField }
+export { isLinearMeasurementField, isMeasurementField }

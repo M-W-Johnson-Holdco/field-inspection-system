@@ -81,7 +81,11 @@ function RoomCard({ room, trigPhoto }) {
   const showOtherName = room.name === 'Other' || room.name?.startsWith('Other - ')
 
   return (
-    <div className="app-card int-room-card">
+    <div
+      id={`nav-interior-${room.id}`}
+      data-nav-anchor={`interior-${room.id}`}
+      className="app-card int-room-card"
+    >
       <div className="int-room-header">
         <button
           type="button"

@@ -4,7 +4,7 @@ import { ROOF_ITEMS } from '../data/roofItems'
 import { ELEV_ITEMS, DIRECTIONS, ELEV_ADDMORE_IDS } from '../data/elevItems'
 import { EXTERIOR_ITEMS } from '../data/exteriorItems'
 import { formatPitch, parsePitchNumerator } from '../utils/pitch'
-import { parseMeasurement } from '../utils/measurement'
+import { formatMeasurementDisplay } from '../utils/measurement'
 import { isFieldVisible } from '../utils/fieldGrid'
 import { getRoofItemStatus, isRoofItemActive, nextRoofItemStatus, withRoofItemStatus } from '../utils/roofItemStatus'
 
@@ -185,7 +185,20 @@ function calculateCompletion(data) {
         return
       }
 
-      ;(itemDef.fields || []).forEach(field => countValue(cell.fields?.[field.l], totals))
+      const elevFields = [
+        ...(itemDef.fieldGroups || []).flatMap(group => group.fields || []),
+        ...(itemDef.fields || []),
+      ]
+      elevFields.forEach(field => {
+        if (!isFieldVisible(field, cell.fields)) return
+        countSubFieldValue(field, cell.fields, totals)
+      })
+      ;(itemDef.fieldGroups || []).forEach(group => {
+        if (!group.keyPrefix) return
+        if (cell.fields?.[`${group.keyPrefix} Damaged`] === 'Yes') {
+          countValue(cell.fields?.[`_${group.id}_damage`], totals)
+        }
+      })
       if (cell.fields?.Damaged === 'Yes') countValue(cell.fields?._damage, totals)
     })
   })
@@ -245,9 +258,9 @@ function normalizeElevGutterCell(cell) {
 /** Parent-level fields on addMore elev items (not migrated into sub-cards). */
 const ELEV_ADDMORE_SHARED_FIELDS = {
   ev3: new Set(['Style', 'Material', 'Size (Inches)', 'Painted']),
-  ev11: new Set(['Style', 'Material']),
+  ev11: new Set(['Style']),
   ev4: new Set(['Style', 'Material', 'Width', 'Painted']),
-  ev12: new Set(['Grade', 'Type', 'Glaze', 'Painted']),
+  ev12: new Set(['Material', 'Grade', 'Type', 'Glaze', 'Painted']),
   ev5: new Set(['Type', 'Grade']),
   ev6: new Set(['Grade', 'Custom Grade', 'Painted']),
 }
@@ -300,21 +313,20 @@ function normalizeElevAddMoreSub(sub, itemId) {
             ? normalizeScreenSubFields(fields)
             : itemId === 'ev12'
               ? normalizeWindowSubFields(fields)
-              : itemId === 'ev14'
-                ? normalizeDeckSubFields(fields)
-                : fields,
+              : fields,
     photos: Array.isArray(sub?.photos) ? sub.photos : [],
   }
 }
 
 function normalizeDoorSubFields(fields = {}) {
   const next = { ...fields }
-  const grades = ['Wood', 'Aluminum', 'Steel', 'Composite', 'Fiberglass', 'None']
-  if (next.Material != null && next.Material !== '' && (next.Grade == null || next.Grade === '' || next.Grade === 'Select')) {
-    const match = grades.find(g => g.toLowerCase() === String(next.Material).toLowerCase())
-    if (match) next.Grade = match
+  const materials = ['Wood', 'Aluminum', 'Steel', 'Composite', 'Fiberglass', 'Insulated Metal', 'Wood Paneled', 'None']
+  // Legacy field was Grade; keep Material as the stored label
+  if (next.Grade != null && next.Grade !== '' && (next.Material == null || next.Material === '' || next.Material === 'Select')) {
+    const match = materials.find(g => g.toLowerCase() === String(next.Grade).toLowerCase())
+    next.Material = match || next.Grade
   }
-  delete next.Material
+  delete next.Grade
   if ((next['Storm Door'] === 'Yes' || next['Storm Door'] === true)
     && (next.Style == null || next.Style === '' || next.Style === 'Select')) {
     next.Style = 'Storm Door'
@@ -324,6 +336,15 @@ function normalizeDoorSubFields(fields = {}) {
   delete next.Qty
   // Legacy S/M/L size buttons — drop; Size is now Length × Width
   if (next.Size === 'S' || next.Size === 'M' || next.Size === 'L') delete next.Size
+  // Inches → feet keys (values kept as-is)
+  if (next['Length (in)'] != null && (next['Length (ft)'] == null || next['Length (ft)'] === '')) {
+    next['Length (ft)'] = next['Length (in)']
+  }
+  if (next['Width (in)'] != null && (next['Width (ft)'] == null || next['Width (ft)'] === '')) {
+    next['Width (ft)'] = next['Width (in)']
+  }
+  delete next['Length (in)']
+  delete next['Width (in)']
   return next
 }
 
@@ -348,6 +369,14 @@ function normalizeGarageDoorSubFields(fields = {}) {
   }
   delete next['Length (in)']
   delete next['Width (in)']
+  if (
+    next.Painted != null
+    && next.Painted !== ''
+    && (next['Painted or Stained'] == null || next['Painted or Stained'] === '' || next['Painted or Stained'] === 'Select')
+  ) {
+    next['Painted or Stained'] = next.Painted
+  }
+  delete next.Painted
   return next
 }
 
@@ -457,14 +486,132 @@ function normalizeWindowSubFields(fields = {}) {
   return next
 }
 
-function normalizeDeckSubFields(fields = {}) {
+function mapDeckMaterial(value) {
+  if (value == null || value === '' || value === 'Select') return value
+  const raw = String(value)
+  if (raw === 'Wood') return 'Treated Wood'
+  return raw
+}
+
+function normalizeDeckFields(fields = {}) {
   const next = { ...fields }
-  delete next.Qty
-  const material = String(next.Material || '')
-  if (material === 'Cedar' || material === 'Pine' || material === 'Redwood') {
-    next.Material = 'Wood'
+  if (
+    next.Material != null
+    && next.Material !== ''
+    && (next['Surface Material'] == null || next['Surface Material'] === '' || next['Surface Material'] === 'Select')
+  ) {
+    next['Surface Material'] = mapDeckMaterial(next.Material)
   }
+  delete next.Material
+
+  if (
+    next['Handrail Height (LF)'] != null
+    && next['Handrail Height (LF)'] !== ''
+    && (next['Handrail Height (Inches)'] == null || next['Handrail Height (Inches)'] === '')
+  ) {
+    next['Handrail Height (Inches)'] = next['Handrail Height (LF)']
+  }
+  delete next['Handrail Height (LF)']
+
+  if (
+    next.Steps != null
+    && next.Steps !== ''
+    && (next['Treads Qty'] == null || next['Treads Qty'] === '')
+  ) {
+    next['Treads Qty'] = next.Steps
+  }
+  delete next.Steps
+  delete next['Tread Length (in)']
+  delete next['Tread Width (in)']
+  delete next.Qty
+
+  if (
+    next.Painted != null
+    && next.Painted !== ''
+    && (next['Painted or Stained'] == null || next['Painted or Stained'] === '' || next['Painted or Stained'] === 'Select')
+  ) {
+    next['Painted or Stained'] = next.Painted
+  }
+  delete next.Painted
+
+  // Legacy deck-wide status → Surface section
+  for (const [legacyKey, nextKey] of [
+    ['Painted or Stained', 'Surface Painted or Stained'],
+    ['Replace', 'Surface Replace'],
+    ['Damaged', 'Surface Damaged'],
+    ['_damage', '_surface_damage'],
+    ['_notes', '_surface_notes'],
+  ]) {
+    if (
+      next[legacyKey] != null
+      && next[legacyKey] !== ''
+      && (next[nextKey] == null || next[nextKey] === '' || next[nextKey] === 'Select')
+    ) {
+      next[nextKey] = next[legacyKey]
+    }
+  }
+  delete next['Painted or Stained']
+  delete next.Replace
+  delete next.Damaged
+  delete next._damage
+  delete next._notes
+
+  if (next['Baluster Existing?'] !== 'Yes') {
+    delete next['Baluster Type']
+    delete next['Baluster Qty']
+  }
+
+  if (next['Surface Material'] != null && next['Surface Material'] !== '') {
+    next['Surface Material'] = mapDeckMaterial(next['Surface Material'])
+  }
+  if (next['Railing Material'] != null && next['Railing Material'] !== '') {
+    next['Railing Material'] = mapDeckMaterial(next['Railing Material'])
+  }
+  if (next['Stairs Material'] != null && next['Stairs Material'] !== '') {
+    next['Stairs Material'] = mapDeckMaterial(next['Stairs Material'])
+  }
+
   return next
+}
+
+function migrateDeckCell(cell = {}) {
+  const excluded = !!cell.excluded
+  const topFields = { ...(cell.fields || {}) }
+  const topPhotos = Array.isArray(cell.photos) ? cell.photos : []
+  const subs = Array.isArray(cell.subItems) ? cell.subItems : []
+  const hasLegacySubs = subs.some(sub => {
+    const f = sub?.fields || {}
+    return Object.keys(f).some(key => !key.startsWith('_') && f[key] != null && f[key] !== '' && f[key] !== 'Select')
+      || (Array.isArray(sub?.photos) && sub.photos.length > 0)
+  })
+
+  let source = { ...topFields }
+  let photos = [...topPhotos]
+
+  if (hasLegacySubs) {
+    const first = subs[0] || { fields: {}, photos: [] }
+    source = { ...(first.fields || {}), ...topFields }
+    photos = [
+      ...(Array.isArray(first.photos) ? first.photos : []),
+      ...topPhotos,
+    ]
+  }
+
+  return {
+    excluded,
+    fields: normalizeDeckFields(source),
+    subItems: [],
+    photos: [],
+    groupPhotos: {
+      railing: Array.isArray(cell.groupPhotos?.railing) ? cell.groupPhotos.railing : [],
+      stairs: Array.isArray(cell.groupPhotos?.stairs) ? cell.groupPhotos.stairs : [],
+      ...(cell.groupPhotos || {}),
+      surface: [
+        ...(Array.isArray(cell.groupPhotos?.surface) ? cell.groupPhotos.surface : []),
+        ...photos,
+      ],
+    },
+  }
 }
 
 function expandWindowLegacySubs(rest = {}, topPhotos = []) {
@@ -507,7 +654,6 @@ function stripElevSharedFromSubFields(itemId, fields = {}) {
   if (itemId === 'ev6') next = normalizeShutterSubFields(next)
   if (itemId === 'ev5') next = normalizeScreenSubFields(next)
   if (itemId === 'ev12') next = normalizeWindowSubFields(next)
-  if (itemId === 'ev14') next = normalizeDeckSubFields(next)
   return next
 }
 
@@ -518,6 +664,24 @@ function normalizeElevSharedFields(itemId, fields = {}) {
   }
   if (itemId === 'ev5' && next.Type !== 'Solar') {
     delete next.Grade
+  }
+  if (itemId === 'ev12') {
+    const WINDOW_MATERIALS = ['Vinyl', 'Wood', 'Composite', 'Aluminum']
+    const WINDOW_GRADES = ['Standard', 'High', 'Premium', 'N/A']
+    // Legacy: Grade held material values (Vinyl/Wood/...)
+    if (
+      WINDOW_MATERIALS.includes(next.Grade)
+      && (next.Material == null || next.Material === '' || next.Material === 'Select')
+    ) {
+      next.Material = next.Grade
+      delete next.Grade
+    }
+    if (next.Grade && !WINDOW_GRADES.includes(next.Grade) && next.Grade !== 'Select') {
+      if (WINDOW_MATERIALS.includes(next.Grade) && !next.Material) {
+        next.Material = next.Grade
+      }
+      if (!WINDOW_GRADES.includes(next.Grade)) delete next.Grade
+    }
   }
   if (itemId === 'ev3') {
     if (next.Size != null) {
@@ -623,7 +787,7 @@ function migrateElevAddMoreCell(cell, itemId) {
   if (elevCellHasLegacyTopFields(rest, itemId) || topPhotos.length) {
     const cardFields = stripElevSharedFromSubFields(itemId, rest)
     let count = 1
-    if (itemId === 'ev7' || itemId === 'ev8' || itemId === 'ev14') {
+    if (itemId === 'ev7' || itemId === 'ev8') {
       const qty = Math.floor(Number(rest.Qty))
       if (qty > 1) count = qty
     }
@@ -653,7 +817,9 @@ function normalizeElevData(elevData = {}) {
     for (const dir of DIRECTIONS) {
       const key = `${item.id}_${dir}`
       const cell = next[key] || { excluded: false, fields: {}, subItems: [], photos: [] }
-      if (ELEV_ADDMORE_IDS.has(item.id)) {
+      if (item.id === 'ev14') {
+        next[key] = migrateDeckCell(cell)
+      } else if (ELEV_ADDMORE_IDS.has(item.id)) {
         next[key] = migrateElevAddMoreCell(cell, item.id)
       } else {
         const fields = { ...(cell.fields || {}) }
@@ -667,8 +833,12 @@ function normalizeElevData(elevData = {}) {
     }
   }
 
-  // Normalize any leftover gutter cells not covered above (legacy keys)
+  // Normalize any leftover addMore elev cells not covered above (legacy keys)
   for (const key of Object.keys(next)) {
+    if (key.startsWith('ev14_')) {
+      next[key] = migrateDeckCell(next[key])
+      continue
+    }
     if (
       key.startsWith('ev3_')
       || key.startsWith('ev11_')
@@ -678,7 +848,6 @@ function normalizeElevData(elevData = {}) {
       || key.startsWith('ev7_')
       || key.startsWith('ev8_')
       || key.startsWith('ev12_')
-      || key.startsWith('ev14_')
     ) {
       next[key] = migrateElevAddMoreCell(next[key], key.split('_')[0])
     }
@@ -697,13 +866,12 @@ function normalizeFenceFields(fields = {}) {
   }
 
   if (next['Height (FT)'] != null && next['Height (FT)'] !== '') {
-    const parsed = String(next['Height (FT)']).match(/(\d+(?:\.\d+)?)/)
-    next['Height (FT)'] = parsed ? parsed[1] : next['Height (FT)']
+    next['Height (FT)'] = formatMeasurementDisplay(next['Height (FT)'], { unitHint: 'feet' }) || next['Height (FT)']
   }
 
-  if (next['Post Spacing (LF)'] != null && next['Post Spacing (LF)'] !== '') {
-    const { feet } = parseMeasurement(next['Post Spacing (LF)'])
-    next['Post Spacing (LF)'] = feet !== '' ? feet : String(next['Post Spacing (LF)']).replace(/[^\d.]/g, '')
+  if (next['Post Spacing'] != null && next['Post Spacing'] !== '') {
+    next['Post Spacing'] = formatMeasurementDisplay(next['Post Spacing'], { unitHint: 'feet' })
+      || String(next['Post Spacing'])
   }
 
   // Legacy multi-select Material → single value
@@ -853,6 +1021,7 @@ function normalizeRoofData(roofData = {}) {
   next = normalizeRi17(next)
   next = normalizeFlashingItems(next)
   next = normalizeRi21(next)
+  next = normalizeRi28(next)
   next = normalizeRi22(next)
   next = normalizeRi23(next)
   return next
@@ -1109,9 +1278,77 @@ function normalizeRi21(roofData) {
   return next
 }
 
+function hasLegacyCorniceStripTopLevel(fields = {}) {
+  return fields['Length'] != null
+    || fields.Stories != null
+    || fields.Story != null
+    || fields.Damaged != null
+    || fields._damage != null
+}
+
+function normalizeRi28(roofData) {
+  const next = { ...roofData }
+  const ri28 = next.ri28
+  if (!ri28) return next
+
+  const fields = { ...(ri28.fields || {}) }
+  const sharedMaterial = fields.Material || ''
+  const sharedPainted = fields.Painted || ''
+  const existingSubs = ri28.subItems || []
+
+  if (!existingSubs.length && hasLegacyCorniceStripTopLevel(fields)) {
+    const subFields = {}
+    if (fields['Length'] != null && fields['Length'] !== '') {
+      subFields['Length'] = fields['Length']
+    }
+    if (fields.Stories != null && fields.Stories !== '') {
+      subFields.Stories = String(fields.Stories)
+    } else if (fields.Story != null && fields.Story !== '') {
+      subFields.Stories = String(fields.Story)
+    }
+    if (fields.Damaged) subFields.Damaged = fields.Damaged
+    if (fields._damage) subFields._damage = fields._damage
+    next.ri28 = {
+      ...ri28,
+      fields: {
+        ...(sharedMaterial ? { Material: sharedMaterial } : {}),
+        ...(sharedPainted ? { Painted: sharedPainted } : {}),
+      },
+      subItems: [{
+        fields: subFields,
+        photos: Array.isArray(ri28.photos) ? ri28.photos : [],
+      }],
+      photos: [],
+    }
+    return next
+  }
+
+  next.ri28 = {
+    ...ri28,
+    fields: {
+      ...(sharedMaterial ? { Material: sharedMaterial } : {}),
+      ...(sharedPainted ? { Painted: sharedPainted } : {}),
+    },
+    subItems: existingSubs.map(sub => {
+      const subFields = { ...(sub?.fields || {}) }
+      if ((subFields.Stories == null || subFields.Stories === '') && subFields.Story != null) {
+        subFields.Stories = String(subFields.Story)
+      }
+      delete subFields.Story
+      return {
+        fields: subFields,
+        photos: Array.isArray(sub?.photos) ? sub.photos : [],
+      }
+    }),
+    photos: [],
+  }
+  return next
+}
+
 function hasLegacyLowSlopeTopLevel(fields = {}) {
   return fields.Location != null
     || fields['Style / Grade'] != null
+    || fields.Style != null
     || fields.Pitch != null
     || fields['Pitch (x/12)'] != null
     || fields.Damaged != null
@@ -1144,8 +1381,35 @@ function normalizeStructurePitchFields(fields = {}) {
   return next
 }
 
+const LOW_SLOPE_STYLE_OPTIONS = ['90lb', 'ModBit', 'Metal', 'Corrugated Plastic', 'TPO', 'EPDM', 'Other', 'N/A']
+
+function normalizeLowSlopeStyleValue(value) {
+  if (value == null || value === '') return ''
+  const raw = String(value).trim()
+  if (!raw || raw === 'Select') return raw
+  if (raw.startsWith('Other - ') || raw === 'Other') return raw
+  const exact = LOW_SLOPE_STYLE_OPTIONS.find(opt => opt === raw)
+  if (exact) return exact
+  const lower = raw.toLowerCase()
+  if (lower === '90lb' || lower === '90 lbs' || lower === '90lbs') return '90lb'
+  if (lower === 'modbit' || lower === 'mod bit' || lower === 'mod.bitumen' || lower === 'mod bitumen' || lower.includes('mod')) return 'ModBit'
+  if (lower === 'metal') return 'Metal'
+  if (lower.includes('corrugat') || lower.includes('plastic')) return 'Corrugated Plastic'
+  if (lower === 'tpo') return 'TPO'
+  if (lower === 'epdm') return 'EPDM'
+  if (lower === 'n/a' || lower === 'na') return 'N/A'
+  return `Other - ${raw}`
+}
+
 function normalizeLowSlopeSubItem(sub) {
   const fields = normalizeStructurePitchFields(sub?.fields || {})
+  if ((fields.Style == null || fields.Style === '') && fields['Style / Grade'] != null) {
+    fields.Style = fields['Style / Grade']
+  }
+  delete fields['Style / Grade']
+  if (fields.Style != null && fields.Style !== '') {
+    fields.Style = normalizeLowSlopeStyleValue(fields.Style)
+  }
   if ((!fields['Edgemetal Material'] || fields['Edgemetal Material'] === 'Select') && fields.Material) {
     fields['Edgemetal Material'] = fields.Material
   }
@@ -1154,6 +1418,7 @@ function normalizeLowSlopeSubItem(sub) {
   }
   delete fields.Material
   delete fields.Painted
+  delete fields['Other Style']
   return {
     fields,
     photos: Array.isArray(sub?.photos) ? sub.photos : [],
@@ -1172,7 +1437,9 @@ function migrateLowSlopeFields(ri22) {
   return [{
     fields: {
       ...(fields.Location ? { Location: fields.Location } : {}),
-      ...(fields['Style / Grade'] ? { 'Style / Grade': fields['Style / Grade'] } : {}),
+      ...(fields.Style || fields['Style / Grade']
+        ? { Style: normalizeLowSlopeStyleValue(fields.Style || fields['Style / Grade']) }
+        : {}),
       ...(fields['Exposed Rafters'] ? { 'Exposed Rafters': fields['Exposed Rafters'] } : {}),
       ...(pitch ? { [STRUCTURE_PITCH_KEY]: normalizeLowSlopePitch(pitch) } : {}),
       ...(fields.Damaged ? { Damaged: fields.Damaged } : {}),
@@ -1221,9 +1488,43 @@ function hasLegacyOtherStructureTopLevel(fields = {}) {
     || fields._damage != null
 }
 
+const OTHER_STRUCTURE_TYPE_OPTIONS = [
+  'Detached Garage',
+  'Pool House',
+  'Shed',
+  'Pergola',
+  'Gazebo',
+  'Other',
+  'N/A',
+]
+
+function normalizeOtherStructureTypeValue(value) {
+  if (value == null || value === '') return ''
+  const raw = String(value).trim()
+  if (!raw || raw === 'Select') return raw
+  if (raw.startsWith('Other - ') || raw === 'Other') return raw
+  const exact = OTHER_STRUCTURE_TYPE_OPTIONS.find(opt => opt === raw)
+  if (exact) return exact
+  const lower = raw.toLowerCase()
+  const match = OTHER_STRUCTURE_TYPE_OPTIONS.find(opt => opt.toLowerCase() === lower)
+  if (match) return match
+  if (lower.includes('garage')) return 'Detached Garage'
+  if (lower.includes('pool')) return 'Pool House'
+  if (lower.includes('shed')) return 'Shed'
+  if (lower.includes('pergola')) return 'Pergola'
+  if (lower.includes('gazebo')) return 'Gazebo'
+  if (lower === 'n/a' || lower === 'na') return 'N/A'
+  return `Other - ${raw}`
+}
+
 function normalizeOtherStructureSubItem(sub) {
+  const fields = normalizeStructurePitchFields(sub?.fields || {})
+  if (fields.Type != null && fields.Type !== '') {
+    fields.Type = normalizeOtherStructureTypeValue(fields.Type)
+  }
+  delete fields['Other Type']
   return {
-    fields: normalizeStructurePitchFields(sub?.fields || {}),
+    fields,
     photos: Array.isArray(sub?.photos) ? sub.photos : [],
   }
 }
@@ -1239,7 +1540,7 @@ function migrateOtherStructureFields(ri23) {
 
   return [{
     fields: {
-      ...(fields.Type ? { Type: fields.Type } : {}),
+      ...(fields.Type ? { Type: normalizeOtherStructureTypeValue(fields.Type) } : {}),
       ...(fields['Style / Grade'] ? { 'Style / Grade': fields['Style / Grade'] } : {}),
       ...(pitch ? { [STRUCTURE_PITCH_KEY]: normalizeLowSlopePitch(pitch) } : {}),
       ...(fields.Damaged ? { Damaged: fields.Damaged } : {}),
@@ -1573,7 +1874,7 @@ function normalizeRi14(roofData) {
 
 function hasLegacyRainDiverterTopLevel(fields = {}) {
   return fields.Qty != null
-    || fields['Length (LF)'] != null
+    || fields['Length'] != null
 }
 
 function migrateRainDiverterFields(ri15) {
@@ -1585,14 +1886,14 @@ function migrateRainDiverterFields(ri15) {
   if (existing.length) return existing
 
   const qty = Math.max(0, Number(fields.Qty) || 0)
-  const length = fields['Length (LF)']
+  const length = fields['Length']
   const hasLength = length != null && length !== ''
   const count = qty > 0 ? qty : (hasLength || (ri15.photos || []).length ? 1 : 0)
   const subItems = []
 
   for (let i = 0; i < count; i += 1) {
     subItems.push({
-      fields: i === 0 && hasLength ? { 'Length (LF)': length } : {},
+      fields: i === 0 && hasLength ? { 'Length': length } : {},
       photos: i === 0 ? (ri15.photos || []) : [],
     })
   }
@@ -1609,7 +1910,7 @@ function normalizeRi15(roofData) {
   if (hasLegacyRainDiverterTopLevel(fields)) {
     const {
       Qty: _qty,
-      'Length (LF)': _length,
+      'Length': _length,
       ...keptFields
     } = fields
     next.ri15 = {
@@ -1635,9 +1936,11 @@ function normalizeRi15(roofData) {
 }
 
 function parseRoofPhotoTarget(target) {
+  const groupMatch = String(target).match(/^(.+)__group_([A-Za-z0-9-]+)$/)
+  if (groupMatch) return { itemId: groupMatch[1], groupId: groupMatch[2], subIndex: null }
   const match = String(target).match(/^(.+)__sub_(\d+)$/)
-  if (match) return { itemId: match[1], subIndex: Number(match[2]) }
-  return { itemId: target, subIndex: null }
+  if (match) return { itemId: match[1], subIndex: Number(match[2]), groupId: null }
+  return { itemId: target, subIndex: null, groupId: null }
 }
 
 function buildPipeJackSubItemsFromParsed(roof = {}) {
@@ -1846,7 +2149,13 @@ function buildLowSlopeSubItemsFromParsed(roof = {}) {
     return list.map(ls => ({
       fields: {
         ...(ls?.location ? { Location: ls.location } : {}),
-        ...(ls?.grade ? { 'Style / Grade': ls.grade } : {}),
+        ...(ls?.style || ls?.grade
+          ? { Style: normalizeLowSlopeStyleValue(ls.style || ls.grade) }
+          : {}),
+        ...(ls?.gutterApronExisting ? { 'Gutter Apron Existing?': ls.gutterApronExisting } : {}),
+        ...(ls?.gutterApronExisting === 'Yes' && ls?.gutterApronWidthLF != null
+          ? { 'Gutter Apron Width': String(ls.gutterApronWidthLF) }
+          : {}),
         ...(ls?.edgemetalExisting ? { 'Edgemetal Existing?': ls.edgemetalExisting } : {}),
         ...(ls?.edgemetalExisting === 'Yes' && ls?.edgemetalWidthInches != null
           ? { 'Edgemetal Width (Inches)': String(ls.edgemetalWidthInches) }
@@ -1868,18 +2177,18 @@ function buildLowSlopeSubItemsFromParsed(roof = {}) {
 
   // Legacy fallback: single shared low-slope section.
   const location = roof.lowSlopeLocation || ''
-  const grade = roof.lowSlopeGrade || ''
+  const style = roof.lowSlopeStyle || roof.lowSlopeGrade || ''
   const pitch = roof.lowSlopePitch ? normalizeLowSlopePitch(roof.lowSlopePitch) : ''
   const damaged = roof.lowSlopeDamaged || ''
   const exposedRafters = roof.exposedRafters || ''
-  const hasData = location || grade || pitch || damaged || exposedRafters
+  const hasData = location || style || pitch || damaged || exposedRafters
 
   if (!hasData) return []
 
   return [{
     fields: {
       ...(location ? { Location: location } : {}),
-      ...(grade ? { 'Style / Grade': grade } : {}),
+      ...(style ? { Style: normalizeLowSlopeStyleValue(style) } : {}),
       ...(exposedRafters ? { 'Exposed Rafters': exposedRafters } : {}),
       ...(pitch ? { 'Pitch (x/12)': pitch } : {}),
       ...(damaged ? { Damaged: damaged } : {}),
@@ -1912,7 +2221,7 @@ function buildRainDiverterSubItemsFromParsed(roof = {}) {
   if (list.length) {
     return list.map(rd => ({
       fields: {
-        ...(rd?.lengthLF != null && rd.lengthLF !== '' ? { 'Length (LF)': String(rd.lengthLF) } : {}),
+        ...(rd?.lengthLF != null && rd.lengthLF !== '' ? { 'Length': String(rd.lengthLF) } : {}),
       },
       photos: [],
     }))
@@ -1926,18 +2235,51 @@ function buildRainDiverterSubItemsFromParsed(roof = {}) {
   const subItems = []
   for (let i = 0; i < count; i += 1) {
     subItems.push({
-      fields: i === 0 && hasLength ? { 'Length (LF)': String(length) } : {},
+      fields: i === 0 && hasLength ? { 'Length': String(length) } : {},
       photos: [],
     })
   }
   return subItems
 }
 
+function buildCorniceStripSubItemsFromParsed(roof = {}) {
+  const list = Array.isArray(roof.corniceStrips) ? roof.corniceStrips : []
+  if (list.length) {
+    return list.map(cs => ({
+      fields: {
+        ...(cs?.lengthLF != null && cs.lengthLF !== '' ? { 'Length': String(cs.lengthLF) } : {}),
+        ...(cs?.stories != null && cs.stories !== '' ? { Stories: String(cs.stories) } : {}),
+        ...(cs?.damaged ? { Damaged: cs.damaged } : {}),
+        ...(cs?.damaged === 'Yes' && cs?.damageDescription ? { _damage: cs.damageDescription } : {}),
+      },
+      photos: [],
+    }))
+  }
+
+  // Legacy fallback: single shared strip profile
+  const length = roof.corniceStripLF
+  const stories = roof.corniceStripStories
+  const damaged = roof.corniceStripDamaged || ''
+  const hasData = (length != null && length !== '') || (stories != null && stories !== '') || damaged
+  if (!hasData) return []
+  return [{
+    fields: {
+      ...(length != null && length !== '' ? { 'Length': String(length) } : {}),
+      ...(stories != null && stories !== '' ? { Stories: String(stories) } : {}),
+      ...(damaged ? { Damaged: damaged } : {}),
+      ...(damaged === 'Yes' && roof.corniceStripDamageDescription
+        ? { _damage: roof.corniceStripDamageDescription }
+        : {}),
+    },
+    photos: [],
+  }]
+}
+
 function buildOtherStructureSubItemsFromParsed(roof = {}) {
   const list = Array.isArray(roof.otherStructures) ? roof.otherStructures : []
   return list.map(os => ({
     fields: {
-      ...(os?.type ? { Type: os.type } : {}),
+      ...(os?.type ? { Type: normalizeOtherStructureTypeValue(os.type) } : {}),
       ...(os?.grade ? { 'Style / Grade': os.grade } : {}),
       ...(os?.pitch ? { 'Pitch (x/12)': normalizeLowSlopePitch(os.pitch) } : {}),
       ...(os?.damaged ? { Damaged: os.damaged } : {}),
@@ -2210,6 +2552,20 @@ export function InspectionProvider({ children }) {
           fields['Location'] = value ? `Other - ${value}` : 'Other'
           delete fields['(Other)']
         }
+        if (itemId === 'ri22' && label === 'Style') {
+          delete fields['Other Style']
+        }
+        if (itemId === 'ri22' && label === 'Other Style') {
+          fields.Style = value ? `Other - ${value}` : 'Other'
+          delete fields['Other Style']
+        }
+        if (itemId === 'ri23' && label === 'Type') {
+          delete fields['Other Type']
+        }
+        if (itemId === 'ri23' && label === 'Other Type') {
+          fields.Type = value ? `Other - ${value}` : 'Other'
+          delete fields['Other Type']
+        }
         if (itemId === 'ri14' && label === 'Style') {
           if (value === 'Tubular') {
             delete fields['Length (ft)']
@@ -2411,6 +2767,34 @@ export function InspectionProvider({ children }) {
     })
   }
 
+  function importRoofCorniceStrips(roof = {}) {
+    const subItems = buildCorniceStripSubItemsFromParsed(roof)
+    const material = roof.corniceStripMaterial || ''
+    const painted = roof.corniceStripPainted || ''
+    if (!subItems.length && !material && !painted) return
+
+    setData(prev => {
+      const item = prev.roofData.ri28
+      const next = {
+        ...prev,
+        roofData: {
+          ...prev.roofData,
+          ri28: {
+            ...withRoofItemStatus(item, 'present'),
+            fields: {
+              ...(material ? { Material: material } : {}),
+              ...(painted ? { Painted: painted } : {}),
+            },
+            subItems: subItems.length ? subItems : (item.subItems || []),
+            photos: [],
+          },
+        },
+      }
+      scheduleSave(next)
+      return next
+    })
+  }
+
   function importRoofChimneys(roof = {}) {
     const subItems = buildChimneySubItemsFromParsed(roof)
     const painted = chimneyPaintedFromParsed(roof)
@@ -2593,6 +2977,11 @@ export function InspectionProvider({ children }) {
       if (cellKey.startsWith('ev8_') && label === 'Windows' && value !== 'Yes') {
         delete fields['Window Qty']
       }
+      // Deck: baluster details only when Baluster Existing? is Yes
+      if (cellKey.startsWith('ev14_') && label === 'Baluster Existing?' && value !== 'Yes') {
+        delete fields['Baluster Type']
+        delete fields['Baluster Qty']
+      }
       const next = { ...prev, elevData: { ...prev.elevData, [cellKey]: { ...cell, fields } } }
       scheduleSave(next)
       return next
@@ -2682,10 +3071,18 @@ export function InspectionProvider({ children }) {
   }
 
   function addElevPhoto(target, dataUrl) {
-    const { itemId: cellKey, subIndex } = parseRoofPhotoTarget(target)
+    const { itemId: cellKey, subIndex, groupId } = parseRoofPhotoTarget(target)
     setData(prev => {
       const cell = prev.elevData[cellKey]
       if (!cell) return prev
+
+      if (groupId != null) {
+        const groupPhotos = { ...(cell.groupPhotos || {}) }
+        groupPhotos[groupId] = [...(groupPhotos[groupId] || []), dataUrl]
+        const next = { ...prev, elevData: { ...prev.elevData, [cellKey]: { ...cell, groupPhotos } } }
+        scheduleSave(next)
+        return next
+      }
 
       if (subIndex != null) {
         const subItems = (cell.subItems || []).map((sub, i) => (
@@ -2705,10 +3102,18 @@ export function InspectionProvider({ children }) {
   }
 
   function removeElevPhoto(target, index) {
-    const { itemId: cellKey, subIndex } = parseRoofPhotoTarget(target)
+    const { itemId: cellKey, subIndex, groupId } = parseRoofPhotoTarget(target)
     setData(prev => {
       const cell = prev.elevData[cellKey]
       if (!cell) return prev
+
+      if (groupId != null) {
+        const groupPhotos = { ...(cell.groupPhotos || {}) }
+        groupPhotos[groupId] = (groupPhotos[groupId] || []).filter((_, photoIndex) => photoIndex !== index)
+        const next = { ...prev, elevData: { ...prev.elevData, [cellKey]: { ...cell, groupPhotos } } }
+        scheduleSave(next)
+        return next
+      }
 
       if (subIndex != null) {
         const subItems = (cell.subItems || []).map((sub, i) => (
@@ -2868,9 +3273,12 @@ export function InspectionProvider({ children }) {
 
       const roofData = { ...next.roofData }
 
-      if (parsed.pitch) {
+      if (parsed.pitch || (parsed.squares != null && parsed.squares > 0)) {
         const ri0 = roofData.ri0
-        roofData.ri0 = { ...ri0, fields: { ...ri0.fields, 'Predominant Pitch (x/12)': parsed.pitch } }
+        const fields = { ...ri0.fields }
+        if (parsed.pitch) fields['Predominant Pitch (x/12)'] = parsed.pitch
+        if (parsed.squares != null && parsed.squares > 0) fields["SQ's"] = String(parsed.squares)
+        roofData.ri0 = { ...ri0, fields }
       }
 
       if (parsed.valleyPresent) {
@@ -2880,7 +3288,7 @@ export function InspectionProvider({ children }) {
 
       if (parsed.lineLengths?.RIDGE > 0) {
         const ri6 = roofData.ri6
-        roofData.ri6 = { ...ri6, fields: { ...ri6.fields, 'Length (LF)': String(parsed.lineLengths.RIDGE) } }
+        roofData.ri6 = { ...ri6, fields: { ...ri6.fields, 'Length': String(parsed.lineLengths.RIDGE) } }
       }
 
       next = { ...next, roofData }
@@ -2958,7 +3366,7 @@ export function InspectionProvider({ children }) {
       saveStatus, driveSaveStatus, setDriveSaveStatus, driveFolderId, setDriveFolderId, completion, updateJobInfo, manualSave, resetAll, startNewInspection, loadInspection, applyXmlImport,
       aiParseState, setAiParseState,
       toggleRoofExclude, cycleRoofStatus, updateRoofField,
-      addRoofSubItem, removeRoofSubItem, updateRoofSubField, adjustRoofSubItemSizeCount, importRoofPipeJacks, importRoofExhaustStacks, importRoofRainDiverters, importRoofChimneys, importRoofFlashingItems, importRoofLowSlopeItems,
+      addRoofSubItem, removeRoofSubItem, updateRoofSubField, adjustRoofSubItemSizeCount, importRoofPipeJacks, importRoofExhaustStacks, importRoofRainDiverters, importRoofCorniceStrips, importRoofChimneys, importRoofFlashingItems, importRoofLowSlopeItems,
       importRoofSkylights, importRoofOtherStructures,
       addRoofPhoto, removeRoofPhoto,
       addJobPhoto, removeJobPhoto,

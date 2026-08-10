@@ -1,10 +1,12 @@
 /** Window area size buckets (square feet). */
+import { measurementToDecimalFeet } from './measurement'
+
 export const WINDOW_SIZE_LEGEND = 'Small ≤11 ft² · Medium 12–19 ft² · Large 20+ ft²'
 
 export function windowAreaSqFt(fields = {}) {
-  const length = Number(fields['Length (ft)'])
-  const width = Number(fields['Width (ft)'])
-  if (!Number.isFinite(length) || !Number.isFinite(width) || length <= 0 || width <= 0) return null
+  const length = measurementToDecimalFeet(fields['Length (ft)'], { unitHint: 'feet' })
+  const width = measurementToDecimalFeet(fields['Width (ft)'], { unitHint: 'feet' })
+  if (length == null || width == null || length <= 0 || width <= 0) return null
   const area = length * width
   return Number.isInteger(area) ? area : Math.round(area * 10) / 10
 }

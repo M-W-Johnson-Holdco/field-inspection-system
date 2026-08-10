@@ -15,6 +15,9 @@ import { buildXactimateExport } from '../lib/xactimateExport'
 import { savePhotosLocal } from '../lib/savePhotosLocal'
 import MeasurementConverterModal from './MeasurementConverterModal'
 import XactimateExportModal from './XactimateExportModal'
+import SectionNavModal from './SectionNavModal'
+import useActiveNavItem from '../hooks/useActiveNavItem'
+import useSectionNavJump from '../hooks/useSectionNavJump'
 import {
   ArrowLeft,
   ArrowRight,
@@ -31,6 +34,7 @@ import {
   MoveHorizontal,
   Folder,
   Ruler,
+  Navigation,
 } from 'lucide-react'
 
 const TOTAL_TABS = 6
@@ -133,6 +137,7 @@ export default function ActionBar() {
   const [showOpen, setShowOpen] = useState(false)
   const [showAccessAdmin, setShowAccessAdmin] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
+  const [showSectionNav, setShowSectionNav] = useState(false)
   const [showMeasureConverter, setShowMeasureConverter] = useState(false)
   const [showImportChooser, setShowImportChooser] = useState(false)
   const [showImportXml, setShowImportXml] = useState(false)
@@ -148,6 +153,8 @@ export default function ActionBar() {
   const pinchStateRef = useRef(null)
   const canGoBack = activeTab > 0
   const canGoNext = activeTab < TOTAL_TABS - 1
+  const activeNavId = useActiveNavItem()
+  const jumpToSection = useSectionNavJump()
 
   useEffect(() => {
     toolbarScaleRef.current = toolbarScale
@@ -439,6 +446,17 @@ export default function ActionBar() {
             <span className="app-button__label">Next</span>
           </button>
           <button
+            className={`app-button app-button--nav${showSectionNav ? ' app-button--active-nav' : ''}`}
+            type="button"
+            aria-label="Jump to section"
+            title="Jump to section"
+            aria-expanded={showSectionNav}
+            onClick={() => setShowSectionNav(true)}
+          >
+            <Navigation className="app-button__icon" aria-hidden="true" />
+            <span className="app-button__label">Navigate</span>
+          </button>
+          <button
             className="app-button app-button--open action-bar__btn--mobile-only"
             type="button"
             aria-label="File menu"
@@ -597,7 +615,8 @@ export default function ActionBar() {
             addr: data.jobInfo?.addr,
             pitch: data.roofData?.ri0?.fields?.['Predominant Pitch (x/12)']
               ?? data.roofData?.ri0?.fields?.['Predominant Pitch'],
-            ridgeLF: data.roofData?.ri6?.fields?.['Length (LF)'],
+            squares: data.roofData?.ri0?.fields?.["SQ's"],
+            ridgeLF: data.roofData?.ri6?.fields?.['Length'],
             valleyIncluded: isRoofItemActive(data.roofData?.ri5),
           }}
           onApply={handleXmlApply}
@@ -668,6 +687,14 @@ export default function ActionBar() {
         <MeasurementConverterModal onClose={() => setShowMeasureConverter(false)} />
       )}
 
+      {showSectionNav && (
+        <SectionNavModal
+          activeNavId={activeNavId}
+          onJump={jumpToSection}
+          onClose={() => setShowSectionNav(false)}
+        />
+      )}
+
       {showHelp && (
         <>
           <div className="modal-backdrop modal-backdrop--top" onClick={() => setShowHelp(false)} />
@@ -681,6 +708,7 @@ export default function ActionBar() {
             <div className="toolbar-help-modal__list">
               <p><ArrowLeft className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Back:</strong> Go to the previous inspection section.</span></p>
               <p><ArrowRight className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Next:</strong> Go to the next inspection section.</span></p>
+              <p><Navigation className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Navigate:</strong> Jump to any line item from Shingle Style / Grade through Misc Notes. The item currently on screen is highlighted.</span></p>
               <p><Folder className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>File (mobile):</strong> Opens Save, Open, Import, Export, New, and Reset.</span></p>
               <p><Save className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Save:</strong> Save the current inspection to cloud storage.</span></p>
               <p><FolderOpen className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Open:</strong> Open a previously saved inspection.</span></p>

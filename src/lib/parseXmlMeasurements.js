@@ -47,14 +47,25 @@ export function parseXmlMeasurements(xmlText) {
   result.valleyPresent = lineLengths.VALLEY > 0
 
   const pitchCounts = {}
+  let totalSqFt = 0
   doc.querySelectorAll('POLYGON').forEach(poly => {
     const pitch = poly.getAttribute('pitch')
     if (pitch) pitchCounts[pitch] = (pitchCounts[pitch] || 0) + 1
+
+    const unrounded = Number(poly.getAttribute('unroundedsize'))
+    const rounded = Number(poly.getAttribute('size'))
+    if (Number.isFinite(unrounded) && unrounded > 0) totalSqFt += unrounded
+    else if (Number.isFinite(rounded) && rounded > 0) totalSqFt += rounded
   })
   const pitchEntries = Object.entries(pitchCounts)
   if (pitchEntries.length) {
     const dominant = pitchEntries.sort((a, b) => b[1] - a[1])[0][0]
     result.pitch = `${dominant}/12`
+  }
+
+  // EagleView polygon sizes are sq ft; roofing squares = sq ft / 100
+  if (totalSqFt > 0) {
+    result.squares = Math.round((totalSqFt / 100) * 10) / 10
   }
 
   return result

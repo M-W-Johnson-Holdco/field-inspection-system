@@ -1,13 +1,15 @@
 /** Window screen area size buckets (square feet). */
+import { measurementToDecimalFeet } from './measurement'
+
 export const SCREEN_SIZE_BUCKETS = ['Small', 'Medium', 'Large', 'X-Large']
 
 export const SCREEN_SIZE_LEGEND =
   'Small 1–9 ft² · Medium 10–16 ft² · Large 17–25 ft² · X-Large 26–32+ ft²'
 
 export function screenAreaSqFt(fields = {}) {
-  const length = Number(fields['Length (ft)'])
-  const width = Number(fields['Width (ft)'])
-  if (!Number.isFinite(length) || !Number.isFinite(width) || length <= 0 || width <= 0) return null
+  const length = measurementToDecimalFeet(fields['Length (ft)'], { unitHint: 'feet' })
+  const width = measurementToDecimalFeet(fields['Width (ft)'], { unitHint: 'feet' })
+  if (length == null || width == null || length <= 0 || width <= 0) return null
   const area = length * width
   return Number.isInteger(area) ? area : Math.round(area * 10) / 10
 }

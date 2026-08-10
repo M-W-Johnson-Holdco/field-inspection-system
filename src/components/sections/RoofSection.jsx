@@ -7,7 +7,7 @@ import DamageDescriptionInput from '../DamageDescriptionInput'
 import ItemNotesField from '../ItemNotesField'
 import DimensionLwInput from '../DimensionLwInput'
 import DiameterCircInput from '../DiameterCircInput'
-import MeasurementInput, { isLinearMeasurementField } from '../MeasurementInput'
+import MeasurementInput, { isMeasurementField } from '../MeasurementInput'
 import { ROOF_ITEMS, SUBSECTIONS } from '../../data/roofItems'
 import { fieldGroupProps } from '../../utils/fieldLayout'
 import { fieldSelectClass, materialOptionColumnStyle, withSelectPlaceholderClass, visibleFieldsForValues, ynOptionsForField, optionsForField } from '../../utils/fieldGrid'
@@ -278,7 +278,7 @@ function FieldRenderer({ field, value, onChange, subFields, onSubFieldChange }) 
 
   const inputCh = Math.max(String(value || p || '').length, 3)
 
-  if (isLinearMeasurementField(field)) {
+  if (isMeasurementField(field)) {
     return <MeasurementInput field={field} value={value} onChange={onChange} />
   }
 
@@ -368,7 +368,7 @@ function collapsibleSubPills(itemId, fields = {}) {
     }
     if (fields.Damaged === 'Yes') red.push('Damaged')
   } else if (itemId === 'ri15') {
-    const length = selectValue(fields['Length (LF)'])
+    const length = selectValue(fields['Length'])
     if (length) grey.push(`${length} LF`)
   } else if (itemId === 'ri17') {
     const size = String(fields['Size / Width'] || '').match(/^(Small|Medium|Large)/)?.[1]
@@ -381,15 +381,16 @@ function collapsibleSubPills(itemId, fields = {}) {
     if (fields.Damaged === 'Yes') red.push('Damaged')
   } else if (itemId === 'ri22') {
     const location = selectValue(fields.Location)
-    const style = selectValue(fields['Style / Grade'])
+    const style = selectValue(fields.Style || fields['Style / Grade'])
     if (location) grey.push(location.startsWith('Other') ? 'Other' : location)
-    if (style) grey.push(style)
+    if (style) grey.push(style.startsWith('Other') ? 'Other' : style)
+    if (fields['Gutter Apron Existing?'] === 'Yes') grey.push('Gutter Apron')
     if (fields['Edgemetal Existing?'] === 'Yes') grey.push('Edgemetal')
     if (fields.Damaged === 'Yes') red.push('Damaged')
   } else if (itemId === 'ri23') {
     const type = selectValue(fields.Type)
     const style = selectValue(fields['Style / Grade'])
-    if (type) grey.push(type)
+    if (type) grey.push(type.startsWith('Other') ? 'Other' : type)
     if (style) grey.push(style)
     if (fields.Damaged === 'Yes') red.push('Damaged')
   }
@@ -468,6 +469,14 @@ function CollapsibleRoofSubCard({
                   if (field.l === '(Other)') {
                     const loc = sub.fields?.Location || ''
                     fieldValue = loc.startsWith('Other - ') ? loc.slice(8) : ''
+                  }
+                  if (field.l === 'Other Style') {
+                    const style = sub.fields?.Style || ''
+                    fieldValue = style.startsWith('Other - ') ? style.slice(8) : ''
+                  }
+                  if (field.l === 'Other Type') {
+                    const type = sub.fields?.Type || ''
+                    fieldValue = type.startsWith('Other - ') ? type.slice(8) : ''
                   }
                   return (
                     <FieldRenderer
@@ -769,7 +778,11 @@ function CheckItem({ itemDef, trigPhoto }) {
   }
 
   return (
-    <div className={`ri-item${status === 'na' ? ' ri-item--excluded' : ''}${status === 'supplement' ? ' ri-item--supplement' : ''}`}>
+    <div
+      id={`nav-${id}`}
+      data-nav-anchor={id}
+      className={`ri-item${status === 'na' ? ' ri-item--excluded' : ''}${status === 'supplement' ? ' ri-item--supplement' : ''}`}
+    >
       <div className="ri-item__top">
         <button
           type="button"

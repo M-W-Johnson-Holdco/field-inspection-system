@@ -11,6 +11,11 @@ const ROOF_MAP = [
   { key: 'stories',                 itemId: 'ri0',  label: 'Stories' },
   { key: 'layers',                  itemId: 'ri0',  label: 'Layers' },
   { key: 'pitch',                   itemId: 'ri0',  label: 'Predominant Pitch (x/12)' },
+  { key: 'squares',                 itemId: 'ri0',  label: "SQ's" },
+  { key: 'deckingType',             itemId: 'ri34', label: 'Type' },
+  { key: 'deckingDamaged',          itemId: 'ri34', label: 'Damaged' },
+  { key: 'deckingDamageDescription', itemId: 'ri34', label: '_damage' },
+  { key: 'deckingNotes',            itemId: 'ri34', label: '_notes' },
   { key: 'edgeFlashingType',        itemId: 'ri1',  label: 'Type' },
   { key: 'edgeMaterial',            itemId: 'ri1',  label: 'Material' },
   { key: 'edgePainted',             itemId: 'ri1',  label: 'Painted' },
@@ -49,7 +54,7 @@ const ROOF_MAP = [
   { key: 'turretCapGrade',          itemId: 'ri32', label: 'Cap Grade' },
   { key: 'turretCapPainted',        itemId: 'ri32', label: 'Painted' },
   { key: 'turretNotes',             itemId: 'ri32', label: '_notes' },
-  { key: 'ridgeVentLF',             itemId: 'ri6',  label: 'Length (LF)' },
+  { key: 'ridgeVentLF',             itemId: 'ri6',  label: 'Length' },
   { key: 'ridgeVentWidth',          itemId: 'ri6',  label: 'Width (inches)' },
   { key: 'ridgeVentType',           itemId: 'ri6',  label: 'Type' },
   { key: 'ridgeVentPainted',        itemId: 'ri6',  label: 'Painted' },
@@ -105,11 +110,11 @@ const ROOF_MAP = [
   { key: 'corniceReturnDamaged',    itemId: 'ri21', label: 'Damaged' },
   { key: 'corniceReturnDamageDescription', itemId: 'ri21', label: '_damage' },
   { key: 'corniceStripMaterial',    itemId: 'ri28', label: 'Material' },
-  { key: 'corniceStripLF',          itemId: 'ri28', label: 'Length (LF)' },
-  { key: 'corniceStripStories',     itemId: 'ri28', label: 'Stories' },
   { key: 'corniceStripPainted',     itemId: 'ri28', label: 'Painted' },
-  { key: 'corniceStripDamaged',     itemId: 'ri28', label: 'Damaged' },
-  { key: 'corniceStripDamageDescription', itemId: 'ri28', label: '_damage' },
+  { key: 'openCornicesExisting',    itemId: 'ri33', label: 'Existing?' },
+  { key: 'openCornicesDamaged',     itemId: 'ri33', label: 'Damaged' },
+  { key: 'openCornicesDamageDescription', itemId: 'ri33', label: '_damage' },
+  { key: 'openCornicesNotes',       itemId: 'ri33', label: '_notes' },
   // Legacy parse keys
   { key: 'corniceGableStory',       itemId: 'ri21', label: 'Stories' },
   { key: 'corniceGableQty',         itemId: 'ri21', label: 'Qty' },
@@ -135,24 +140,24 @@ const ELEV_MAP = [
   { key: 'gutterMaterial',       itemId: 'ev3',  label: 'Material' },
   { key: 'gutterSize',           itemId: 'ev3',  label: 'Size (Inches)' },
   { key: 'gutterPainted',        itemId: 'ev3',  label: 'Painted' },
-  { key: 'gutterLF',             itemId: 'ev3',  label: 'Length (LF)' },
+  { key: 'gutterLF',             itemId: 'ev3',  label: 'Length' },
   { key: 'gutterDamage',         itemId: 'ev3',  label: 'Damaged' },
   { key: 'gutterDamageDescription', itemId: 'ev3', label: '_damage' },
   { key: 'gutterGuardStyle',     itemId: 'ev11', label: 'Style' },
-  { key: 'gutterGuardMaterial',  itemId: 'ev11', label: 'Material' },
-  { key: 'gutterGuardLF',        itemId: 'ev11', label: 'Length (LF)' },
+  { key: 'gutterGuardLF',        itemId: 'ev11', label: 'Length' },
   { key: 'gutterGuardDamage',    itemId: 'ev11', label: 'Damaged' },
   { key: 'gutterGuardDamageDescription', itemId: 'ev11', label: '_damage' },
   // Legacy: qty expands into N cards during apply
   { key: 'gutterGuardQty',       itemId: 'ev11', label: 'Qty' },
   { key: 'downspoutQty',         itemId: 'ev4',  label: 'Qty' },
-  { key: 'downspoutLF',          itemId: 'ev4',  label: 'Length (LF)' },
+  { key: 'downspoutLF',          itemId: 'ev4',  label: 'Length' },
   { key: 'downspoutMaterial',    itemId: 'ev4',  label: 'Material' },
   { key: 'downspoutStyle',       itemId: 'ev4',  label: 'Style' },
   { key: 'downspoutWidth',       itemId: 'ev4',  label: 'Width' },
   { key: 'downspoutPainted',     itemId: 'ev4',  label: 'Painted' },
   { key: 'downspoutDamage',      itemId: 'ev4',  label: 'Damaged' },
   { key: 'downspoutDamageDescription', itemId: 'ev4', label: '_damage' },
+  { key: 'windowMaterial',       itemId: 'ev12', label: 'Material' },
   { key: 'windowGrade',          itemId: 'ev12', label: 'Grade' },
   { key: 'windowType',           itemId: 'ev12', label: 'Type' },
   { key: 'windowGlaze',          itemId: 'ev12', label: 'Glaze' },
@@ -183,6 +188,7 @@ const ELEV_MAP = [
   { key: 'shutterMaterial',      itemId: 'ev6',  label: 'Grade' },
   { key: 'shutterGrade',         itemId: 'ev6',  label: 'Grade' },
   { key: 'shutterCustomGrade',   itemId: 'ev6',  label: 'Custom Grade' },
+  { key: 'shutterAction',        itemId: 'ev6',  label: 'Action' },
   { key: 'shutterLength',        itemId: 'ev6',  label: 'Length (in)' },
   { key: 'shutterWidth',         itemId: 'ev6',  label: 'Width (in)' },
   { key: 'shutterPainted',       itemId: 'ev6',  label: 'Painted' },
@@ -193,19 +199,20 @@ const ELEV_MAP = [
   { key: 'shutterSmallQty',      itemId: 'ev6',  label: '_smallQty' },
   { key: 'shutterMediumQty',     itemId: 'ev6',  label: '_mediumQty' },
   { key: 'shutterLargeQty',      itemId: 'ev6',  label: '_largeQty' },
-  { key: 'doorGrade',            itemId: 'ev7',  label: 'Grade' },
+  { key: 'doorMaterial',         itemId: 'ev7',  label: 'Material' },
+  { key: 'doorGrade',            itemId: 'ev7',  label: 'Material' },
   { key: 'doorStyle',            itemId: 'ev7',  label: 'Style' },
+  { key: 'doorGlass',            itemId: 'ev7',  label: 'Glass' },
   { key: 'doorConfiguration',    itemId: 'ev7',  label: 'Configuration' },
   { key: 'doorPainted',          itemId: 'ev7',  label: 'Painted' },
-  { key: 'doorLength',           itemId: 'ev7',  label: 'Length (in)' },
-  { key: 'doorWidth',            itemId: 'ev7',  label: 'Width (in)' },
+  { key: 'doorLength',           itemId: 'ev7',  label: 'Length (ft)' },
+  { key: 'doorWidth',            itemId: 'ev7',  label: 'Width (ft)' },
   { key: 'doorAction',           itemId: 'ev7',  label: 'Action' },
   { key: 'doorDamage',           itemId: 'ev7',  label: 'Damaged' },
   { key: 'doorDamageDescription', itemId: 'ev7', label: '_damage' },
   { key: 'doorQty',              itemId: 'ev7',  label: 'Qty' },
   // Legacy flat fields
   { key: 'doorSize',             itemId: 'ev7',  label: 'Size' },
-  { key: 'doorMaterial',         itemId: 'ev7',  label: 'Material' },
   { key: 'stormDoor',            itemId: 'ev7',  label: 'Storm Door' },
   { key: 'garageDoorType',       itemId: 'ev8',  label: 'Type' },
   { key: 'garageDoorMaterial',   itemId: 'ev8',  label: 'Grade' },
@@ -213,23 +220,42 @@ const ELEV_MAP = [
   { key: 'garageDoorInsulated',  itemId: 'ev8',  label: 'Insulated' },
   { key: 'garageDoorWindows',    itemId: 'ev8',  label: 'Windows' },
   { key: 'garageDoorWindowQty',  itemId: 'ev8',  label: 'Window Qty' },
-  { key: 'garageDoorPainted',    itemId: 'ev8',  label: 'Painted' },
+  { key: 'garageDoorPainted',    itemId: 'ev8',  label: 'Painted or Stained' },
+  { key: 'garageDoorAccessories', itemId: 'ev8', label: 'Accessories' },
   { key: 'garageDoorLength',     itemId: 'ev8',  label: 'Length (ft)' },
   { key: 'garageDoorWidth',      itemId: 'ev8',  label: 'Width (ft)' },
   { key: 'garageDoorDamage',     itemId: 'ev8',  label: 'Damaged' },
   { key: 'garageDoorDamageDescription', itemId: 'ev8', label: '_damage' },
   { key: 'garageDoorQty',        itemId: 'ev8',  label: 'Qty' },
-  { key: 'deckMaterial',         itemId: 'ev14', label: 'Material' },
-  { key: 'deckHandrailHeight',   itemId: 'ev14', label: 'Handrail Height (Inches)' },
-  { key: 'deckSteps',            itemId: 'ev14', label: 'Steps' },
+  { key: 'deckSurfaceMaterial',  itemId: 'ev14', label: 'Surface Material' },
+  { key: 'deckMaterial',         itemId: 'ev14', label: 'Surface Material' },
   { key: 'deckLength',           itemId: 'ev14', label: 'Deck Length (ft)' },
   { key: 'deckWidth',            itemId: 'ev14', label: 'Deck Width (ft)' },
-  { key: 'deckTreadLength',      itemId: 'ev14', label: 'Tread Length (in)' },
-  { key: 'deckTreadWidth',       itemId: 'ev14', label: 'Tread Width (in)' },
-  { key: 'deckPainted',          itemId: 'ev14', label: 'Painted' },
-  { key: 'deckDamage',           itemId: 'ev14', label: 'Damaged' },
-  { key: 'deckDamageDescription', itemId: 'ev14', label: '_damage' },
-  { key: 'deckQty',              itemId: 'ev14', label: 'Qty' },
+  { key: 'deckRailingMaterial',  itemId: 'ev14', label: 'Railing Material' },
+  { key: 'deckHandrailHeight',   itemId: 'ev14', label: 'Handrail Height (Inches)' },
+  { key: 'deckBalusterExisting', itemId: 'ev14', label: 'Baluster Existing?' },
+  { key: 'deckBalusterType',     itemId: 'ev14', label: 'Baluster Type' },
+  { key: 'deckBalusterQty',      itemId: 'ev14', label: 'Baluster Qty' },
+  { key: 'deckStairsMaterial',   itemId: 'ev14', label: 'Stairs Material' },
+  { key: 'deckTreadsQty',        itemId: 'ev14', label: 'Treads Qty' },
+  { key: 'deckSteps',            itemId: 'ev14', label: 'Treads Qty' },
+  { key: 'deckSurfacePainted',   itemId: 'ev14', label: 'Surface Painted or Stained' },
+  { key: 'deckSurfaceReplace',   itemId: 'ev14', label: 'Surface Replace' },
+  { key: 'deckSurfaceDamage',    itemId: 'ev14', label: 'Surface Damaged' },
+  { key: 'deckSurfaceDamageDescription', itemId: 'ev14', label: '_surface_damage' },
+  { key: 'deckRailingPainted',   itemId: 'ev14', label: 'Railing Painted or Stained' },
+  { key: 'deckRailingReplace',   itemId: 'ev14', label: 'Railing Replace' },
+  { key: 'deckRailingDamage',    itemId: 'ev14', label: 'Railing Damaged' },
+  { key: 'deckRailingDamageDescription', itemId: 'ev14', label: '_railing_damage' },
+  { key: 'deckStairsPainted',    itemId: 'ev14', label: 'Stairs Painted or Stained' },
+  { key: 'deckStairsReplace',    itemId: 'ev14', label: 'Stairs Replace' },
+  { key: 'deckStairsDamage',     itemId: 'ev14', label: 'Stairs Damaged' },
+  { key: 'deckStairsDamageDescription', itemId: 'ev14', label: '_stairs_damage' },
+  // Legacy shared deck status → Surface
+  { key: 'deckPainted',          itemId: 'ev14', label: 'Surface Painted or Stained' },
+  { key: 'deckReplace',          itemId: 'ev14', label: 'Surface Replace' },
+  { key: 'deckDamage',           itemId: 'ev14', label: 'Surface Damaged' },
+  { key: 'deckDamageDescription', itemId: 'ev14', label: '_surface_damage' },
 ]
 
 // Maps AI JSON exterior keys → { itemId, fieldLabel }
@@ -238,7 +264,7 @@ const EXTERIOR_MAP = [
   { key: 'fenceStyle',             itemId: 'ei_fence',   label: 'Style' },
   { key: 'fencePosts',             itemId: 'ei_fence',   label: 'Posts' },
   { key: 'fencePostQty',           itemId: 'ei_fence',   label: 'Post Qty' },
-  { key: 'fencePostSpacing',       itemId: 'ei_fence',   label: 'Post Spacing (LF)' },
+  { key: 'fencePostSpacing',       itemId: 'ei_fence',   label: 'Post Spacing' },
   { key: 'fenceHeight',            itemId: 'ei_fence',   label: 'Height (FT)' },
   { key: 'fenceStained',           itemId: 'ei_fence',   label: 'Stained' },
   { key: 'fencePainted',           itemId: 'ei_fence',   label: 'Painted' },
@@ -366,7 +392,7 @@ function toArray(val) {
 function applyParsed(parsed, ctx) {
   const {
     updateJobInfo, updateRoofField, updateElevField, updateExteriorField, updateNote,
-    importRoofPipeJacks, importRoofExhaustStacks, importRoofRainDiverters, importRoofChimneys, importRoofFlashingItems,
+    importRoofPipeJacks, importRoofExhaustStacks, importRoofRainDiverters, importRoofCorniceStrips, importRoofChimneys, importRoofFlashingItems,
     importRoofLowSlopeItems, importRoofSkylights, importRoofOtherStructures,
     importInteriorRooms,
     replaceElevSubItems,
@@ -435,6 +461,7 @@ function applyParsed(parsed, ctx) {
   // that here for AI-driven updates, or these fields would cap completion forever.
   const DAMAGE_FLAG_ITEMS = [
     { itemId: 'ri1',  key: 'edgeDamaged' },
+    { itemId: 'ri34', key: 'deckingDamaged' },
     { itemId: 'ri3',  key: 'ridgeCapDamaged' },
     { itemId: 'ri6',  key: 'ridgeVentDamaged' },
     { itemId: 'ri7',  key: 'boxVentDamaged' },
@@ -446,6 +473,7 @@ function applyParsed(parsed, ctx) {
     { itemId: 'ri27', key: 'rooftopIntakeVentDamaged' },
     { itemId: 'ri30', key: 'windVaneDamaged' },
     { itemId: 'ri31', key: 'cupolaDamaged' },
+    { itemId: 'ri33', key: 'openCornicesDamaged' },
   ]
   DAMAGE_FLAG_ITEMS.forEach(({ itemId, key }) => {
     const val = roof[key]
@@ -461,6 +489,7 @@ function applyParsed(parsed, ctx) {
   importRoofPipeJacks(roof)
   importRoofExhaustStacks(roof)
   importRoofRainDiverters(roof)
+  importRoofCorniceStrips(roof)
   importRoofChimneys(roof)
   importRoofFlashingItems(roof)
   importRoofLowSlopeItems(roof)
@@ -476,12 +505,12 @@ function applyParsed(parsed, ctx) {
   // Elevations
   const elevations = parsed.elevations || {}
   const DIRS = ['Front', 'Right', 'Rear', 'Left']
-  const ADDMORE_ELEV_IDS = new Set(['ev3', 'ev11', 'ev4', 'ev12', 'ev5', 'ev6', 'ev7', 'ev8', 'ev14'])
+  const ADDMORE_ELEV_IDS = new Set(['ev3', 'ev11', 'ev4', 'ev12', 'ev5', 'ev6', 'ev7', 'ev8'])
   const ADDMORE_PARENT_FIELDS_BY_ID = {
     ev3: new Set(['Style', 'Material', 'Size (Inches)', 'Painted']),
-    ev11: new Set(['Style', 'Material']),
+    ev11: new Set(['Style']),
     ev4: new Set(['Style', 'Material', 'Width', 'Painted']),
-    ev12: new Set(['Grade', 'Type', 'Glaze', 'Painted']),
+    ev12: new Set(['Material', 'Grade', 'Type', 'Glaze', 'Painted']),
     ev5: new Set(['Type', 'Grade']),
     ev6: new Set(['Grade', 'Custom Grade', 'Painted']),
   }
@@ -494,9 +523,19 @@ function applyParsed(parsed, ctx) {
       if (val == null) return
       if (key === 'gutterSize') val = normalizeGutterSize(val)
       if (key === 'downspoutWidth') val = normalizeDownspoutWidth(val)
+      if (key === 'garageDoorAccessories') val = toArray(val)
       if (key === 'sidingStyle' || key === 'sidingMaterial') {
         val = normalizeSidingStyle(val)
         updateElevField(`${itemId}_${dir}`, 'Style', val)
+        return
+      }
+      // Legacy AI: windowGrade held material (Vinyl/Wood/...)
+      if (
+        key === 'windowGrade'
+        && ['Vinyl', 'Wood', 'Composite', 'Aluminum'].includes(val)
+        && dirData.windowMaterial == null
+      ) {
+        parentFieldUpdates.push([`${itemId}_${dir}`, 'Material', val])
         return
       }
       if (ADDMORE_ELEV_IDS.has(itemId)) {
@@ -524,7 +563,6 @@ function applyParsed(parsed, ctx) {
         || cellKey.startsWith('ev6_')
         || cellKey.startsWith('ev7_')
         || cellKey.startsWith('ev8_')
-        || cellKey.startsWith('ev14_')
       ) {
         let count = Math.max(1, Math.floor(Number(qtyRaw)) || 1)
         let cardFields = { ...fields }
@@ -558,7 +596,7 @@ function applyParsed(parsed, ctx) {
           delete cardFields.Qty
         } else {
           cardFields = {
-            ...(fields['Length (LF)'] != null ? { 'Length (LF)': fields['Length (LF)'] } : {}),
+            ...(fields['Length'] != null ? { 'Length': fields['Length'] } : {}),
             ...(fields.Damaged != null ? { Damaged: fields.Damaged } : {}),
             ...(fields._damage != null ? { _damage: fields._damage } : {}),
           }

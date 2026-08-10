@@ -46,7 +46,7 @@ function isEdgeFlashingFieldsPattern(fields) {
 function isFlashingSubFieldsPattern(fields) {
   return fields.length === 3
     && isLinearMeasurementField(fields[0])
-    && fields[0].l === 'Length (LF)'
+    && fields[0].l === 'Length'
     && fields[1].t === 'yn' && fields[1].l === 'Painted'
     && fields[2].t === 'yn' && fields[2].l === 'Damaged'
 }
@@ -179,7 +179,7 @@ export function groupFieldsForGrid(fields) {
 
     if (
       field.t === 'num' && field.l === 'Qty'
-      && next?.t === 'num' && /\bLF\b/i.test(next.l)
+      && next?.t === 'num' && (/\bLF\b/i.test(next.l) || next.l === 'Length' || next.lfFeetOnly)
       && !field.full && !next.full
     ) {
       groups.push({
@@ -196,7 +196,7 @@ export function groupFieldsForGrid(fields) {
 
     if (
       field.t === 'num' && field.l === 'Post Qty'
-      && next?.t === 'num' && next.l === 'Post Spacing (LF)'
+      && next?.t === 'num' && next.l === 'Post Spacing'
       && !field.full && !next.full
     ) {
       groups.push({
@@ -248,7 +248,7 @@ export function groupFieldsForGrid(fields) {
 
     if (
       field.t === 'num' && /Size/i.test(field.l)
-      && next?.t === 'num' && /\bLF\b/i.test(next.l)
+      && next?.t === 'num' && (/\bLF\b/i.test(next.l) || next.l === 'Length' || next.lfFeetOnly)
     ) {
       groups.push({
         type: 'row',

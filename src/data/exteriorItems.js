@@ -13,7 +13,7 @@ export const EXTERIOR_ITEMS = [
       { t: 'radio', l: 'Style', o: ['Privacy', 'Board on Board', 'Picket'], full: true },
       { t: 'radio', l: 'Posts', o: ['Metal Rod', '4x4', '6x6'], full: true },
       { t: 'num', l: 'Post Qty', p: '0', full: true },
-      { t: 'num', l: 'Post Spacing (LF)', p: '8', lfFeetOnly: true, full: true },
+      { t: 'num', l: 'Post Spacing', p: '8', lfFeetOnly: true, full: true },
       { t: 'num', l: 'Height (FT)', p: '6', full: true },
       { t: 'computedFenceLf', l: 'Total Linear Footage', full: true },
       { t: 'yn', l: 'Stained', full: true },
