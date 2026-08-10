@@ -853,6 +853,7 @@ function normalizeRoofData(roofData = {}) {
   next = normalizeRi17(next)
   next = normalizeFlashingItems(next)
   next = normalizeRi21(next)
+  next = normalizeRi28(next)
   next = normalizeRi22(next)
   next = normalizeRi23(next)
   return next
@@ -1109,9 +1110,77 @@ function normalizeRi21(roofData) {
   return next
 }
 
+function hasLegacyCorniceStripTopLevel(fields = {}) {
+  return fields['Length (LF)'] != null
+    || fields.Stories != null
+    || fields.Story != null
+    || fields.Damaged != null
+    || fields._damage != null
+}
+
+function normalizeRi28(roofData) {
+  const next = { ...roofData }
+  const ri28 = next.ri28
+  if (!ri28) return next
+
+  const fields = { ...(ri28.fields || {}) }
+  const sharedMaterial = fields.Material || ''
+  const sharedPainted = fields.Painted || ''
+  const existingSubs = ri28.subItems || []
+
+  if (!existingSubs.length && hasLegacyCorniceStripTopLevel(fields)) {
+    const subFields = {}
+    if (fields['Length (LF)'] != null && fields['Length (LF)'] !== '') {
+      subFields['Length (LF)'] = fields['Length (LF)']
+    }
+    if (fields.Stories != null && fields.Stories !== '') {
+      subFields.Stories = String(fields.Stories)
+    } else if (fields.Story != null && fields.Story !== '') {
+      subFields.Stories = String(fields.Story)
+    }
+    if (fields.Damaged) subFields.Damaged = fields.Damaged
+    if (fields._damage) subFields._damage = fields._damage
+    next.ri28 = {
+      ...ri28,
+      fields: {
+        ...(sharedMaterial ? { Material: sharedMaterial } : {}),
+        ...(sharedPainted ? { Painted: sharedPainted } : {}),
+      },
+      subItems: [{
+        fields: subFields,
+        photos: Array.isArray(ri28.photos) ? ri28.photos : [],
+      }],
+      photos: [],
+    }
+    return next
+  }
+
+  next.ri28 = {
+    ...ri28,
+    fields: {
+      ...(sharedMaterial ? { Material: sharedMaterial } : {}),
+      ...(sharedPainted ? { Painted: sharedPainted } : {}),
+    },
+    subItems: existingSubs.map(sub => {
+      const subFields = { ...(sub?.fields || {}) }
+      if ((subFields.Stories == null || subFields.Stories === '') && subFields.Story != null) {
+        subFields.Stories = String(subFields.Story)
+      }
+      delete subFields.Story
+      return {
+        fields: subFields,
+        photos: Array.isArray(sub?.photos) ? sub.photos : [],
+      }
+    }),
+    photos: [],
+  }
+  return next
+}
+
 function hasLegacyLowSlopeTopLevel(fields = {}) {
   return fields.Location != null
     || fields['Style / Grade'] != null
+    || fields.Style != null
     || fields.Pitch != null
     || fields['Pitch (x/12)'] != null
     || fields.Damaged != null
@@ -1144,8 +1213,35 @@ function normalizeStructurePitchFields(fields = {}) {
   return next
 }
 
+const LOW_SLOPE_STYLE_OPTIONS = ['90lb', 'ModBit', 'Metal', 'Corrugated Plastic', 'TPO', 'EPDM', 'Other', 'N/A']
+
+function normalizeLowSlopeStyleValue(value) {
+  if (value == null || value === '') return ''
+  const raw = String(value).trim()
+  if (!raw || raw === 'Select') return raw
+  if (raw.startsWith('Other - ') || raw === 'Other') return raw
+  const exact = LOW_SLOPE_STYLE_OPTIONS.find(opt => opt === raw)
+  if (exact) return exact
+  const lower = raw.toLowerCase()
+  if (lower === '90lb' || lower === '90 lbs' || lower === '90lbs') return '90lb'
+  if (lower === 'modbit' || lower === 'mod bit' || lower === 'mod.bitumen' || lower === 'mod bitumen' || lower.includes('mod')) return 'ModBit'
+  if (lower === 'metal') return 'Metal'
+  if (lower.includes('corrugat') || lower.includes('plastic')) return 'Corrugated Plastic'
+  if (lower === 'tpo') return 'TPO'
+  if (lower === 'epdm') return 'EPDM'
+  if (lower === 'n/a' || lower === 'na') return 'N/A'
+  return `Other - ${raw}`
+}
+
 function normalizeLowSlopeSubItem(sub) {
   const fields = normalizeStructurePitchFields(sub?.fields || {})
+  if ((fields.Style == null || fields.Style === '') && fields['Style / Grade'] != null) {
+    fields.Style = fields['Style / Grade']
+  }
+  delete fields['Style / Grade']
+  if (fields.Style != null && fields.Style !== '') {
+    fields.Style = normalizeLowSlopeStyleValue(fields.Style)
+  }
   if ((!fields['Edgemetal Material'] || fields['Edgemetal Material'] === 'Select') && fields.Material) {
     fields['Edgemetal Material'] = fields.Material
   }
@@ -1154,6 +1250,7 @@ function normalizeLowSlopeSubItem(sub) {
   }
   delete fields.Material
   delete fields.Painted
+  delete fields['Other Style']
   return {
     fields,
     photos: Array.isArray(sub?.photos) ? sub.photos : [],
@@ -1172,7 +1269,9 @@ function migrateLowSlopeFields(ri22) {
   return [{
     fields: {
       ...(fields.Location ? { Location: fields.Location } : {}),
-      ...(fields['Style / Grade'] ? { 'Style / Grade': fields['Style / Grade'] } : {}),
+      ...(fields.Style || fields['Style / Grade']
+        ? { Style: normalizeLowSlopeStyleValue(fields.Style || fields['Style / Grade']) }
+        : {}),
       ...(fields['Exposed Rafters'] ? { 'Exposed Rafters': fields['Exposed Rafters'] } : {}),
       ...(pitch ? { [STRUCTURE_PITCH_KEY]: normalizeLowSlopePitch(pitch) } : {}),
       ...(fields.Damaged ? { Damaged: fields.Damaged } : {}),
@@ -1221,9 +1320,43 @@ function hasLegacyOtherStructureTopLevel(fields = {}) {
     || fields._damage != null
 }
 
+const OTHER_STRUCTURE_TYPE_OPTIONS = [
+  'Detached Garage',
+  'Pool House',
+  'Shed',
+  'Pergola',
+  'Gazebo',
+  'Other',
+  'N/A',
+]
+
+function normalizeOtherStructureTypeValue(value) {
+  if (value == null || value === '') return ''
+  const raw = String(value).trim()
+  if (!raw || raw === 'Select') return raw
+  if (raw.startsWith('Other - ') || raw === 'Other') return raw
+  const exact = OTHER_STRUCTURE_TYPE_OPTIONS.find(opt => opt === raw)
+  if (exact) return exact
+  const lower = raw.toLowerCase()
+  const match = OTHER_STRUCTURE_TYPE_OPTIONS.find(opt => opt.toLowerCase() === lower)
+  if (match) return match
+  if (lower.includes('garage')) return 'Detached Garage'
+  if (lower.includes('pool')) return 'Pool House'
+  if (lower.includes('shed')) return 'Shed'
+  if (lower.includes('pergola')) return 'Pergola'
+  if (lower.includes('gazebo')) return 'Gazebo'
+  if (lower === 'n/a' || lower === 'na') return 'N/A'
+  return `Other - ${raw}`
+}
+
 function normalizeOtherStructureSubItem(sub) {
+  const fields = normalizeStructurePitchFields(sub?.fields || {})
+  if (fields.Type != null && fields.Type !== '') {
+    fields.Type = normalizeOtherStructureTypeValue(fields.Type)
+  }
+  delete fields['Other Type']
   return {
-    fields: normalizeStructurePitchFields(sub?.fields || {}),
+    fields,
     photos: Array.isArray(sub?.photos) ? sub.photos : [],
   }
 }
@@ -1239,7 +1372,7 @@ function migrateOtherStructureFields(ri23) {
 
   return [{
     fields: {
-      ...(fields.Type ? { Type: fields.Type } : {}),
+      ...(fields.Type ? { Type: normalizeOtherStructureTypeValue(fields.Type) } : {}),
       ...(fields['Style / Grade'] ? { 'Style / Grade': fields['Style / Grade'] } : {}),
       ...(pitch ? { [STRUCTURE_PITCH_KEY]: normalizeLowSlopePitch(pitch) } : {}),
       ...(fields.Damaged ? { Damaged: fields.Damaged } : {}),
@@ -1846,7 +1979,13 @@ function buildLowSlopeSubItemsFromParsed(roof = {}) {
     return list.map(ls => ({
       fields: {
         ...(ls?.location ? { Location: ls.location } : {}),
-        ...(ls?.grade ? { 'Style / Grade': ls.grade } : {}),
+        ...(ls?.style || ls?.grade
+          ? { Style: normalizeLowSlopeStyleValue(ls.style || ls.grade) }
+          : {}),
+        ...(ls?.gutterApronExisting ? { 'Gutter Apron Existing?': ls.gutterApronExisting } : {}),
+        ...(ls?.gutterApronExisting === 'Yes' && ls?.gutterApronWidthLF != null
+          ? { 'Gutter Apron Width (LF)': String(ls.gutterApronWidthLF) }
+          : {}),
         ...(ls?.edgemetalExisting ? { 'Edgemetal Existing?': ls.edgemetalExisting } : {}),
         ...(ls?.edgemetalExisting === 'Yes' && ls?.edgemetalWidthInches != null
           ? { 'Edgemetal Width (Inches)': String(ls.edgemetalWidthInches) }
@@ -1868,18 +2007,18 @@ function buildLowSlopeSubItemsFromParsed(roof = {}) {
 
   // Legacy fallback: single shared low-slope section.
   const location = roof.lowSlopeLocation || ''
-  const grade = roof.lowSlopeGrade || ''
+  const style = roof.lowSlopeStyle || roof.lowSlopeGrade || ''
   const pitch = roof.lowSlopePitch ? normalizeLowSlopePitch(roof.lowSlopePitch) : ''
   const damaged = roof.lowSlopeDamaged || ''
   const exposedRafters = roof.exposedRafters || ''
-  const hasData = location || grade || pitch || damaged || exposedRafters
+  const hasData = location || style || pitch || damaged || exposedRafters
 
   if (!hasData) return []
 
   return [{
     fields: {
       ...(location ? { Location: location } : {}),
-      ...(grade ? { 'Style / Grade': grade } : {}),
+      ...(style ? { Style: normalizeLowSlopeStyleValue(style) } : {}),
       ...(exposedRafters ? { 'Exposed Rafters': exposedRafters } : {}),
       ...(pitch ? { 'Pitch (x/12)': pitch } : {}),
       ...(damaged ? { Damaged: damaged } : {}),
@@ -1933,11 +2072,44 @@ function buildRainDiverterSubItemsFromParsed(roof = {}) {
   return subItems
 }
 
+function buildCorniceStripSubItemsFromParsed(roof = {}) {
+  const list = Array.isArray(roof.corniceStrips) ? roof.corniceStrips : []
+  if (list.length) {
+    return list.map(cs => ({
+      fields: {
+        ...(cs?.lengthLF != null && cs.lengthLF !== '' ? { 'Length (LF)': String(cs.lengthLF) } : {}),
+        ...(cs?.stories != null && cs.stories !== '' ? { Stories: String(cs.stories) } : {}),
+        ...(cs?.damaged ? { Damaged: cs.damaged } : {}),
+        ...(cs?.damaged === 'Yes' && cs?.damageDescription ? { _damage: cs.damageDescription } : {}),
+      },
+      photos: [],
+    }))
+  }
+
+  // Legacy fallback: single shared strip profile
+  const length = roof.corniceStripLF
+  const stories = roof.corniceStripStories
+  const damaged = roof.corniceStripDamaged || ''
+  const hasData = (length != null && length !== '') || (stories != null && stories !== '') || damaged
+  if (!hasData) return []
+  return [{
+    fields: {
+      ...(length != null && length !== '' ? { 'Length (LF)': String(length) } : {}),
+      ...(stories != null && stories !== '' ? { Stories: String(stories) } : {}),
+      ...(damaged ? { Damaged: damaged } : {}),
+      ...(damaged === 'Yes' && roof.corniceStripDamageDescription
+        ? { _damage: roof.corniceStripDamageDescription }
+        : {}),
+    },
+    photos: [],
+  }]
+}
+
 function buildOtherStructureSubItemsFromParsed(roof = {}) {
   const list = Array.isArray(roof.otherStructures) ? roof.otherStructures : []
   return list.map(os => ({
     fields: {
-      ...(os?.type ? { Type: os.type } : {}),
+      ...(os?.type ? { Type: normalizeOtherStructureTypeValue(os.type) } : {}),
       ...(os?.grade ? { 'Style / Grade': os.grade } : {}),
       ...(os?.pitch ? { 'Pitch (x/12)': normalizeLowSlopePitch(os.pitch) } : {}),
       ...(os?.damaged ? { Damaged: os.damaged } : {}),
@@ -2210,6 +2382,20 @@ export function InspectionProvider({ children }) {
           fields['Location'] = value ? `Other - ${value}` : 'Other'
           delete fields['(Other)']
         }
+        if (itemId === 'ri22' && label === 'Style') {
+          delete fields['Other Style']
+        }
+        if (itemId === 'ri22' && label === 'Other Style') {
+          fields.Style = value ? `Other - ${value}` : 'Other'
+          delete fields['Other Style']
+        }
+        if (itemId === 'ri23' && label === 'Type') {
+          delete fields['Other Type']
+        }
+        if (itemId === 'ri23' && label === 'Other Type') {
+          fields.Type = value ? `Other - ${value}` : 'Other'
+          delete fields['Other Type']
+        }
         if (itemId === 'ri14' && label === 'Style') {
           if (value === 'Tubular') {
             delete fields['Length (ft)']
@@ -2403,6 +2589,34 @@ export function InspectionProvider({ children }) {
               ...(painted ? { Painted: painted } : {}),
             },
             subItems: subItems.length ? subItems : (item.subItems || []),
+          },
+        },
+      }
+      scheduleSave(next)
+      return next
+    })
+  }
+
+  function importRoofCorniceStrips(roof = {}) {
+    const subItems = buildCorniceStripSubItemsFromParsed(roof)
+    const material = roof.corniceStripMaterial || ''
+    const painted = roof.corniceStripPainted || ''
+    if (!subItems.length && !material && !painted) return
+
+    setData(prev => {
+      const item = prev.roofData.ri28
+      const next = {
+        ...prev,
+        roofData: {
+          ...prev.roofData,
+          ri28: {
+            ...withRoofItemStatus(item, 'present'),
+            fields: {
+              ...(material ? { Material: material } : {}),
+              ...(painted ? { Painted: painted } : {}),
+            },
+            subItems: subItems.length ? subItems : (item.subItems || []),
+            photos: [],
           },
         },
       }
@@ -2958,7 +3172,7 @@ export function InspectionProvider({ children }) {
       saveStatus, driveSaveStatus, setDriveSaveStatus, driveFolderId, setDriveFolderId, completion, updateJobInfo, manualSave, resetAll, startNewInspection, loadInspection, applyXmlImport,
       aiParseState, setAiParseState,
       toggleRoofExclude, cycleRoofStatus, updateRoofField,
-      addRoofSubItem, removeRoofSubItem, updateRoofSubField, adjustRoofSubItemSizeCount, importRoofPipeJacks, importRoofExhaustStacks, importRoofRainDiverters, importRoofChimneys, importRoofFlashingItems, importRoofLowSlopeItems,
+      addRoofSubItem, removeRoofSubItem, updateRoofSubField, adjustRoofSubItemSizeCount, importRoofPipeJacks, importRoofExhaustStacks, importRoofRainDiverters, importRoofCorniceStrips, importRoofChimneys, importRoofFlashingItems, importRoofLowSlopeItems,
       importRoofSkylights, importRoofOtherStructures,
       addRoofPhoto, removeRoofPhoto,
       addJobPhoto, removeJobPhoto,

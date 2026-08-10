@@ -52,6 +52,16 @@ export const ROOF_LINE_ITEMS = {
     damaged: null,
     note: `${num(fields, 'Stories') ?? '?'} stories, ${num(fields, 'Layers') ?? '?'} layer(s), predominant pitch ${str(fields, 'Predominant Pitch (x/12)') || str(fields, 'Predominant Pitch') || '?'}`,
   }],
+  ri34: (fields) => [{
+    trade: 'Roofing', category: 'RFG',
+    description: `Decking - ${str(fields, 'Type') || 'unspecified'}`,
+    unit: 'SQ', qty: null,
+    damaged: yn(fields, 'Damaged'),
+    note: [
+      fields?._notes || null,
+      fields?._damage && fields._damage !== 'n/a' ? fields._damage : null,
+    ].filter(Boolean).join('; ') || null,
+  }],
   ri1: (fields) => [{
     trade: 'Roofing', category: 'RFG',
     description: (() => {
@@ -287,13 +297,15 @@ export const ROOF_LINE_ITEMS = {
       yn(fields, 'Painted') ? 'Painted' : null,
     ].filter(Boolean).join('; ') || null,
   }],
-  ri28: (fields) => [{
+  ri33: (fields) => [{
     trade: 'Roofing', category: 'RFG',
-    description: `Cornice strip - ${str(fields, 'Material') || 'unspecified'}`,
-    unit: 'LF', qty: num(fields, 'Length (LF)'), damaged: yn(fields, 'Damaged'),
+    description: 'Open cornices',
+    unit: 'EA', qty: null,
+    damaged: yn(fields, 'Damaged'),
     note: [
-      (fields?.Stories || fields?.Story) ? `${fields.Stories || fields.Story} stories` : null,
-      yn(fields, 'Painted') ? 'Painted' : null,
+      fields?.['Existing?'] && fields['Existing?'] !== 'Select' ? `Existing: ${fields['Existing?']}` : null,
+      fields?._notes || null,
+      fields?._damage && fields._damage !== 'n/a' ? fields._damage : null,
     ].filter(Boolean).join('; ') || null,
   }],
 }
@@ -356,6 +368,17 @@ export const ROOF_SUBITEM_LINE_ITEMS = {
       note: [sizeLabel, areaNote].filter(Boolean).join('; ') || null,
     }
   },
+  ri28: (f, parentFields) => ({
+    trade: 'Roofing', category: 'RFG',
+    description: `Cornice strip - ${str(parentFields, 'Material') || str(f, 'Material') || 'unspecified'}`,
+    unit: 'LF',
+    qty: num(f, 'Length (LF)'),
+    damaged: yn(f, 'Damaged'),
+    note: [
+      (f?.Stories || f?.Story) ? `${f.Stories || f.Story} stories` : null,
+      yn(parentFields, 'Painted') || yn(f, 'Painted') ? 'Painted' : null,
+    ].filter(Boolean).join('; ') || null,
+  }),
   ri15: (f, parentFields) => ({
     trade: 'Roofing', category: 'RFG',
     description: 'Rain diverter',
@@ -376,10 +399,14 @@ export const ROOF_SUBITEM_LINE_ITEMS = {
   }),
   ri22: (f) => ({
     trade: 'Roofing', category: 'RFG',
-    description: `Low slope roofing - ${str(f, 'Location') || 'unspecified'} (${str(f, 'Style / Grade') || 'unspecified'})`,
+    description: `Low slope roofing - ${str(f, 'Location') || 'unspecified'} (${str(f, 'Style') || str(f, 'Style / Grade') || 'unspecified'})`,
     unit: 'SQ', qty: null, damaged: yn(f, 'Damaged'),
     note: [
       yn(f, 'Exposed Rafters') ? 'Exposed rafters' : null,
+      f?.['Gutter Apron Existing?'] === 'Yes' ? [
+        'Gutter apron',
+        num(f, 'Gutter Apron Width (LF)') != null ? `${num(f, 'Gutter Apron Width (LF)')} LF` : null,
+      ].filter(Boolean).join(' ') : null,
       f?.['Edgemetal Existing?'] === 'Yes' ? [
         'Edgemetal',
         num(f, 'Edgemetal Width (Inches)') != null ? `${num(f, 'Edgemetal Width (Inches)')}"` : null,

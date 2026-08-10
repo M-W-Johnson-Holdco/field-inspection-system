@@ -381,15 +381,16 @@ function collapsibleSubPills(itemId, fields = {}) {
     if (fields.Damaged === 'Yes') red.push('Damaged')
   } else if (itemId === 'ri22') {
     const location = selectValue(fields.Location)
-    const style = selectValue(fields['Style / Grade'])
+    const style = selectValue(fields.Style || fields['Style / Grade'])
     if (location) grey.push(location.startsWith('Other') ? 'Other' : location)
-    if (style) grey.push(style)
+    if (style) grey.push(style.startsWith('Other') ? 'Other' : style)
+    if (fields['Gutter Apron Existing?'] === 'Yes') grey.push('Gutter Apron')
     if (fields['Edgemetal Existing?'] === 'Yes') grey.push('Edgemetal')
     if (fields.Damaged === 'Yes') red.push('Damaged')
   } else if (itemId === 'ri23') {
     const type = selectValue(fields.Type)
     const style = selectValue(fields['Style / Grade'])
-    if (type) grey.push(type)
+    if (type) grey.push(type.startsWith('Other') ? 'Other' : type)
     if (style) grey.push(style)
     if (fields.Damaged === 'Yes') red.push('Damaged')
   }
@@ -468,6 +469,14 @@ function CollapsibleRoofSubCard({
                   if (field.l === '(Other)') {
                     const loc = sub.fields?.Location || ''
                     fieldValue = loc.startsWith('Other - ') ? loc.slice(8) : ''
+                  }
+                  if (field.l === 'Other Style') {
+                    const style = sub.fields?.Style || ''
+                    fieldValue = style.startsWith('Other - ') ? style.slice(8) : ''
+                  }
+                  if (field.l === 'Other Type') {
+                    const type = sub.fields?.Type || ''
+                    fieldValue = type.startsWith('Other - ') ? type.slice(8) : ''
                   }
                   return (
                     <FieldRenderer

@@ -11,6 +11,10 @@ const ROOF_MAP = [
   { key: 'stories',                 itemId: 'ri0',  label: 'Stories' },
   { key: 'layers',                  itemId: 'ri0',  label: 'Layers' },
   { key: 'pitch',                   itemId: 'ri0',  label: 'Predominant Pitch (x/12)' },
+  { key: 'deckingType',             itemId: 'ri34', label: 'Type' },
+  { key: 'deckingDamaged',          itemId: 'ri34', label: 'Damaged' },
+  { key: 'deckingDamageDescription', itemId: 'ri34', label: '_damage' },
+  { key: 'deckingNotes',            itemId: 'ri34', label: '_notes' },
   { key: 'edgeFlashingType',        itemId: 'ri1',  label: 'Type' },
   { key: 'edgeMaterial',            itemId: 'ri1',  label: 'Material' },
   { key: 'edgePainted',             itemId: 'ri1',  label: 'Painted' },
@@ -105,11 +109,11 @@ const ROOF_MAP = [
   { key: 'corniceReturnDamaged',    itemId: 'ri21', label: 'Damaged' },
   { key: 'corniceReturnDamageDescription', itemId: 'ri21', label: '_damage' },
   { key: 'corniceStripMaterial',    itemId: 'ri28', label: 'Material' },
-  { key: 'corniceStripLF',          itemId: 'ri28', label: 'Length (LF)' },
-  { key: 'corniceStripStories',     itemId: 'ri28', label: 'Stories' },
   { key: 'corniceStripPainted',     itemId: 'ri28', label: 'Painted' },
-  { key: 'corniceStripDamaged',     itemId: 'ri28', label: 'Damaged' },
-  { key: 'corniceStripDamageDescription', itemId: 'ri28', label: '_damage' },
+  { key: 'openCornicesExisting',    itemId: 'ri33', label: 'Existing?' },
+  { key: 'openCornicesDamaged',     itemId: 'ri33', label: 'Damaged' },
+  { key: 'openCornicesDamageDescription', itemId: 'ri33', label: '_damage' },
+  { key: 'openCornicesNotes',       itemId: 'ri33', label: '_notes' },
   // Legacy parse keys
   { key: 'corniceGableStory',       itemId: 'ri21', label: 'Stories' },
   { key: 'corniceGableQty',         itemId: 'ri21', label: 'Qty' },
@@ -366,7 +370,7 @@ function toArray(val) {
 function applyParsed(parsed, ctx) {
   const {
     updateJobInfo, updateRoofField, updateElevField, updateExteriorField, updateNote,
-    importRoofPipeJacks, importRoofExhaustStacks, importRoofRainDiverters, importRoofChimneys, importRoofFlashingItems,
+    importRoofPipeJacks, importRoofExhaustStacks, importRoofRainDiverters, importRoofCorniceStrips, importRoofChimneys, importRoofFlashingItems,
     importRoofLowSlopeItems, importRoofSkylights, importRoofOtherStructures,
     importInteriorRooms,
     replaceElevSubItems,
@@ -435,6 +439,7 @@ function applyParsed(parsed, ctx) {
   // that here for AI-driven updates, or these fields would cap completion forever.
   const DAMAGE_FLAG_ITEMS = [
     { itemId: 'ri1',  key: 'edgeDamaged' },
+    { itemId: 'ri34', key: 'deckingDamaged' },
     { itemId: 'ri3',  key: 'ridgeCapDamaged' },
     { itemId: 'ri6',  key: 'ridgeVentDamaged' },
     { itemId: 'ri7',  key: 'boxVentDamaged' },
@@ -446,6 +451,7 @@ function applyParsed(parsed, ctx) {
     { itemId: 'ri27', key: 'rooftopIntakeVentDamaged' },
     { itemId: 'ri30', key: 'windVaneDamaged' },
     { itemId: 'ri31', key: 'cupolaDamaged' },
+    { itemId: 'ri33', key: 'openCornicesDamaged' },
   ]
   DAMAGE_FLAG_ITEMS.forEach(({ itemId, key }) => {
     const val = roof[key]
@@ -461,6 +467,7 @@ function applyParsed(parsed, ctx) {
   importRoofPipeJacks(roof)
   importRoofExhaustStacks(roof)
   importRoofRainDiverters(roof)
+  importRoofCorniceStrips(roof)
   importRoofChimneys(roof)
   importRoofFlashingItems(roof)
   importRoofLowSlopeItems(roof)

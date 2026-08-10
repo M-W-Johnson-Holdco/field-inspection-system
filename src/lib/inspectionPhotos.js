@@ -27,6 +27,7 @@ function sanitizePathSegment(seg) {
 // Maps roof item IDs → leaf name used in photoFileName
 const ROOF_ITEM_LEAF = {
   ri0:  'shingle_style',
+  ri34: 'decking',
   ri1:  'edge_flashings',
   ri2:  'underlayment',
   ri3:  'ridge_cap',
@@ -53,6 +54,7 @@ const ROOF_ITEM_LEAF = {
   ri20: 'l_flashing',
   ri21: 'cornice_returns',
   ri28: 'cornice_strips',
+  ri33: 'open_cornices',
   ri22: 'low_slope',
   ri23: 'other_structures',
   ri24: 'solar_panels',

@@ -24,6 +24,18 @@ export const ROOF_ITEMS = [
     ],
   },
   {
+    id: 'ri34', lbl: 'Decking', flags: ['P', 'D'],
+    fields: [
+      {
+        t: 'radio',
+        l: 'Type',
+        o: ['1/2 OSB', '1/2 CDX', '2/3 CDK', 'Slat Decking', 'N/A'],
+        full: true,
+      },
+      { t: 'yn', l: 'Damaged', allowNA: true, full: true },
+    ],
+  },
+  {
     id: 'ri1', lbl: 'Edge Flashings', flags: ['P', 'D'],
     fields: [
       {
@@ -67,7 +79,7 @@ export const ROOF_ITEMS = [
       {
         t: 'multiRadio',
         l: 'Grade',
-        o: ['Ice & Water', 'Valley Metal', 'W-Valley', 'N/A'],
+        o: ['90lbs', 'Ice & Water', 'Valley Metal', 'W-Valley', 'N/A'],
         allowNA: true,
         nativeMenu: true,
         wrapSelected: true,
@@ -123,12 +135,25 @@ export const ROOF_ITEMS = [
   },
   {
     id: 'ri28', lbl: 'Cornice Strips', flags: ['P', 'M'],
+    addMore: true,
+    addMoreLabel: 'Add Cornice Strip',
+    subItemPhotos: true,
+    subItemDamaged: true,
     fields: [
       { t: 'radio', l: 'Material', o: ['3-Tab', 'Laminate', 'Metal', 'Copper'], full: true },
+      { t: 'yn', l: 'Painted', full: true },
+    ],
+    subFields: [
       { t: 'num', l: 'Length (LF)', lfFeetOnly: true, full: true },
       { t: 'num', l: 'Stories', p: '1', full: true },
-      { t: 'yn', l: 'Painted', full: true },
       { t: 'yn', l: 'Damaged', full: true },
+    ],
+  },
+  {
+    id: 'ri33', lbl: 'Open Cornices', flags: ['P', 'D'],
+    fields: [
+      { t: 'yn', l: 'Existing?', allowNA: true, full: true },
+      { t: 'yn', l: 'Damaged', allowNA: true, full: true },
     ],
   },
   {
@@ -421,9 +446,31 @@ export const ROOF_ITEMS = [
     subFields: [
       { t: 'select', l: 'Location', fullRow: true, o: ['Select', 'Back Porch', 'Front Porch', 'Other'] },
       { t: 'txt', l: '(Other)', showWhen: { field: 'Location', equals: 'Other' }, full: true },
-      { t: 'txt', l: 'Style / Grade', p: 'e.g. TPO, Mod.Bitumen, EPDM', full: true },
+      {
+        t: 'select',
+        l: 'Style',
+        full: true,
+        o: ['Select', '90lb', 'ModBit', 'Metal', 'Corrugated Plastic', 'TPO', 'EPDM', 'Other', 'N/A'],
+      },
+      {
+        t: 'txt',
+        l: 'Other Style',
+        p: 'Describe style...',
+        full: true,
+        noTopDivider: true,
+        showWhen: { field: 'Style', equals: 'Other' },
+      },
       { t: 'yn', l: 'Exposed Rafters' },
       { t: 'pitch', l: 'Pitch (x/12)', p: '1', full: true, showNumeratorOnly: true },
+      { t: 'yn', l: 'Gutter Apron Existing?', full: true },
+      {
+        t: 'num',
+        l: 'Gutter Apron Width (LF)',
+        lfFeetOnly: true,
+        full: true,
+        noTopDivider: true,
+        showWhen: { field: 'Gutter Apron Existing?', equals: 'Yes' },
+      },
       { t: 'yn', l: 'Edgemetal Existing?', full: true },
       {
         t: 'num',
@@ -459,7 +506,20 @@ export const ROOF_ITEMS = [
     subItemTotalCounter: { label: 'Structures' },
     fields: [],
     subFields: [
-      { t: 'txt', l: 'Type', p: 'Detached garage / shed', full: true },
+      {
+        t: 'select',
+        l: 'Type',
+        full: true,
+        o: ['Select', 'Detached Garage', 'Pool House', 'Shed', 'Pergola', 'Gazebo', 'Other', 'N/A'],
+      },
+      {
+        t: 'txt',
+        l: 'Other Type',
+        p: 'Describe structure...',
+        full: true,
+        noTopDivider: true,
+        showWhen: { field: 'Type', equals: 'Other' },
+      },
       { t: 'txt', l: 'Style / Grade', full: true },
       { t: 'pitch', l: 'Pitch (x/12)', p: '4', full: true, showNumeratorOnly: true },
       { t: 'yn', l: 'Damaged' },
