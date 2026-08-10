@@ -3273,9 +3273,12 @@ export function InspectionProvider({ children }) {
 
       const roofData = { ...next.roofData }
 
-      if (parsed.pitch) {
+      if (parsed.pitch || (parsed.squares != null && parsed.squares > 0)) {
         const ri0 = roofData.ri0
-        roofData.ri0 = { ...ri0, fields: { ...ri0.fields, 'Predominant Pitch (x/12)': parsed.pitch } }
+        const fields = { ...ri0.fields }
+        if (parsed.pitch) fields['Predominant Pitch (x/12)'] = parsed.pitch
+        if (parsed.squares != null && parsed.squares > 0) fields["SQ's"] = String(parsed.squares)
+        roofData.ri0 = { ...ri0, fields }
       }
 
       if (parsed.valleyPresent) {

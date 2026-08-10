@@ -21,6 +21,7 @@ export const ROOF_ITEMS = [
       { t: 'num', l: 'Stories', full: true },
       { t: 'num', l: 'Layers', full: true },
       { t: 'pitch', l: 'Predominant Pitch (x/12)', p: '4', full: true, showNumeratorOnly: true },
+      { t: 'num', l: "SQ's", full: true },
     ],
   },
   {

@@ -11,6 +11,7 @@ const ROOF_MAP = [
   { key: 'stories',                 itemId: 'ri0',  label: 'Stories' },
   { key: 'layers',                  itemId: 'ri0',  label: 'Layers' },
   { key: 'pitch',                   itemId: 'ri0',  label: 'Predominant Pitch (x/12)' },
+  { key: 'squares',                 itemId: 'ri0',  label: "SQ's" },
   { key: 'deckingType',             itemId: 'ri34', label: 'Type' },
   { key: 'deckingDamaged',          itemId: 'ri34', label: 'Damaged' },
   { key: 'deckingDamageDescription', itemId: 'ri34', label: '_damage' },

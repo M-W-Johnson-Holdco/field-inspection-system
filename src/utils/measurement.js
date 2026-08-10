@@ -73,7 +73,7 @@ export function isMeasurementField(field) {
   if (field.t !== 'num') return false
   if (isQtyField(field)) return false
   const label = field.l || ''
-  if (/^Stories$/i.test(label) || /^Layers$/i.test(label)) return false
+  if (/^Stories$/i.test(label) || /^Layers$/i.test(label) || /^SQ'?s$/i.test(label)) return false
   if (field.t === 'pitch' || /\bpitch\b/i.test(label)) return false
   if (field.lfFeetOnly || isLinearMeasurementField(field)) return true
   return /\b(LF|FT|Feet|Foot|Inches?|Inch|Length|Width|Height|Diameter|Circumference|Spacing|Exposure|Handrail)\b/i.test(label)

@@ -4,7 +4,7 @@ import { parseXmlMeasurements } from '../lib/parseXmlMeasurements'
 import ModalSheetBack from './ModalSheetBack'
 
 function buildPreviewRows(parsed, existing) {
-  const { address, pitch, lineLengths, valleyPresent } = parsed
+  const { address, pitch, squares, lineLengths, valleyPresent } = parsed
   const rows = []
 
   if (address?.address1) {
@@ -13,6 +13,9 @@ function buildPreviewRows(parsed, existing) {
   }
   if (pitch) {
     rows.push({ label: 'Predominant Pitch (x/12)', value: pitch, overwrite: Boolean(existing?.pitch) })
+  }
+  if (squares != null && squares > 0) {
+    rows.push({ label: "SQ's", value: String(squares), overwrite: Boolean(existing?.squares) })
   }
   if (lineLengths?.RIDGE > 0) {
     rows.push({
@@ -114,7 +117,7 @@ export default function XmlImportModal({ existing, onApply, onBack, onClose }) {
           {status !== 'done' && (
             <p className="import-modal__intro">
               Upload an EagleView measurements XML file to autofill property address, predominant pitch,
-              ridge length, and valley inclusion when available.
+              SQ&apos;s, ridge length, and valley inclusion when available.
             </p>
           )}
 

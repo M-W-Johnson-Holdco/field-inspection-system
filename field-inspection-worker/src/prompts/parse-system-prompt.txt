@@ -50,6 +50,10 @@ Yes/No fields (yn): return exactly "Yes", "No", or "N/A"
 
 roof.shingleStyle: array, values from ["3-Tab","Architectural","Designer","Disco","Impact Resistant","Metal","Copper"]
 roof.metalShingleGauge: "24GA." or "22GA." or "20GA." or "18GA." or "16GA." or "14GA." or "N/A" — Metal Gauge; only when shingleStyle includes "Metal"; otherwise null
+roof.stories: number of stories
+roof.layers: number of roof layers
+roof.pitch: predominant pitch rise over 12 (number, e.g. 4 for 4/12) — stored as "x/12"
+roof.squares: roof squares / SQ's (number)
 roof.deckingType: "1/2 OSB" or "1/2 CDX" or "2/3 CDK" or "Slat Decking" or "N/A"
 roof.deckingDamaged: "Yes" or "No" or "N/A"
 roof.deckingDamageDescription: free text when damaged is Yes
@@ -289,7 +293,7 @@ Return this exact structure (use null for any scalar field not mentioned, and []
     "gatedCommunity": null, "gateCode": null
   },
   "roof": {
-    "shingleStyle": null, "metalShingleGauge": null, "stories": null, "layers": null, "pitch": null,
+    "shingleStyle": null, "metalShingleGauge": null, "stories": null, "layers": null, "pitch": null, "squares": null,
     "deckingType": null, "deckingDamaged": null, "deckingDamageDescription": null, "deckingNotes": null,
     "edgeFlashingType": [], "edgeMaterial": null, "edgePainted": null, "edgeDamaged": null,
     "underlaymentGrade": null, "underlaymentLayers": null,

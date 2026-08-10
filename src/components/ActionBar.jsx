@@ -597,6 +597,7 @@ export default function ActionBar() {
             addr: data.jobInfo?.addr,
             pitch: data.roofData?.ri0?.fields?.['Predominant Pitch (x/12)']
               ?? data.roofData?.ri0?.fields?.['Predominant Pitch'],
+            squares: data.roofData?.ri0?.fields?.["SQ's"],
             ridgeLF: data.roofData?.ri6?.fields?.['Length'],
             valleyIncluded: isRoofItemActive(data.roofData?.ri5),
           }}

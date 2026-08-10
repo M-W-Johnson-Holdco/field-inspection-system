@@ -59,7 +59,7 @@ export const ROOF_LINE_ITEMS = {
         ? `Comp. shingle - ${styleLabel} (${gauge})`
         : `Comp. shingle - ${styleLabel}`
     })(),
-    unit: 'SQ', qty: null,
+    unit: 'SQ', qty: num(fields, "SQ's"),
     damaged: null,
     note: `${num(fields, 'Stories') ?? '?'} stories, ${num(fields, 'Layers') ?? '?'} layer(s), predominant pitch ${str(fields, 'Predominant Pitch (x/12)') || str(fields, 'Predominant Pitch') || '?'}`,
   }],
