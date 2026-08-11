@@ -1,6 +1,8 @@
 import { isRoofItemActive } from '../utils/roofItemStatus'
 import { fenceTotalLf } from '../utils/fenceLength'
 import { measurementToDecimalFeet, measurementToDecimalInches } from '../utils/measurement'
+import { exhaustStackSizeBucketFromFields } from '../utils/exhaustStackSize'
+import { chimneyWidthSizeBucketFromFields, formatChimneyWidth } from '../utils/chimneyWidthSize'
 
 // Maps inspection field data to Xactimate-style trade/category line items so the
 // export can be pasted or transcribed into an estimate with minimal rework.
@@ -263,27 +265,6 @@ export const ROOF_LINE_ITEMS = {
     description: 'Power meter mast - reset',
     unit: 'EA', qty: num(fields, 'Qty'), damaged: null, note: null,
   }],
-  ri29: (fields) => {
-    const damagedParts = Array.isArray(fields?.Damaged) ? fields.Damaged : []
-    return [{
-      trade: 'Roofing', category: 'RFG',
-      description: [
-        'Chimney cover',
-        str(fields, 'Type'),
-        str(fields, 'Grade'),
-      ].filter(Boolean).join(' - '),
-      unit: 'EA',
-      qty: 1,
-      damaged: damagedParts.length > 0,
-      note: [
-        fields?.Flue && fields.Flue !== 'Select' ? `Flue: ${fields.Flue}` : null,
-        str(fields, 'Condition'),
-        yn(fields, 'Painted') ? 'Painted' : null,
-        damagedParts.length ? `Damaged: ${damagedParts.join(', ')}` : null,
-        fields?._damage && fields._damage !== 'n/a' ? fields._damage : null,
-      ].filter(Boolean).join('; ') || null,
-    }]
-  },
   ri18: (fields) => [{
     trade: 'Roofing', category: 'RFG',
     description: `Step flashing${str(fields, 'Material') ? ` - ${str(fields, 'Material')}` : ''}`,
@@ -328,14 +309,22 @@ export const ROOF_SUBITEM_LINE_ITEMS = {
     description: `Pipe jack - ${str(f, 'Type') || 'unspecified'} (${str(f, 'Size (inches)') || '?'}")`,
     unit: 'EA', qty: 1, damaged: null, note: yn(f, 'Painted') ? 'Painted' : null,
   }),
-  ri12: (f, parentFields) => ({
-    trade: 'Roofing', category: 'RFG',
-    description: `Exhaust stack - ${str(f, 'Size') || 'unspecified size'}`,
-    unit: 'EA',
-    qty: 1,
-    damaged: Array.isArray(f?.Damaged) && f.Damaged.length > 0,
-    note: exhaustStackNote(f, parentFields),
-  }),
+  ri12: (f, parentFields) => {
+    const diameter = str(f, 'Diameter') || str(f, 'Height')
+    const bucket = exhaustStackSizeBucketFromFields(f)
+    return {
+      trade: 'Roofing', category: 'RFG',
+      description: [
+        'Exhaust stack',
+        bucket || null,
+        diameter,
+      ].filter(Boolean).join(' - ') || 'Exhaust stack - unspecified diameter',
+      unit: 'EA',
+      qty: 1,
+      damaged: Array.isArray(f?.Damaged) && f.Damaged.some(part => part && part !== 'N/A'),
+      note: exhaustStackNote(f, parentFields),
+    }
+  },
   ri14: (f) => {
     const style = str(f, 'Style')
     if (style === 'Tubular') {
@@ -398,16 +387,47 @@ export const ROOF_SUBITEM_LINE_ITEMS = {
     damaged: null,
     note: yn(parentFields, 'Painted') ? 'Painted' : null,
   }),
-  ri17: (f, parentFields) => ({
-    trade: 'Roofing', category: 'RFG',
-    description: `Chimney flashing - ${str(f, 'Size / Width') || 'unspecified size'}${str(f, 'Material') ? ` - ${str(f, 'Material')}` : ''}`,
-    unit: 'EA', qty: 1, damaged: yn(f, 'Damaged'),
-    note: [
-      `Counter flashing: ${str(f, 'Counter Flashing') || '?'}`,
-      str(f, 'Cricket Present') ? `Cricket: ${str(f, 'Cricket Present')}` : null,
-      yn(parentFields, 'Painted') || yn(f, 'Painted') ? 'painted' : null,
-    ].filter(Boolean).join(', '),
-  }),
+  ri17: (f, parentFields) => {
+    const width = formatChimneyWidth(f) || str(f, 'Width')
+    const bucket = chimneyWidthSizeBucketFromFields(f)
+    const sizeLabel = width
+      ? [bucket, width].filter(Boolean).join(' ')
+      : (bucket || str(f, 'Size / Width') || 'unspecified size')
+    const lines = [{
+      trade: 'Roofing', category: 'RFG',
+      description: `Chimney flashing - ${sizeLabel}${str(f, 'Material') ? ` - ${str(f, 'Material')}` : ''}`,
+      unit: 'EA', qty: 1, damaged: yn(f, 'Damaged'),
+      note: [
+        `Counter flashing: ${str(f, 'Counter Flashing') || '?'}`,
+        str(f, 'Cricket Present') ? `Cricket: ${str(f, 'Cricket Present')}` : null,
+        yn(parentFields, 'Painted') || yn(f, 'Painted') ? 'painted' : null,
+      ].filter(Boolean).join(', '),
+    }]
+
+    if (f['Chimney Cover Existing?'] === 'Yes') {
+      const damagedParts = Array.isArray(f['Cover Damaged']) ? f['Cover Damaged'] : []
+      lines.push({
+        trade: 'Roofing', category: 'RFG',
+        description: [
+          'Chimney cover',
+          str(f, 'Type'),
+          str(f, 'Grade'),
+        ].filter(Boolean).join(' - '),
+        unit: 'EA',
+        qty: 1,
+        damaged: damagedParts.length > 0,
+        note: [
+          f?.Flue && f.Flue !== 'Select' ? `Flue: ${f.Flue}` : null,
+          str(f, 'Condition'),
+          yn(f, 'Cover Painted') || yn(f, 'Painted') ? 'Painted' : null,
+          damagedParts.length ? `Damaged: ${damagedParts.join(', ')}` : null,
+          f?._cover_damage && f._cover_damage !== 'n/a' ? f._cover_damage : null,
+        ].filter(Boolean).join('; ') || null,
+      })
+    }
+
+    return lines
+  },
   ri22: (f) => ({
     trade: 'Roofing', category: 'RFG',
     description: `Low slope roofing - ${str(f, 'Location') || 'unspecified'} (${str(f, 'Style') || str(f, 'Style / Grade') || 'unspecified'})`,
@@ -440,7 +460,7 @@ export const ELEV_LINE_ITEMS = {
     const style = str(fields, 'Style') || 'unspecified'
     const styleLabel = style.startsWith('Other') ? (style === 'Other' ? 'Other' : style) : style
     const grade = str(fields, 'Grade')
-    const exposure = num(fields, 'Exposure (Inches)')
+    const exposure = num(fields, 'Exposure') ?? num(fields, 'Exposure (Inches)')
     const parts = [
       styleLabel,
       grade || null,
@@ -454,7 +474,7 @@ export const ELEV_LINE_ITEMS = {
   },
   ev1: (fields, dir) => [{
     trade: 'Siding', category: 'FCA',
-    description: `Fascia - ${str(fields, 'Material') || 'unspecified'}${num(fields, 'Width (Inches)') != null ? `, ${num(fields, 'Width (Inches)')}"` : ''}`,
+    description: `Fascia - ${str(fields, 'Material') || 'unspecified'}${(num(fields, 'Width') ?? num(fields, 'Width (Inches)')) != null ? `, ${num(fields, 'Width') ?? num(fields, 'Width (Inches)')}"` : ''}`,
     unit: 'LF', qty: null, damaged: yn(fields, 'Damaged'),
     note: [
       `${dir} elevation`,
@@ -611,9 +631,15 @@ export const ELEV_LINE_ITEMS = {
   },
   ev7: (fields, dir) => {
     if (str(fields, 'Material') === 'None' && str(fields, 'Grade') === 'None' && str(fields, 'Action') === 'None') return []
-    const length = num(fields, 'Length (ft)') ?? num(fields, 'Length (in)')
-    const width = num(fields, 'Width (ft)') ?? num(fields, 'Width (in)')
-    const area = length != null && width != null ? length * width : null
+    const length = num(fields, 'Length (in)') ?? (() => {
+      const ft = num(fields, 'Length (ft)')
+      return ft != null ? ft * 12 : null
+    })()
+    const width = num(fields, 'Width (in)') ?? (() => {
+      const ft = num(fields, 'Width (ft)')
+      return ft != null ? ft * 12 : null
+    })()
+    const area = length != null && width != null ? Math.round(length * width * 10) / 10 : null
     return [{
       trade: 'Doors', category: 'DOR',
       description: [
@@ -621,14 +647,14 @@ export const ELEV_LINE_ITEMS = {
         str(fields, 'Material') || str(fields, 'Grade') || 'unspecified material',
         str(fields, 'Style') || 'unspecified style',
         str(fields, 'Configuration') || null,
-        area != null ? `${area} ft²` : null,
+        area != null ? `${area} in²` : null,
       ].filter(Boolean).join(' - '),
       unit: 'EA',
       qty: 1,
       damaged: yn(fields, 'Damaged'),
       note: [
         `${dir} elevation`,
-        length != null && width != null ? `${length}' × ${width}'` : null,
+        length != null && width != null ? `${length}" × ${width}"` : null,
         yn(fields, 'Painted') ? 'Painted' : null,
         fields?.Glass && fields.Glass !== 'Select' ? `Glass: ${fields.Glass}` : null,
         str(fields, 'Action') && str(fields, 'Action') !== 'None' ? `Action: ${str(fields, 'Action')}` : null,
@@ -757,7 +783,10 @@ export function buildRoofLineItems(itemDef, itemData) {
   const fixed = ROOF_LINE_ITEMS[itemDef.id]?.(itemData.fields || {}) || []
   const subBuilder = ROOF_SUBITEM_LINE_ITEMS[itemDef.id]
   const subs = subBuilder
-    ? (itemData.subItems || []).map(sub => subBuilder(sub.fields || {}, itemData.fields || {}))
+    ? (itemData.subItems || []).flatMap(sub => {
+        const result = subBuilder(sub.fields || {}, itemData.fields || {})
+        return Array.isArray(result) ? result : (result ? [result] : [])
+      })
     : []
   const lines = [...fixed, ...subs]
   if (itemData.status !== 'supplement') return lines

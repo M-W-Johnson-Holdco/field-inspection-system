@@ -1,12 +1,14 @@
-/** Convert feet + inches to total inches or decimal feet. */
+/** Convert feet + inches + fraction to total inches or decimal feet. */
+import { partsToTotalInches } from './measurement'
 
-export function feetInchesToTotalInches(feet, inches) {
+export function feetInchesToTotalInches(feet, inches, fraction = '') {
   const ft = Number(feet)
   const inch = Number(inches)
   const safeFt = Number.isFinite(ft) ? ft : 0
   const safeIn = Number.isFinite(inch) ? inch : 0
   if (safeFt < 0 || safeIn < 0) return null
-  return safeFt * 12 + safeIn
+  const total = partsToTotalInches({ feet: safeFt, inches: safeIn, fraction })
+  return Number.isFinite(total) ? total : null
 }
 
 export function formatConversionResult(totalInches, unit) {

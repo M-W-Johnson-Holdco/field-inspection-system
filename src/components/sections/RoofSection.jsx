@@ -8,14 +8,23 @@ import ItemNotesField from '../ItemNotesField'
 import DimensionLwInput from '../DimensionLwInput'
 import DiameterCircInput from '../DiameterCircInput'
 import MeasurementInput, { isMeasurementField } from '../MeasurementInput'
+import { formatMeasurementDisplay } from '../../utils/measurement'
 import { ROOF_ITEMS, SUBSECTIONS } from '../../data/roofItems'
 import { fieldGroupProps } from '../../utils/fieldLayout'
-import { fieldSelectClass, materialOptionColumnStyle, withSelectPlaceholderClass, visibleFieldsForValues, ynOptionsForField, optionsForField } from '../../utils/fieldGrid'
+import { fieldSelectClass, materialOptionColumnStyle, withSelectPlaceholderClass, visibleFieldsForValues, ynOptionsForField, optionsForField, isFieldVisible } from '../../utils/fieldGrid'
 import { DECIMAL_INPUT_PROPS, sanitizeDecimalInput } from '../../utils/decimalInput'
 import { formatPitch, parsePitchNumerator } from '../../utils/pitch'
 import useExpandedSection from '../../hooks/useExpandedSection'
 import { getRoofItemStatus, isRoofItemActive } from '../../utils/roofItemStatus'
 import { skylightAreaSqFt, skylightSizeBucket, skylightSizeLabel } from '../../utils/skylightSize'
+import {
+  exhaustStackSizeBucketFromFields,
+  formatExhaustStackDiameter,
+} from '../../utils/exhaustStackSize'
+import {
+  chimneyWidthSizeBucketFromFields,
+  formatChimneyWidth,
+} from '../../utils/chimneyWidthSize'
 import { sizeCounterLabel } from '../../utils/sizeCounterLabels'
 
 // ── Field Renderer ─────────────────────────────────────────────────
@@ -352,8 +361,10 @@ function collapsibleSubPills(itemId, fields = {}) {
   const red = []
 
   if (itemId === 'ri12') {
-    const size = String(fields.Size || '').match(/^(Small|Medium|Large)/)?.[1]
-    if (size) grey.push(size)
+    const diameter = formatExhaustStackDiameter(fields)
+    const bucket = exhaustStackSizeBucketFromFields(fields)
+    if (diameter) grey.push(diameter)
+    else if (bucket) grey.push(bucket)
     if (Array.isArray(fields.Damaged)) {
       ;['Cap', 'Stack', 'Flange'].forEach(part => {
         if (fields.Damaged.includes(part)) red.push(part)
@@ -370,15 +381,23 @@ function collapsibleSubPills(itemId, fields = {}) {
   } else if (itemId === 'ri15') {
     const length = selectValue(fields['Length'])
     if (length) grey.push(`${length} LF`)
+  } else if (itemId === 'ri28') {
+    const length = formatMeasurementDisplay(fields.Length, { unitHint: 'feet' })
+    if (length) grey.push(length)
+    if (fields.Damaged === 'Yes') red.push('Damaged')
   } else if (itemId === 'ri17') {
-    const size = String(fields['Size / Width'] || '').match(/^(Small|Medium|Large)/)?.[1]
+    const width = formatChimneyWidth(fields)
+    const size = chimneyWidthSizeBucketFromFields(fields)
     const material = selectValue(fields.Material)
     const counter = selectValue(fields['Counter Flashing'])
-    if (size) grey.push(size)
+    if (width) grey.push(width)
+    else if (size) grey.push(size)
     if (material) grey.push(material)
     if (counter) grey.push(counter)
     if (fields['Cricket Present'] === 'Yes') grey.push('Cricket')
+    if (fields['Chimney Cover Existing?'] === 'Yes') grey.push('Cover')
     if (fields.Damaged === 'Yes') red.push('Damaged')
+    if (Array.isArray(fields['Cover Damaged']) && fields['Cover Damaged'].length) red.push('Cover Damaged')
   } else if (itemId === 'ri22') {
     const location = selectValue(fields.Location)
     const style = selectValue(fields.Style || fields['Style / Grade'])
@@ -398,9 +417,21 @@ function collapsibleSubPills(itemId, fields = {}) {
   return { grey, red }
 }
 
+/** True when Damaged / multi Damaged has a real damage selection (not empty, not N/A-only). */
+function hasDamageSelection(value) {
+  if (value === 'Yes') return true
+  if (!Array.isArray(value)) return false
+  return value.some(part => part && part !== 'N/A')
+}
+
+function isDamageNaSelection(value) {
+  if (value === 'No' || value === 'N/A') return true
+  if (!Array.isArray(value)) return false
+  return value.length === 0 || (value.length === 1 && value[0] === 'N/A')
+}
+
 function showSubItemDamageDescription(fields = {}) {
-  return fields.Damaged === 'Yes'
-    || (Array.isArray(fields.Damaged) && fields.Damaged.length > 0)
+  return hasDamageSelection(fields.Damaged)
 }
 
 function CollapsibleRoofSubCard({
@@ -409,6 +440,7 @@ function CollapsibleRoofSubCard({
   sub,
   index,
   subFields,
+  nestedSection = null,
   gridStyle,
   trigPhoto,
   onUpdateField,
@@ -419,6 +451,132 @@ function CollapsibleRoofSubCard({
   const { grey, red } = collapsibleSubPills(itemId, sub.fields || {})
   const showDamage = showSubItemDamageDescription(sub.fields || {})
   const itemLabel = `${title} #${index + 1}`
+  const nestedVisible = nestedSection?.showWhen
+    ? isFieldVisible({ showWhen: nestedSection.showWhen }, sub.fields || {})
+    : Boolean(nestedSection)
+  const showCoverDamage = nestedVisible
+    && hasDamageSelection(sub.fields?.[nestedSection?.damageField])
+  const coverPhotos = nestedSection
+    ? (sub[nestedSection.photosKey] || [])
+    : []
+
+  const allSubFields = subFields || []
+  const insertAfter = nestedSection?.insertAfterField
+  const insertIdx = insertAfter
+    ? allSubFields.findIndex(field => field.l === insertAfter)
+    : -1
+  const hasNestedInsert = insertIdx >= 0
+  const nestedAfterPhotos = Boolean(nestedSection?.afterPhotos) && !hasNestedInsert
+  const leadingSubFields = hasNestedInsert ? allSubFields.slice(0, insertIdx + 1) : allSubFields
+  const trailingSubFields = hasNestedInsert ? allSubFields.slice(insertIdx + 1) : []
+
+  function renderSubFieldControl(field) {
+    let fieldValue = sub.fields?.[field.l]
+    if (field.l === '(Other)') {
+      const loc = sub.fields?.Location || ''
+      fieldValue = loc.startsWith('Other - ') ? loc.slice(8) : ''
+    }
+    if (field.l === 'Other Style') {
+      const style = sub.fields?.Style || ''
+      fieldValue = style.startsWith('Other - ') ? style.slice(8) : ''
+    }
+    if (field.l === 'Other Type') {
+      const type = sub.fields?.Type || ''
+      fieldValue = type.startsWith('Other - ') ? type.slice(8) : ''
+    }
+    return (
+      <FieldRenderer
+        key={field.l}
+        field={field}
+        value={fieldValue}
+        subFields={sub.fields}
+        onChange={value => {
+          onUpdateField(field.l, value)
+          if (field.l === 'Damaged') {
+            if (isDamageNaSelection(value)) onUpdateField('_damage', 'n/a')
+            else if (hasDamageSelection(value)
+              && (sub.fields?._damage || '') === 'n/a') {
+              onUpdateField('_damage', '')
+            } else if (!hasDamageSelection(value) && value !== 'Yes') {
+              onUpdateField('_damage', '')
+            }
+          }
+          if (field.l === (nestedSection?.damageField || 'Cover Damaged')) {
+            if (isDamageNaSelection(value)) {
+              onUpdateField(nestedSection.damageDescKey, 'n/a')
+            } else if (hasDamageSelection(value)
+              && (sub.fields?.[nestedSection.damageDescKey] || '') === 'n/a') {
+              onUpdateField(nestedSection.damageDescKey, '')
+            }
+          }
+        }}
+        onSubFieldChange={onUpdateField}
+      />
+    )
+  }
+
+  function renderNestedSection() {
+    if (!nestedVisible || !nestedSection) return null
+    return (
+      <div className="ri-nested-section">
+        <div className="ri-nested-section__title">{nestedSection.title}</div>
+        <FieldsGrid
+          fields={visibleFieldsForValues(nestedSection.fields, sub.fields || {})}
+          renderField={renderSubFieldControl}
+        >
+          {showCoverDamage && (
+            <div className="ri-damage-row">
+              <label className="form-label">Damage Description</label>
+              <DamageDescriptionInput
+                placeholder="Describe cover damage..."
+                value={sub.fields?.[nestedSection.damageDescKey] || ''}
+                onChange={value => onUpdateField(nestedSection.damageDescKey, value)}
+              />
+            </div>
+          )}
+          <ItemNotesField
+            value={sub.fields?.[nestedSection.notesKey] || ''}
+            onChange={value => onUpdateField(nestedSection.notesKey, value)}
+          />
+          <PhotoZone
+            entityId={`${itemId}__sub_${index}__cover`}
+            photos={coverPhotos}
+            trigPhoto={trigPhoto}
+            onRemove={onRemovePhoto}
+            inlineActions
+          />
+        </FieldsGrid>
+      </div>
+    )
+  }
+
+  function renderItemFooter() {
+    return (
+      <>
+        {showDamage && (
+          <div className="ri-damage-row">
+            <label className="form-label">Damage Description</label>
+            <DamageDescriptionInput
+              placeholder="Describe damage..."
+              value={sub.fields?._damage || ''}
+              onChange={value => onUpdateField('_damage', value)}
+            />
+          </div>
+        )}
+        <ItemNotesField
+          value={sub.fields?._notes || ''}
+          onChange={value => onUpdateField('_notes', value)}
+        />
+        <PhotoZone
+          entityId={`${itemId}__sub_${index}`}
+          photos={sub.photos || []}
+          trigPhoto={trigPhoto}
+          onRemove={onRemovePhoto}
+          inlineActions
+        />
+      </>
+    )
+  }
 
   return (
     <div className={`ri-sub-card${red.length ? ' ri-sub-card--damage' : ''}`}>
@@ -460,84 +618,37 @@ function CollapsibleRoofSubCard({
       <div className={`collapse-panel ${open ? 'collapse-panel--open' : ''}`} aria-hidden={!open}>
         <div className="collapse-panel__inner">
           <div className="ri-collapsible-sub-body">
-            {subFields && subFields.length > 0 && (
-              <FieldsGrid
-                fields={visibleFieldsForValues(subFields, sub.fields || {})}
-                gridStyle={gridStyle}
-                renderField={field => {
-                  let fieldValue = sub.fields?.[field.l]
-                  if (field.l === '(Other)') {
-                    const loc = sub.fields?.Location || ''
-                    fieldValue = loc.startsWith('Other - ') ? loc.slice(8) : ''
-                  }
-                  if (field.l === 'Other Style') {
-                    const style = sub.fields?.Style || ''
-                    fieldValue = style.startsWith('Other - ') ? style.slice(8) : ''
-                  }
-                  if (field.l === 'Other Type') {
-                    const type = sub.fields?.Type || ''
-                    fieldValue = type.startsWith('Other - ') ? type.slice(8) : ''
-                  }
-                  return (
-                    <FieldRenderer
-                      key={field.l}
-                      field={field}
-                      value={fieldValue}
-                      subFields={sub.fields}
-                      onChange={value => onUpdateField(field.l, value)}
-                      onSubFieldChange={onUpdateField}
-                    />
-                  )
-                }}
-              >
-                {showDamage && (
-                  <div className="ri-damage-row">
-                    <label className="form-label">Damage Description</label>
-                    <DamageDescriptionInput
-                      placeholder="Describe damage..."
-                      value={sub.fields?._damage || ''}
-                      onChange={value => onUpdateField('_damage', value)}
-                    />
-                  </div>
-                )}
-                <ItemNotesField
-                  value={sub.fields?._notes || ''}
-                  onChange={value => onUpdateField('_notes', value)}
-                />
-                <PhotoZone
-                  entityId={`${itemId}__sub_${index}`}
-                  photos={sub.photos || []}
-                  trigPhoto={trigPhoto}
-                  onRemove={onRemovePhoto}
-                  inlineActions
-                />
-              </FieldsGrid>
-            )}
-
-            {(!subFields || subFields.length === 0) && showDamage && (
-              <div className="ri-damage-row">
-                <label className="form-label">Damage Description</label>
-                <DamageDescriptionInput
-                  placeholder="Describe damage..."
-                  value={sub.fields?._damage || ''}
-                  onChange={value => onUpdateField('_damage', value)}
-                />
-              </div>
-            )}
-
-            {(!subFields || subFields.length === 0) && (
+            {hasNestedInsert ? (
               <>
-                <ItemNotesField
-                  value={sub.fields?._notes || ''}
-                  onChange={value => onUpdateField('_notes', value)}
-                />
-                <PhotoZone
-                  entityId={`${itemId}__sub_${index}`}
-                  photos={sub.photos || []}
-                  trigPhoto={trigPhoto}
-                  onRemove={onRemovePhoto}
-                  inlineActions
-                />
+                {leadingSubFields.length > 0 && (
+                  <FieldsGrid
+                    fields={visibleFieldsForValues(leadingSubFields, sub.fields || {})}
+                    gridStyle={gridStyle}
+                    renderField={renderSubFieldControl}
+                  />
+                )}
+                {renderNestedSection()}
+                <FieldsGrid
+                  fields={visibleFieldsForValues(trailingSubFields, sub.fields || {})}
+                  gridStyle={gridStyle}
+                  renderField={renderSubFieldControl}
+                >
+                  {renderItemFooter()}
+                </FieldsGrid>
+              </>
+            ) : (
+              <>
+                {allSubFields.length > 0 && (
+                  <FieldsGrid
+                    fields={visibleFieldsForValues(allSubFields, sub.fields || {})}
+                    gridStyle={gridStyle}
+                    renderField={renderSubFieldControl}
+                  >
+                    {renderItemFooter()}
+                  </FieldsGrid>
+                )}
+                {allSubFields.length === 0 && renderItemFooter()}
+                {nestedAfterPhotos && renderNestedSection()}
               </>
             )}
           </div>
@@ -556,7 +667,7 @@ function CheckItem({ itemDef, trigPhoto }) {
     removeRoofPhoto, data,
   } = useInspection()
 
-  const { id, lbl, flags, fields = [], addMore, addMoreLabel, subFields, addMoreAtTop, subItemPhotos, subFieldsUseMaterialColumnWidth, subItemSizeCounters, subItemTotalCounter, compactOptionPairRow } = itemDef
+  const { id, lbl, flags, fields = [], addMore, addMoreLabel, subFields, addMoreAtTop, subItemPhotos, subFieldsUseMaterialColumnWidth, subItemSizeCounters, subItemTotalCounter, compactOptionPairRow, subItemNestedSection = null } = itemDef
   const item = data.roofData[id]
   const { subItems, photos } = item
   const status = getRoofItemStatus(item)
@@ -585,12 +696,12 @@ function CheckItem({ itemDef, trigPhoto }) {
         onChange={val => {
           updateRoofField(id, f.l, val)
           if (f.l === 'Damaged') {
-            if (Array.isArray(val)) {
-              if (val.length === 0) updateRoofField(id, '_damage', 'n/a')
-              else if ((item.fields['_damage'] || '') === 'n/a') updateRoofField(id, '_damage', '')
-            } else if (val === 'No' || val === 'N/A') {
+            if (isDamageNaSelection(val)) {
               updateRoofField(id, '_damage', 'n/a')
-            } else if (val !== 'Yes') {
+            } else if (hasDamageSelection(val)
+              && (item.fields['_damage'] || '') === 'n/a') {
+              updateRoofField(id, '_damage', '')
+            } else if (!hasDamageSelection(val) && val !== 'Yes') {
               updateRoofField(id, '_damage', '')
             }
           }
@@ -599,8 +710,7 @@ function CheckItem({ itemDef, trigPhoto }) {
     )
   }
 
-  const damagedPartsSelected = Array.isArray(item.fields['Damaged']) && item.fields['Damaged'].length > 0
-  const showMainDamageDescription = item.fields['Damaged'] === 'Yes' || damagedPartsSelected
+  const showMainDamageDescription = hasDamageSelection(item.fields['Damaged'])
 
   const sizeCounts = subItemSizeCounters
     ? Object.fromEntries(
@@ -612,6 +722,16 @@ function CheckItem({ itemDef, trigPhoto }) {
     for (const sub of subItems || []) {
       if (subItemSizeCounters.fromMeasuredArea) {
         const bucket = skylightSizeBucket(skylightAreaSqFt(sub.fields || {}))
+        if (bucket && bucket in sizeCounts) sizeCounts[bucket] += 1
+        continue
+      }
+      if (subItemSizeCounters.fromMeasuredHeight) {
+        const bucket = exhaustStackSizeBucketFromFields(sub.fields || {})
+        if (bucket && bucket in sizeCounts) sizeCounts[bucket] += 1
+        continue
+      }
+      if (subItemSizeCounters.fromMeasuredWidth) {
+        const bucket = chimneyWidthSizeBucketFromFields(sub.fields || {})
         if (bucket && bucket in sizeCounts) sizeCounts[bucket] += 1
         continue
       }
@@ -757,6 +877,7 @@ function CheckItem({ itemDef, trigPhoto }) {
             sub={sub}
             index={idx}
             subFields={subFields}
+            nestedSection={subItemNestedSection}
             gridStyle={subFieldsUseMaterialColumnWidth ? materialOptionColumnStyle() : undefined}
             trigPhoto={trigPhoto}
             onUpdateField={(label, value) => updateRoofSubField(id, idx, label, value)}

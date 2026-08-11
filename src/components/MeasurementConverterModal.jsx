@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Ruler, X } from 'lucide-react'
 import { DECIMAL_INPUT_PROPS, sanitizeDecimalInput } from '../utils/decimalInput'
 import { feetInchesToTotalInches, formatConversionResult } from '../utils/measureConvert'
+import { MEASUREMENT_FRACTIONS, formatFractionDisplay } from '../utils/measurement'
 
 const OUTPUT_UNITS = [
   { id: 'inches', label: 'Inches' },
@@ -50,21 +51,40 @@ function NumberStepper({ label, value, onChange, placeholder = '0', step = 1 }) 
   )
 }
 
+function FractionSelect({ value, onChange }) {
+  return (
+    <select
+      id="measure-frac"
+      className="field-select"
+      value={value || ''}
+      aria-label="Fraction"
+      onChange={e => onChange(e.target.value)}
+    >
+      {MEASUREMENT_FRACTIONS.map(opt => (
+        <option key={opt || '0'} value={opt}>
+          {`${formatFractionDisplay(opt)}"`}
+        </option>
+      ))}
+    </select>
+  )
+}
+
 export default function MeasurementConverterModal({ onClose }) {
   const [feet, setFeet] = useState('')
   const [inches, setInches] = useState('')
+  const [fraction, setFraction] = useState('')
   const [unit, setUnit] = useState('inches')
   const [copied, setCopied] = useState(false)
 
   const totalInches = useMemo(
-    () => feetInchesToTotalInches(feet, inches),
-    [feet, inches],
+    () => feetInchesToTotalInches(feet, inches, fraction),
+    [feet, inches, fraction],
   )
   const result = useMemo(
     () => formatConversionResult(totalInches, unit),
     [totalInches, unit],
   )
-  const hasInput = feet !== '' || inches !== ''
+  const hasInput = feet !== '' || inches !== '' || fraction !== ''
   const unitLabel = unit === 'inches' ? 'in' : 'ft'
 
   function updateFeet(next) {
@@ -74,6 +94,11 @@ export default function MeasurementConverterModal({ onClose }) {
 
   function updateInches(next) {
     setInches(next)
+    setCopied(false)
+  }
+
+  function updateFraction(next) {
+    setFraction(next)
     setCopied(false)
   }
 
@@ -91,6 +116,7 @@ export default function MeasurementConverterModal({ onClose }) {
   function handleClear() {
     setFeet('')
     setInches('')
+    setFraction('')
     setCopied(false)
   }
 
@@ -115,7 +141,7 @@ export default function MeasurementConverterModal({ onClose }) {
 
         <div className="measure-converter-modal__body">
           <p className="measure-converter-modal__intro">
-            Enter a feet &amp; inches measurement, then choose inches or feet.
+            Enter a feet, inches &amp; fraction measurement, then choose inches or feet.
           </p>
 
           <div className="measure-converter-modal__inputs">
@@ -133,6 +159,13 @@ export default function MeasurementConverterModal({ onClose }) {
                 label="Inches"
                 value={inches}
                 onChange={updateInches}
+              />
+            </div>
+            <div className="field-group field-group--full field-group--stepper-row field-group--inline-stepper">
+              <label className="form-label" htmlFor="measure-frac">Fraction</label>
+              <FractionSelect
+                value={fraction}
+                onChange={updateFraction}
               />
             </div>
           </div>

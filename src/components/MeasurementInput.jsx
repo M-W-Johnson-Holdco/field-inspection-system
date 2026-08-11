@@ -55,22 +55,38 @@ export default function MeasurementInput({
   className,
 }) {
   const labelText = label || field?.displayL || field?.l || 'Measurement'
-  const unitHint = measurementUnitHint(label || field)
-  const parts = parseMeasurementParts(value, { unitHint })
+  // Prefer field key (e.g. "Length (in)") over display label for unit inference.
+  const unitHint = measurementUnitHint(field?.l ? field : (label || field))
+  const inchesOnly = Boolean(field?.inchesOnly)
+  const rawParts = parseMeasurementParts(value, { unitHint })
+  // Flatten legacy feet into the inches dial when Feet is hidden
+  const parts = inchesOnly
+    ? {
+        feet: 0,
+        inches: Math.min(100, Math.max(0, (Number(rawParts.feet) || 0) * 12 + (Number(rawParts.inches) || 0))),
+        fraction: rawParts.fraction || '',
+      }
+    : rawParts
 
   function commit(next) {
-    onChange(formatMeasurementParts(next))
+    onChange(formatMeasurementParts(
+      inchesOnly
+        ? { feet: 0, inches: next.inches, fraction: next.fraction }
+        : next,
+    ))
   }
 
   const body = (
-    <div className="meas-inline">
-      <InlineSelect
-        label="Feet"
-        options={FEET_OPTIONS}
-        value={parts.feet}
-        onChange={feet => commit({ ...parts, feet })}
-        formatOption={n => `${n}'`}
-      />
+    <div className={`meas-inline${inchesOnly ? ' meas-inline--inches-only' : ''}`}>
+      {!inchesOnly && (
+        <InlineSelect
+          label="Feet"
+          options={FEET_OPTIONS}
+          value={parts.feet}
+          onChange={feet => commit({ ...parts, feet })}
+          formatOption={n => `${n}'`}
+        />
+      )}
       <InlineSelect
         label="Inches"
         options={INCH_OPTIONS}

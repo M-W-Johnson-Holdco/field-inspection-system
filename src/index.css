@@ -2099,26 +2099,27 @@ button:disabled {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 8px 12px 20px;
+  padding: 0 12px 20px;
   -webkit-overflow-scrolling: touch;
 }
 
 .section-nav-modal__group + .section-nav-modal__group {
-  margin-top: 14px;
+  margin-top: 8px;
 }
 
 .section-nav-modal__group-label {
   position: sticky;
   top: 0;
   z-index: 1;
-  padding: 8px 10px 6px;
+  padding: 10px 10px 8px;
   margin: 0 -4px;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: #64748b;
-  background: linear-gradient(#fff 70%, rgba(255, 255, 255, 0));
+  background: #fff;
+  box-shadow: 0 1px 0 #e2e8f0;
 }
 
 .section-nav-modal__list {
@@ -2889,6 +2890,23 @@ button:disabled {
   overflow: visible;
 }
 
+.ri-nested-section {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: calc(var(--radius) - 2px);
+  background: rgba(248, 250, 252, 0.9);
+}
+
+.ri-nested-section__title {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #475569;
+}
+
 .ri-item {
   position: relative;
   --ri-item-pad-y: 12px;
@@ -3247,8 +3265,20 @@ button:disabled {
 .ri-fields-grid .field-group--measurement {
   grid-column: 1 / -1;
   align-items: flex-start;
-  width: max-content;
+  width: 100%;
   max-width: 100%;
+}
+
+/* Keep Length/Width measurement pairs as one visual block */
+.ri-item__body .ri-fields-grid > .field-group--measurement + .field-group--measurement,
+.int-room-body .ri-fields-grid > .field-group--measurement + .field-group--measurement {
+  border-top: none;
+  padding-top: 6px;
+}
+
+.ri-item__body .ri-fields-grid > .field-group--measurement:has(+ .field-group--measurement),
+.int-room-body .ri-fields-grid > .field-group--measurement:has(+ .field-group--measurement) {
+  padding-bottom: 6px;
 }
 
 .ri-fields-grid .field-group--stepper-row {
@@ -3962,22 +3992,30 @@ summary.field-select.field-select--placeholder {
 }
 
 .meas-picker-mount {
-  width: 100%;
+  width: max-content;
+  max-width: 100%;
   min-width: 0;
 }
 
 .meas-inline {
+  --meas-col-width: 4.75rem;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(3, var(--meas-col-width));
   gap: 8px;
-  width: 100%;
+  width: max-content;
+  max-width: 100%;
   min-width: 0;
+}
+
+.meas-inline--inches-only {
+  grid-template-columns: repeat(2, var(--meas-col-width));
 }
 
 .meas-inline__col {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  width: var(--meas-col-width);
   min-width: 0;
 }
 
@@ -3989,10 +4027,32 @@ summary.field-select.field-select--placeholder {
   color: var(--muted);
 }
 
-.meas-inline__select {
+.meas-inline__select,
+.ri-fields-grid .meas-inline__select,
+.ri-fields-grid .field-group--full .meas-inline__select,
+.ri-fields-grid .field-group--compact .meas-inline__select,
+.ri-fields-grid .field-group--measurement .meas-inline__select,
+.elev-items .ri-fields-grid .meas-inline__select,
+.ext-items .ri-fields-grid .meas-inline__select {
   width: 100%;
   min-width: 0;
+  max-width: none;
+  align-self: auto;
+  height: var(--field-control-height, 36px);
+  min-height: var(--field-control-height, 36px);
+  max-height: var(--field-control-height, 36px);
+  padding: 0 28px 0 10px;
+  font-size: 14px;
+  line-height: 1.2;
   font-variant-numeric: tabular-nums;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--primary) 50%),
+    linear-gradient(135deg, var(--primary) 50%, transparent 50%);
+  background-position:
+    calc(100% - 14px) 50%,
+    calc(100% - 9px) 50%;
+  background-repeat: no-repeat;
+  background-size: 5px 5px;
 }
 
 .dimension-lw-input-wrap {
@@ -4005,15 +4065,15 @@ summary.field-select.field-select--placeholder {
 }
 
 .dimension-lw-input-wrap.field-group {
-  align-items: stretch;
+  align-items: flex-start;
 }
 
 .dimension-lw-input-wrap > .dimension-lw-input__row {
-  width: 100%;
+  width: max-content;
   max-width: 100%;
-  padding-top: 10px;
-  padding-bottom: 10px;
-  border-top: 1px solid var(--border);
+  padding-top: 6px;
+  padding-bottom: 6px;
+  border-top: none;
   margin: 0;
 }
 
@@ -4041,6 +4101,15 @@ summary.field-select.field-select--placeholder {
 
 .dimension-lw-input__title-row .form-label {
   margin-bottom: 0;
+}
+
+.dimension-lw-input__hint {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted, #94a3b8);
+  line-height: 1.3;
+  text-align: center;
 }
 
 .elev-size-counters {

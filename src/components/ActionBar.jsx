@@ -531,7 +531,7 @@ export default function ActionBar() {
             className="app-button app-button--measure"
             type="button"
             aria-label="Convert measurements"
-            title="Convert feet and inches"
+            title="Convert feet, inches, and fraction"
             onClick={() => setShowMeasureConverter(true)}
           >
             <Ruler className="app-button__icon" aria-hidden="true" />
@@ -716,7 +716,7 @@ export default function ActionBar() {
               <p><ExternalLink className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Export:</strong> Choose Export Preview (PDF/CSV/JSON) or Save Photos (share to Photos on phone, or download a ZIP on computer).</span></p>
               <p><FilePlus className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>New:</strong> Start a new inspection form.</span></p>
               <p><RotateCcw className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Reset:</strong> Clear all current inspection data.</span></p>
-              <p><Ruler className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Convert:</strong> Convert feet &amp; inches into total inches or feet.</span></p>
+              <p><Ruler className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Convert:</strong> Convert feet, inches &amp; fraction into total inches or feet.</span></p>
               <p><CircleHelp className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Help:</strong> Show this toolbar guide.</span></p>
               <p><Shield className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Access:</strong> Manage who can sign in and their role — Sales, Supervisor, or Admin (admins only).</span></p>
               <p><MoveHorizontal className="toolbar-help-modal__icon" aria-hidden="true" /><span><strong>Scroll:</strong> Swipe the toolbar left or right to see more buttons.</span></p>

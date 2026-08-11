@@ -47,7 +47,6 @@ const ROOF_ITEM_LEAF = {
   ri14: 'skylights',
   ri15: 'rain_diverter',
   ri16: 'power_meter_mast',
-  ri29: 'chimney_cover',
   ri17: 'chimney_flashing',
   ri18: 'step_flashing',
   ri19: 'counter_flashing',
