@@ -26,7 +26,24 @@ export default function Header() {
     error: 'Failed',
   }[driveSaveStatus]
 
+  const saveTitle = {
+    saved: 'Saved to cloud (R2)',
+    saving: 'Saving to cloud…',
+    unsaved: 'Not saved to cloud yet — tap Save in the toolbar',
+    error: 'Cloud save failed — tap Save to retry',
+  }[driveSaveStatus]
+
   const isUnsaved = driveSaveStatus === 'unsaved' || driveSaveStatus === 'error'
+
+  function handleLogout() {
+    const dirty = driveSaveStatus === 'unsaved' || driveSaveStatus === 'error' || driveSaveStatus === 'saving'
+    if (dirty) {
+      if (!window.confirm('Sign out? Current changes are not saved to the cloud and may be lost on this device if you clear site data.')) {
+        return
+      }
+    }
+    logout()
+  }
 
   return (
     <details
@@ -44,7 +61,10 @@ export default function Header() {
             <div className="app-header__progress-track">
               <div className="app-header__progress-fill" style={{ width: `${completion.percent}%` }} />
             </div>
-            <span className={`status-pill status-pill--compact ${isUnsaved ? 'status-pill--unsaved' : ''}`}>
+            <span
+              className={`status-pill status-pill--compact ${isUnsaved ? 'status-pill--unsaved' : ''}`}
+              title={saveTitle}
+            >
               {saveLabel}
             </span>
           </div>
@@ -71,7 +91,10 @@ export default function Header() {
             <div className="app-header__progress-track">
               <div className="app-header__progress-fill" style={{ width: `${completion.percent}%` }} />
             </div>
-            <span className={`status-pill status-pill--compact ${isUnsaved ? 'status-pill--unsaved' : ''}`}>
+            <span
+              className={`status-pill status-pill--compact ${isUnsaved ? 'status-pill--unsaved' : ''}`}
+              title={saveTitle}
+            >
               {saveLabel}
             </span>
           </div>
@@ -82,7 +105,7 @@ export default function Header() {
           )}
           <div>
             <p className="app-header__user-name">{user?.name}</p>
-            <button className="link-button" onClick={logout}>Sign out</button>
+            <button className="link-button" onClick={handleLogout}>Sign out</button>
           </div>
         </div>
       </div>

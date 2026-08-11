@@ -347,7 +347,11 @@ export default function ActionBar() {
   }
 
   function handleNew() {
-    if (!window.confirm('Start a new inspection? This will clear the current form.')) return
+    const dirty = driveSaveStatus === 'unsaved' || driveSaveStatus === 'error' || driveSaveStatus === 'saving'
+    const msg = dirty
+      ? 'Start a new inspection? Current changes are not saved to the cloud and will be cleared.'
+      : 'Start a new inspection? This will clear the current form.'
+    if (!window.confirm(msg)) return
     startNewInspection()
     goToSection(0)
     window.scrollTo(0, 0)
@@ -367,6 +371,11 @@ export default function ActionBar() {
   }
 
   function handleReset() {
+    const dirty = driveSaveStatus === 'unsaved' || driveSaveStatus === 'error' || driveSaveStatus === 'saving'
+    const msg = dirty
+      ? 'Reset all data? Current changes are not saved to the cloud and will be lost.'
+      : 'Reset all data? This cannot be undone.'
+    if (!window.confirm(msg)) return
     resetAll()
   }
 

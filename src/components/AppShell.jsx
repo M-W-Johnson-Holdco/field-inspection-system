@@ -31,7 +31,13 @@ function PanelContent() {
   return <section id="section-panel" className="section-panel">{content}</section>
 }
 
+function isCloudSaveDirty(status) {
+  return status === 'unsaved' || status === 'error' || status === 'saving'
+}
+
 function Shell() {
+  const { driveSaveStatus } = useInspection()
+
   useEffect(() => {
     const scrollEl = document.querySelector('.app-scroll-region')
     if (!scrollEl) return undefined
@@ -47,14 +53,22 @@ function Shell() {
       sessionStorage.setItem('tcScrollY', String(scrollEl.scrollTop))
     }
 
+    function warnIfUnsaved(event) {
+      if (!isCloudSaveDirty(driveSaveStatus)) return
+      event.preventDefault()
+      event.returnValue = ''
+    }
+
     scrollEl.addEventListener('scroll', saveScroll, { passive: true })
     window.addEventListener('beforeunload', saveScroll)
+    window.addEventListener('beforeunload', warnIfUnsaved)
 
     return () => {
       scrollEl.removeEventListener('scroll', saveScroll)
       window.removeEventListener('beforeunload', saveScroll)
+      window.removeEventListener('beforeunload', warnIfUnsaved)
     }
-  }, [])
+  }, [driveSaveStatus])
 
   useEffect(() => {
     const header = document.querySelector('.app-header')
