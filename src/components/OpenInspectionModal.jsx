@@ -306,7 +306,7 @@ export default function OpenInspectionModal({ saveStatus, currentFolderId = null
         <>
           <div className="modal-backdrop modal-backdrop--top" />
           <div className="modal-confirm" role="alertdialog" aria-modal="true">
-            <p className="modal-confirm__msg">You have unsaved changes. Opening another inspection will discard them.</p>
+            <p className="modal-confirm__msg">Current changes are not saved to the cloud. Opening another inspection will discard them.</p>
             <div className="modal-confirm__actions">
               <button className="app-button app-button--secondary" onClick={() => setConfirmOpen(false)}>
                 Go Back & Save

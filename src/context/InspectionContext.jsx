@@ -3498,7 +3498,6 @@ export function InspectionProvider({ children }) {
   }
 
   function resetAll() {
-    if (!confirm('Reset all data? This cannot be undone.')) return
     setData(INITIAL_STATE)
     setActiveTabState(0)
     setExpandedSectionsState({})
