@@ -1,8 +1,9 @@
-import { ExternalLink, Images, X } from 'lucide-react'
+import { ExternalLink, FileText, Images, X } from 'lucide-react'
 import ModalSheetBack from './ModalSheetBack'
 
 export default function ExportChooserModal({
   onChoosePreview,
+  onChooseConditionSummary,
   onChooseSavePhotos,
   savingPhotos = false,
   onBack,
@@ -39,6 +40,19 @@ export default function ExportChooserModal({
           </p>
 
           <div className="import-chooser-modal__options">
+            <button
+              type="button"
+              className="import-chooser-modal__option"
+              onClick={onChooseConditionSummary}
+              disabled={savingPhotos}
+            >
+              <FileText size={22} aria-hidden="true" />
+              <span className="import-chooser-modal__option-title">Condition Summary PDF</span>
+              <span className="import-chooser-modal__option-hint">
+                Title page, damage list, and inspector notes
+              </span>
+            </button>
+
             <button
               type="button"
               className="import-chooser-modal__option"

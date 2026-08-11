@@ -12,6 +12,7 @@ import XmlImportModal from './XmlImportModal'
 import { usePermissions } from '../context/PermissionsContext'
 import { isRoofItemActive } from '../utils/roofItemStatus'
 import { buildXactimateExport } from '../lib/xactimateExport'
+import { downloadConditionSummaryPdf } from '../lib/conditionSummaryPdf'
 import { savePhotosLocal } from '../lib/savePhotosLocal'
 import MeasurementConverterModal from './MeasurementConverterModal'
 import XactimateExportModal from './XactimateExportModal'
@@ -399,6 +400,17 @@ export default function ActionBar() {
     }
   }
 
+  function handleChooseConditionSummary() {
+    try {
+      downloadConditionSummaryPdf(data)
+      setShowExportChooser(false)
+      setReturnToFileMenu(false)
+    } catch (err) {
+      console.error('Condition summary PDF failed:', err)
+      window.alert('Could not create the condition summary PDF. See console for details.')
+    }
+  }
+
   async function handleChooseSavePhotos() {
     setSavingPhotos(true)
     try {
@@ -650,6 +662,7 @@ export default function ActionBar() {
       {showExportChooser && (
         <ExportChooserModal
           onChoosePreview={handleChooseExportPreview}
+          onChooseConditionSummary={handleChooseConditionSummary}
           onChooseSavePhotos={handleChooseSavePhotos}
           savingPhotos={savingPhotos}
           onBack={returnToFileMenu ? backToFileMenu : undefined}
