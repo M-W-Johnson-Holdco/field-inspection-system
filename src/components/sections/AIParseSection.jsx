@@ -96,13 +96,6 @@ const ROOF_MAP = [
   { key: 'kickoutsPainted',         itemId: 'ri13', label: 'Painted' },
   { key: 'rainDiverterPainted',     itemId: 'ri15', label: 'Painted' },
   { key: 'powerMeterMastQty',       itemId: 'ri16', label: 'Qty' },
-  { key: 'chimneyCoverType',        itemId: 'ri29', label: 'Type' },
-  { key: 'chimneyCoverGrade',       itemId: 'ri29', label: 'Grade' },
-  { key: 'chimneyCoverFlue',        itemId: 'ri29', label: 'Flue' },
-  { key: 'chimneyCoverCondition',   itemId: 'ri29', label: 'Condition' },
-  { key: 'chimneyCoverPainted',     itemId: 'ri29', label: 'Painted' },
-  { key: 'chimneyCoverDamaged',     itemId: 'ri29', label: 'Damaged' },
-  { key: 'chimneyCoverDamageDescription', itemId: 'ri29', label: '_damage' },
   { key: 'corniceReturnMaterial',   itemId: 'ri21', label: 'Material' },
   { key: 'corniceReturnStories',    itemId: 'ri21', label: 'Stories' },
   { key: 'corniceReturnQty',        itemId: 'ri21', label: 'Qty' },
@@ -128,11 +121,11 @@ const ROOF_MAP = [
 const ELEV_MAP = [
   { key: 'sidingStyle',          itemId: 'ev0',  label: 'Style' },
   { key: 'sidingGrade',          itemId: 'ev0',  label: 'Grade' },
-  { key: 'sidingExposure',       itemId: 'ev0',  label: 'Exposure (Inches)' },
+  { key: 'sidingExposure',       itemId: 'ev0',  label: 'Exposure' },
   { key: 'sidingDamage',         itemId: 'ev0',  label: 'Damaged' },
   { key: 'sidingDamageDescription', itemId: 'ev0', label: '_damage' },
   { key: 'fasciaMaterial',       itemId: 'ev1',  label: 'Material' },
-  { key: 'fasciaWidth',          itemId: 'ev1',  label: 'Width (Inches)' },
+  { key: 'fasciaWidth',          itemId: 'ev1',  label: 'Width' },
   { key: 'fasciaPainted',        itemId: 'ev1',  label: 'Painted' },
   { key: 'fasciaDamage',         itemId: 'ev1',  label: 'Damaged' },
   { key: 'fasciaDamageDescription', itemId: 'ev1', label: '_damage' },
@@ -205,8 +198,8 @@ const ELEV_MAP = [
   { key: 'doorGlass',            itemId: 'ev7',  label: 'Glass' },
   { key: 'doorConfiguration',    itemId: 'ev7',  label: 'Configuration' },
   { key: 'doorPainted',          itemId: 'ev7',  label: 'Painted' },
-  { key: 'doorLength',           itemId: 'ev7',  label: 'Length (ft)' },
-  { key: 'doorWidth',            itemId: 'ev7',  label: 'Width (ft)' },
+  { key: 'doorLength',           itemId: 'ev7',  label: 'Length (in)' },
+  { key: 'doorWidth',            itemId: 'ev7',  label: 'Width (in)' },
   { key: 'doorAction',           itemId: 'ev7',  label: 'Action' },
   { key: 'doorDamage',           itemId: 'ev7',  label: 'Damaged' },
   { key: 'doorDamageDescription', itemId: 'ev7', label: '_damage' },
@@ -451,7 +444,6 @@ function applyParsed(parsed, ctx) {
     if (key === 'valleyMetalChooseOne' && val === 'Cut') val = 'Closed Cut'
     if (key === 'valleyNAChooseOne' && val === 'Cut') val = 'Closed Cut'
     if (key === 'edgeFlashingType') val = toArray(val)
-    if (key === 'chimneyCoverDamaged') val = toArray(val)
     updateRoofField(itemId, label, val)
   })
 
@@ -479,12 +471,6 @@ function applyParsed(parsed, ctx) {
     const val = roof[key]
     if (val === 'No' || val === 'N/A') updateRoofField(itemId, '_damage', 'n/a')
   })
-  {
-    const parts = toArray(roof.chimneyCoverDamaged)
-    if (roof.chimneyCoverDamaged != null && parts.length === 0) {
-      updateRoofField('ri29', '_damage', 'n/a')
-    }
-  }
 
   importRoofPipeJacks(roof)
   importRoofExhaustStacks(roof)

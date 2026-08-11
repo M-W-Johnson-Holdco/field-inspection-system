@@ -17,6 +17,34 @@ import { countShutterSizeBuckets, shutterAreaSqIn, shutterSizeBucket, SHUTTER_SI
 import { countScreenSizeBuckets, screenAreaSqFt, screenSizeBucket, SCREEN_SIZE_LEGEND } from '../../utils/screenSize'
 import { sizeCounterLabel } from '../../utils/sizeCounterLabels'
 import { countWindowSizeBuckets, windowAreaSqFt, windowSizeBucket, WINDOW_SIZE_LEGEND } from '../../utils/windowSize'
+import { measurementToDecimalFeet, measurementToDecimalInches } from '../../utils/measurement'
+
+function doorAreaSqIn(fields = {}) {
+  const length = measurementToDecimalInches(fields['Length (in)'], { unitHint: 'inches' })
+  const width = measurementToDecimalInches(fields['Width (in)'], { unitHint: 'inches' })
+  if (length == null || width == null || length <= 0 || width <= 0) return null
+  const area = length * width
+  return Number.isInteger(area) ? area : Math.round(area * 10) / 10
+}
+
+function garageDoorAreaSqFt(fields = {}) {
+  const length = measurementToDecimalFeet(
+    fields['Length (ft)'] ?? fields['Length (in)'],
+    { unitHint: 'feet' },
+  )
+  const width = measurementToDecimalFeet(
+    fields['Width (ft)'] ?? fields['Width (in)'],
+    { unitHint: 'feet' },
+  )
+  if (length == null || width == null || length <= 0 || width <= 0) return null
+  const area = length * width
+  return Number.isInteger(area) ? area : Math.round(area * 10) / 10
+}
+
+function formatAreaPill(area, unit = 'ft²') {
+  if (area == null) return null
+  return `${area} ${unit}`
+}
 
 function elevSizeCounterConfig(itemDef, subItems) {
   if (itemDef.shutterSizeCounters) {
@@ -164,6 +192,51 @@ function FieldRenderer({ field, value, onChange, subFields, onSubFieldChange }) 
       }
       onChange(opts.filter(o => nextArr.includes(o)))
     }
+
+    if (field.nativeMenu) {
+      const ordered = opts.filter(opt => arr.includes(opt))
+      const displayValue = ordered.length ? '__selected__' : ''
+      const displayLabel = ordered.length ? ordered.join(', ') : 'Select'
+      const selectClass = withSelectPlaceholderClass(
+        fieldSelectClass(
+          field.halfWidthDesktop ? { ...field, t: 'radio' } : field,
+        ),
+        displayValue,
+      )
+      const selectEl = (
+        <select
+          className={field.wrapSelected ? `${selectClass} field-select--native-multi-overlay` : selectClass}
+          value={displayValue}
+          onChange={e => {
+            const next = e.target.value
+            if (!next || next === '__selected__') return
+            toggleMultiOption(next)
+          }}
+          aria-label={l}
+        >
+          <option value={displayValue} hidden>{displayLabel}</option>
+          {opts.map(opt => (
+            <option key={opt} value={opt}>
+              {ordered.includes(opt) ? `✓ ${opt}` : opt}
+            </option>
+          ))}
+        </select>
+      )
+      return (
+        <div {...fieldGroupProps(field)}>
+          {lbl}
+          {field.wrapSelected ? (
+            <div className={`native-multi-face${ordered.length ? '' : ' native-multi-face--placeholder'}`}>
+              <span className="native-multi-face__text">{displayLabel}</span>
+              {selectEl}
+            </div>
+          ) : (
+            selectEl
+          )}
+        </div>
+      )
+    }
+
     return (
       <div {...fieldGroupProps(field)}>
         {lbl}
@@ -322,14 +395,8 @@ function ElevSubCard({
     : null
   const isDoor = cellKey.startsWith('ev7_')
   const doorStyle = sub.fields?.Style
-  const doorLength = Number(sub.fields?.['Length (ft)'] ?? sub.fields?.['Length (in)'])
-  const doorWidth = Number(sub.fields?.['Width (ft)'] ?? sub.fields?.['Width (in)'])
-  const doorArea = Number.isFinite(doorLength) && Number.isFinite(doorWidth) && doorLength > 0 && doorWidth > 0
-    ? `${doorLength * doorWidth} ft²`
-    : null
-  const doorPill = isDoor
-    ? [doorStyle, doorArea].filter(Boolean).join(' · ') || null
-    : null
+  const doorStylePill = isDoor && doorStyle && doorStyle !== 'Select' ? doorStyle : null
+  const doorAreaPill = isDoor ? formatAreaPill(doorAreaSqIn(sub.fields || {}), 'in²') : null
   const isShutter = cellKey.startsWith('ev6_')
   const shutterArea = isShutter ? shutterAreaSqIn(sub.fields || {}) : null
   const shutterBucket = isShutter ? shutterSizeBucket(shutterArea) : null
@@ -351,14 +418,17 @@ function ElevSubCard({
   const isGarageDoor = cellKey.startsWith('ev8_')
   const garageType = sub.fields?.Type
   const garageTypePill = isGarageDoor && garageType && garageType !== 'Select' ? garageType : null
-  const damagePill = (isGarageDoor || isShutter || isScreen || isWindow) && sub.fields?.Damaged === 'Yes' ? 'Damaged' : null
+  const garageAreaPill = isGarageDoor ? formatAreaPill(garageDoorAreaSqFt(sub.fields || {})) : null
+  const damagePill = (isGarageDoor || isShutter || isScreen || isWindow || isDoor) && sub.fields?.Damaged === 'Yes' ? 'Damaged' : null
   const greyPills = [
     !isGarageDoor && !isShutter && !isScreen && !isWindow && !isDoor && lengthPill ? lengthPill : null,
-    doorPill,
+    doorStylePill,
+    doorAreaPill,
     shutterPill,
     screenPill,
     windowPill,
     garageTypePill,
+    garageAreaPill,
   ].filter(Boolean)
   const redPills = [damagePill].filter(Boolean)
   const hasPills = greyPills.length > 0 || redPills.length > 0

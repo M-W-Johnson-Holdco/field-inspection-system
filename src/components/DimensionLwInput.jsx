@@ -34,6 +34,17 @@ export default function DimensionLwInput({
   const areaLabel = field.areaLabel || 'Total Area'
   const areaValue = showArea ? formatArea(lengthValue, widthValue, areaUnit) : null
   const showHeading = Boolean(field.l && field.l !== 'Size')
+  const inchesOnly = Boolean(field.inchesOnly)
+  const lengthField = {
+    l: field.lengthKey || lengthLabel,
+    t: 'num',
+    inchesOnly,
+  }
+  const widthField = {
+    l: field.widthKey || widthLabel,
+    t: 'num',
+    inchesOnly,
+  }
 
   return (
     <div {...fieldGroupProps(field, 'dimension-lw-input-wrap')}>
@@ -49,7 +60,7 @@ export default function DimensionLwInput({
       <div className="field-group field-group--full field-group--measurement dimension-lw-input__row">
         <label className="form-label">{lengthLabel}</label>
         <MeasurementInput
-          field={{ l: lengthLabel, t: 'num' }}
+          field={lengthField}
           label={lengthLabel}
           value={lengthValue}
           onChange={onLengthChange}
@@ -60,7 +71,7 @@ export default function DimensionLwInput({
       <div className="field-group field-group--full field-group--measurement dimension-lw-input__row">
         <label className="form-label">{widthLabel}</label>
         <MeasurementInput
-          field={{ l: widthLabel, t: 'num' }}
+          field={widthField}
           label={widthLabel}
           value={widthValue}
           onChange={onWidthChange}

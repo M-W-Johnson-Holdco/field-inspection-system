@@ -81,9 +81,11 @@ roof.exposedRafters: "Yes" or "No"
 roof.pipeJacks[].size: "1.5" or "2" or "3" or "4" or "5"
 roof.pipeJacks[].type: "3-in-1/Neoprene" or "Lead" or "Lifetime/Silicone"
 roof.exhaustStackPainted: "Yes" or "No" for whether all exhaust stacks are painted
-roof.exhaustStacks[].size: "Small (3-4\")" or "Medium (5-7\")" or "Large (8\"+)"
+roof.exhaustStacks[].diameter: diameter measurement (e.g. "6\"" or "1' 2\"") — replaces size/height; used to derive Small (3-4"), Medium (5-7"), Large (8"+)
+roof.exhaustStacks[].height: legacy alias for diameter
+roof.exhaustStacks[].size: legacy — "Small (3-4\")" or "Medium (5-7\")" or "Large (8\"+)" — prefer diameter when available
 roof.exhaustStacks[].damaged: array containing any mentioned values from "Cap", "Stack", "Flange"
-roof.chimneyCoverType: "Shroud" or "Chase Cover" or "N/A"
+roof.chimneyCoverType: "Shroud" or "Chase Cover" or "N/A" — nested under first chimney when cover present
 roof.chimneyCoverGrade: "Aluminum" or "Steel" or "Copper" or "N/A"
 roof.chimneyCoverFlue: "Yes" or "No" or "N/A"
 roof.chimneyCoverCondition: free text condition notes
@@ -108,7 +110,8 @@ roof.turretCapGrade: "Metal" or "Copper" or "N/A" — only when turretCapExistin
 roof.turretCapPainted: "Yes" or "No" or "N/A" — only when turretCapExisting is "Yes"; otherwise null
 roof.turretNotes: free text notes
 roof.chimneyPainted: "Yes" or "No" or "N/A" for whether chimney flashing is painted (section-level, not per chimney)
-roof.chimneys[].size: "Small" (width ≤23in) or "Medium" (24-36in) or "Large" (37+in)
+roof.chimneys[].width: chimney width measurement (e.g. "2' 6\"" or "30\"") — used to derive Small (≤23"), Medium (24-36"), Large (37"+)
+roof.chimneys[].size: legacy — "Small" (width ≤23in) or "Medium" (24-36in) or "Large" (37+in) — prefer width when available
 roof.chimneys[].material: "Galvanized" or "Copper" or "Aluminum" or "N/A"
 roof.chimneys[].counterFlashing: "Replace" or "Reuse"
 roof.chimneys[].cricketPresent: "Yes" or "No"
@@ -209,8 +212,8 @@ elevations.[direction].doorStyle: "Hinge" or "French" or "Sliding" or "Storm Doo
 elevations.[direction].doorGlass: "Yes" or "No" or "N/A"
 elevations.[direction].doorConfiguration: "Single" or "Double"
 elevations.[direction].doorPainted: "Yes" or "No"
-elevations.[direction].doorLength: door length in feet (number)
-elevations.[direction].doorWidth: door width in feet (number)
+elevations.[direction].doorLength: door length in inches (number)
+elevations.[direction].doorWidth: door width in inches (number)
 elevations.[direction].doorAction: "Replace" or "Repair" or "None"
 elevations.[direction].doorDamage: "Yes" or "No" or "N/A"
 elevations.[direction].doorQty: optional number of doors (creates that many cards; omit if unknown)
@@ -326,7 +329,7 @@ Return this exact structure (use null for any scalar field not mentioned, and []
     "rooftopIntakeVentDamaged": null, "rooftopIntakeVentDamageDescription": null,
     "pipeJacks": [{ "size": null, "type": null, "painted": null }],
     "exhaustStackPainted": null,
-    "exhaustStacks": [{ "size": null, "damaged": [], "damageDescription": null }],
+    "exhaustStacks": [{ "diameter": null, "height": null, "size": null, "damaged": [], "damageDescription": null }],
     "kickoutsExisting": null, "kickoutsExistingCount": null, "kickoutsNeeded": null, "kickoutsPainted": null,
     "rainDiverterPainted": null,
     "rainDiverters": [{ "lengthLF": null }],
@@ -334,7 +337,7 @@ Return this exact structure (use null for any scalar field not mentioned, and []
     "chimneyCoverType": null, "chimneyCoverGrade": null, "chimneyCoverFlue": null, "chimneyCoverCondition": null,
     "chimneyCoverPainted": null, "chimneyCoverDamaged": [], "chimneyCoverDamageDescription": null,
     "chimneyPainted": null,
-    "chimneys": [{ "size": null, "material": null, "counterFlashing": null, "cricketPresent": null, "damaged": null, "damageDescription": null, "conditionNotes": null }],
+    "chimneys": [{ "width": null, "size": null, "material": null, "counterFlashing": null, "cricketPresent": null, "damaged": null, "damageDescription": null, "conditionNotes": null }],
     "stepFlashingMaterial": null, "stepFlashingPainted": null, "stepFlashingDamaged": null, "stepFlashingDamageDescription": null,
     "counterFlashingMaterial": null, "counterFlashingPainted": null, "counterFlashingDamaged": null, "counterFlashingDamageDescription": null,
     "lFlashingMaterial": null, "lFlashingPainted": null, "lFlashingDamaged": null, "lFlashingDamageDescription": null,

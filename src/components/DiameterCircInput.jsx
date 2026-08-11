@@ -31,10 +31,11 @@ export default function DiameterCircInput({
   onDiameterChange,
   onCircumferenceChange,
 }) {
-  const diameterLabel = field.diameterLabel || 'Diameter (Inches)'
+  const diameterLabel = field.diameterLabel || 'Diameter'
   const showCircumference = field.showCircumference !== false
   const circumferenceLabel = field.circumferenceLabel || 'Total Circumference'
   const showHeading = Boolean(field.l && field.l !== 'Diameter')
+  const fieldHint = field.fieldHint || ''
 
   const circDisplay = (() => {
     if (circumferenceValue !== '' && circumferenceValue != null) return circumferenceValue
@@ -59,6 +60,10 @@ export default function DiameterCircInput({
         <div className="dimension-lw-input__title-row">
           <label className="form-label">{field.l}</label>
         </div>
+      )}
+
+      {fieldHint && (
+        <p className="dimension-lw-input__hint">{fieldHint}</p>
       )}
 
       <div className="field-group field-group--full field-group--measurement dimension-lw-input__row">
