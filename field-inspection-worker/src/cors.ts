@@ -1,4 +1,9 @@
 const ALLOWED_ORIGINS = new Set([
+	// Frontend Worker (Workers Assets)
+	'https://field-inspection-system.k-liss.workers.dev',
+	// Cloudflare Pages kept during cutover — remove after traffic moves
+	'https://field-inspection-system.pages.dev',
+	// GitHub Pages kept during cutover — remove after traffic moves
 	'https://m-w-johnson-holdco.github.io',
 	'http://localhost:5173',
 	'http://127.0.0.1:5173',
