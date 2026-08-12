@@ -1,0 +1,13 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "field-inspection-system",
+	"account_id": "4b9211261079c82d2e6c2f5c069b9b1b",
+	"compatibility_date": "2026-08-12",
+	"observability": {
+		"enabled": true
+	},
+	"assets": {
+		"directory": "./dist",
+		"not_found_handling": "single-page-application"
+	}
+}

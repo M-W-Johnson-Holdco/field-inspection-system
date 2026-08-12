@@ -2,15 +2,15 @@
   "name": "TC Roofing Field Inspection",
   "short_name": "TC Inspection",
   "description": "Mobile field inspection app for TC Roofing.",
-  "start_url": "/field-inspection-system/",
-  "scope": "/field-inspection-system/",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#f4f8fc",
   "theme_color": "rgb(45,110,181)",
   "icons": [
     {
-      "src": "/field-inspection-system/pt_favicon.png",
+      "src": "/pt_favicon.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
