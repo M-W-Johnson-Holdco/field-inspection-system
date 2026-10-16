@@ -3,6 +3,7 @@ import { formatPitch, parsePitchNumerator } from '../../utils/pitch'
 import { formatPropertyAddress } from '../../utils/address'
 import { useAuth } from '../../context/AuthContext'
 import { WORKER_URL } from '../../lib/inspectionApi'
+import WalkthroughRecorder from '../WalkthroughRecorder'
 
 // Maps AI JSON roof keys → { itemId, fieldLabel }
 const ROOF_MAP = [
@@ -703,8 +704,16 @@ export default function AIParseSection() {
       <p className="section-eyebrow">Section 6</p>
       <h2 className="section-title">AI Transcript Parser</h2>
       <p className="ai-section__hint">
-        Dictate the inspection using Plaud, then paste the transcript below. AI will populate the form across all sections.
+        Record your walkthrough here, or paste a Plaud transcript below. AI will populate the form across all sections.
       </p>
+
+      <WalkthroughRecorder
+        disabled={status === 'parsing'}
+        onTranscript={text => setAiParseState(prev => ({
+          ...prev,
+          transcript: [prev.transcript?.trim(), text].filter(Boolean).join('\n\n'),
+        }))}
+      />
 
       <div className="ai-card app-card">
         <div className="ai-card__label-row">

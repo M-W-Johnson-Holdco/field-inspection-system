@@ -6,6 +6,7 @@ import { AuthError, authErrorResponse, requireAuthUser, requireGoogleAuthUser, r
 import { emptyCors, getCorsHeaders, jsonResponse } from './cors'
 import { folderPathParams, getInspection, listInspections, putInspection } from './inspections'
 import { createSessionToken } from './session'
+import { transcribeAudio } from './transcribe'
 
 export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
@@ -26,6 +27,12 @@ export default {
 			if (request.method === 'POST' && (pathname === '/' || pathname === '')) {
 				await requireAuthUser(request, env)
 				return await handleParseTranscript(request, env, origin)
+			}
+
+			if (request.method === 'POST' && pathname === '/api/transcribe') {
+				await requireAuthUser(request, env)
+				const result = await transcribeAudio(request, env)
+				return jsonResponse(result.body, origin, result.status)
 			}
 
 			// ── Authenticated inspection / permissions API ──

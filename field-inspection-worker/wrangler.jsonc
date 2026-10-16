@@ -20,6 +20,9 @@
 			"bucket_name": "field-inspections"
 		}
 	],
+	"ai": {
+		"binding": "AI"
+	},
 	"kv_namespaces": [
 		{
 			"binding": "PERMISSIONS",

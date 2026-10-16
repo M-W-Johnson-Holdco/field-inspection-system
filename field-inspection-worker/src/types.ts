@@ -14,6 +14,8 @@ export interface Env {
 	PT_GS_SHEET_ID?: string
 	SESSION_SECRET: string
 	INSPECTIONS: R2Bucket
+	/** Workers AI — speech-to-text for the Record button. */
+	AI: Ai
 	PERMISSIONS: KVNamespace
 }
 

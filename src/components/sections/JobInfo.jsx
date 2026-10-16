@@ -5,6 +5,8 @@ import { filterInsuranceCompanies } from '../../data/insuranceCompanies'
 import { withSelectPlaceholderClass } from '../../utils/fieldGrid'
 import useExpandedSection from '../../hooks/useExpandedSection'
 import { formatPropertyAddress } from '../../utils/address'
+import { EMBEDDED } from '../../lib/embed'
+import AcuLynxCard from '../AcuLynxCard'
 
 const CONTACT_OPTIONS = ['Phone', 'Email', 'Text']
 const LOSS_TYPE_OPTIONS = [
@@ -323,6 +325,7 @@ export default function JobInfo() {
       <div className={`collapse-panel ${isOpen ? 'collapse-panel--open' : ''}`} aria-hidden={!isOpen}>
         <div className="collapse-panel__inner">
           <div className="job-info-groups">
+            {EMBEDDED && <AcuLynxCard />}
             <JobInfoGroup title="Customer & Contact" headingId="job-info-customer-heading">
               <div className="form-grid">
                 {field('cust', 'Customer Name(s)', { full: true, placeholder: 'John Jones, Mary Jones', required: true })}

@@ -33,6 +33,30 @@ export function postToPortal(message) {
   })
 }
 
+/**
+ * Ask the portal to do something only it can (AcuLynx lookups/uploads):
+ * sends { type, requestId, ...payload } and resolves with the matching
+ * insp:al-result. insp:al-progress messages go to onProgress(done, total).
+ */
+export function portalRequest(type, payload = {}, onProgress) {
+  if (!EMBEDDED) return Promise.reject(new Error('Only available inside the employee portal'))
+  const requestId = `${Date.now()}-${Math.random().toString(36).slice(2)}`
+  return new Promise((resolve, reject) => {
+    const off = onPortalMessage((msg) => {
+      if (msg.requestId !== requestId) return
+      if (msg.type === 'insp:al-progress') {
+        onProgress?.(msg.done, msg.total)
+        return
+      }
+      if (msg.type !== 'insp:al-result') return
+      off()
+      if (msg.ok) resolve(msg.result)
+      else reject(new Error(msg.error || 'AcuLynx request failed'))
+    })
+    postToPortal({ type, requestId, ...payload })
+  })
+}
+
 /** Listen for insp:* messages from the portal window only. Returns an unsubscribe. */
 export function onPortalMessage(handler) {
   function listener(event) {

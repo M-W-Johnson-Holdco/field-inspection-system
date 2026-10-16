@@ -76,6 +76,11 @@ function pdfCell(doc, text, x, y, maxWidth) {
 }
 
 export function downloadXactimatePdf(exportData, filename) {
+  buildXactimatePdf(exportData).save(filename || 'inspection_export.pdf')
+}
+
+/** Build the Xactimate export PDF without saving it (e.g. to upload). */
+export function buildXactimatePdf(exportData) {
   const { job, lineItems, notes } = exportData
   const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'letter' })
   const pageWidth = doc.internal.pageSize.getWidth()
@@ -184,7 +189,7 @@ export function downloadXactimatePdf(exportData, filename) {
     })
   }
 
-  doc.save(filename || 'inspection_export.pdf')
+  return doc
 }
 
 export function downloadTextFile(filename, contents, mimeType = 'text/plain') {

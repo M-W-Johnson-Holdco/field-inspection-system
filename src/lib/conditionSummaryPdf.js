@@ -239,6 +239,13 @@ function drawNotesSection(doc, summary, startY) {
 }
 
 export function downloadConditionSummaryPdf(data, filename) {
+  const { doc, summary, defaultFilename } = buildConditionSummaryPdf(data)
+  doc.save(filename || defaultFilename)
+  return summary
+}
+
+/** Build the condition summary PDF without saving it (e.g. to upload). */
+export function buildConditionSummaryPdf(data) {
   const summary = buildConditionSummary(data)
   const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'letter' })
 
@@ -253,8 +260,7 @@ export function downloadConditionSummaryPdf(data, filename) {
     .replace(/\s+/g, '_')
     .slice(0, 40) || 'inspection'
 
-  doc.save(filename || `${safeCustomer}_condition_summary.pdf`)
-  return summary
+  return { doc, summary, defaultFilename: `${safeCustomer}_condition_summary.pdf` }
 }
 
 export { PAGE }
