@@ -6,6 +6,12 @@ export const SUBSECTIONS = {
   ri22: '1E — Low Slope & Other Structures',
 }
 
+// Roof area is split: shingle squares (everything except metal) and metal
+// squares, which only shows when "Metal" is one of the styles.
+export const SQ_MINUS_METAL_KEY = "SQ's (Minus Metal)"
+export const SQ_METAL_KEY = "Metal SQ's"
+export const LEGACY_SQ_KEY = "SQ's"
+
 export const ROOF_ITEMS = [
   {
     id: 'ri0', lbl: 'Shingle Style / Grade', flags: ['P'],
@@ -21,7 +27,8 @@ export const ROOF_ITEMS = [
       { t: 'num', l: 'Stories', full: true },
       { t: 'num', l: 'Layers', full: true },
       { t: 'pitch', l: 'Predominant Pitch (x/12)', p: '4', full: true, showNumeratorOnly: true },
-      { t: 'num', l: "SQ's", full: true },
+      { t: 'num', l: SQ_MINUS_METAL_KEY, full: true },
+      { t: 'num', l: SQ_METAL_KEY, full: true, showWhen: { field: 'Style', includes: 'Metal' } },
     ],
   },
   {

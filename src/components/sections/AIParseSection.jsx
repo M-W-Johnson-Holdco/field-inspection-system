@@ -1,6 +1,7 @@
 import { useInspection } from '../../context/InspectionContext'
 import { formatPitch, parsePitchNumerator } from '../../utils/pitch'
 import { formatPropertyAddress } from '../../utils/address'
+import { SQ_METAL_KEY, SQ_MINUS_METAL_KEY } from '../../data/roofItems'
 import { useAuth } from '../../context/AuthContext'
 import { WORKER_URL } from '../../lib/inspectionApi'
 import WalkthroughRecorder from '../WalkthroughRecorder'
@@ -12,7 +13,8 @@ const ROOF_MAP = [
   { key: 'stories',                 itemId: 'ri0',  label: 'Stories' },
   { key: 'layers',                  itemId: 'ri0',  label: 'Layers' },
   { key: 'pitch',                   itemId: 'ri0',  label: 'Predominant Pitch (x/12)' },
-  { key: 'squares',                 itemId: 'ri0',  label: "SQ's" },
+  { key: 'squares',                 itemId: 'ri0',  label: SQ_MINUS_METAL_KEY },
+  { key: 'metalSquares',            itemId: 'ri0',  label: SQ_METAL_KEY },
   { key: 'deckingType',             itemId: 'ri34', label: 'Type' },
   { key: 'deckingDamaged',          itemId: 'ri34', label: 'Damaged' },
   { key: 'deckingDamageDescription', itemId: 'ri34', label: '_damage' },

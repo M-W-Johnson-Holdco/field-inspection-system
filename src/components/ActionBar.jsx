@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useInspection } from '../context/InspectionContext'
 import { useAuth } from '../context/AuthContext'
+import { SQ_MINUS_METAL_KEY } from '../data/roofItems'
 import { saveInspection, TokenExpiredError } from '../lib/inspectionApi'
 import OpenInspectionModal from './OpenInspectionModal'
 import AccessAdminModal from './AccessAdminModal'
@@ -622,7 +623,7 @@ export default function ActionBar() {
             addr: data.jobInfo?.addr,
             pitch: data.roofData?.ri0?.fields?.['Predominant Pitch (x/12)']
               ?? data.roofData?.ri0?.fields?.['Predominant Pitch'],
-            squares: data.roofData?.ri0?.fields?.["SQ's"],
+            squares: data.roofData?.ri0?.fields?.[SQ_MINUS_METAL_KEY],
             ridgeLF: data.roofData?.ri6?.fields?.['Length'],
             valleyIncluded: isRoofItemActive(data.roofData?.ri5),
           }}

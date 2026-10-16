@@ -1,4 +1,5 @@
 import { isRoofItemActive } from '../utils/roofItemStatus'
+import { SQ_METAL_KEY, SQ_MINUS_METAL_KEY } from '../data/roofItems'
 import { fenceTotalLf } from '../utils/fenceLength'
 import { measurementToDecimalFeet, measurementToDecimalInches } from '../utils/measurement'
 import { exhaustStackSizeBucketFromFields } from '../utils/exhaustStackSize'
@@ -49,22 +50,36 @@ function exhaustStackNote(fields, parentFields) {
 // ---- Roof (RFG) --------------------------------------------------------
 
 export const ROOF_LINE_ITEMS = {
-  ri0: (fields) => [{
-    trade: 'Roofing', category: 'RFG',
-    description: (() => {
-      const styles = Array.isArray(fields?.Style)
-        ? fields.Style
-        : (fields?.Style ? [String(fields.Style)] : [])
-      const styleLabel = styles.join('/') || 'unspecified style'
-      const gauge = styles.includes('Metal') ? str(fields, 'Metal Gauge') : null
-      return gauge
-        ? `Comp. shingle - ${styleLabel} (${gauge})`
-        : `Comp. shingle - ${styleLabel}`
-    })(),
-    unit: 'SQ', qty: num(fields, "SQ's"),
-    damaged: null,
-    note: `${num(fields, 'Stories') ?? '?'} stories, ${num(fields, 'Layers') ?? '?'} layer(s), predominant pitch ${str(fields, 'Predominant Pitch (x/12)') || str(fields, 'Predominant Pitch') || '?'}`,
-  }],
+  // Shingle squares exclude metal; metal roofing is its own line.
+  ri0: (fields) => {
+    const styles = Array.isArray(fields?.Style)
+      ? fields.Style
+      : (fields?.Style ? [String(fields.Style)] : [])
+    const shingleStyles = styles.filter(s => s !== 'Metal')
+    const hasMetal = styles.includes('Metal') || num(fields, SQ_METAL_KEY) != null
+    const note = `${num(fields, 'Stories') ?? '?'} stories, ${num(fields, 'Layers') ?? '?'} layer(s), predominant pitch ${str(fields, 'Predominant Pitch (x/12)') || str(fields, 'Predominant Pitch') || '?'}`
+    const lines = []
+    if (!hasMetal || shingleStyles.length || num(fields, SQ_MINUS_METAL_KEY) != null) {
+      lines.push({
+        trade: 'Roofing', category: 'RFG',
+        description: `Comp. shingle - ${shingleStyles.join('/') || 'unspecified style'}`,
+        unit: 'SQ', qty: num(fields, SQ_MINUS_METAL_KEY),
+        damaged: null,
+        note,
+      })
+    }
+    if (hasMetal) {
+      const gauge = str(fields, 'Metal Gauge')
+      lines.push({
+        trade: 'Roofing', category: 'RFG',
+        description: `Metal roofing${gauge && gauge !== 'N/A' && gauge !== 'Select' ? ` (${gauge})` : ''}`,
+        unit: 'SQ', qty: num(fields, SQ_METAL_KEY),
+        damaged: null,
+        note,
+      })
+    }
+    return lines
+  },
   ri34: (fields) => [{
     trade: 'Roofing', category: 'RFG',
     description: `Decking - ${str(fields, 'Type') || 'unspecified'}`,

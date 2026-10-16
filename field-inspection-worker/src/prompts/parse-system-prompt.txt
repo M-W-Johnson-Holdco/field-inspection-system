@@ -53,7 +53,8 @@ roof.metalShingleGauge: "24GA." or "22GA." or "20GA." or "18GA." or "16GA." or "
 roof.stories: number of stories
 roof.layers: number of roof layers
 roof.pitch: predominant pitch rise over 12 (number, e.g. 4 for 4/12) — stored as "x/12"
-roof.squares: roof squares / SQ's (number)
+roof.squares: roof squares EXCLUDING any metal roofing — "SQ's minus metal" (number). If the transcript gives one total and also a metal amount, subtract the metal from the total. If it gives only one roof-squares figure and no metal is mentioned, use it here.
+roof.metalSquares: squares of metal roofing only — "metal SQ's" (number); only when the transcript states a metal roofing area; otherwise null
 roof.deckingType: "1/2 OSB" or "1/2 CDX" or "2/3 CDK" or "Slat Decking" or "N/A"
 roof.deckingDamaged: "Yes" or "No" or "N/A"
 roof.deckingDamageDescription: free text when damaged is Yes
@@ -296,7 +297,7 @@ Return this exact structure (use null for any scalar field not mentioned, and []
     "gatedCommunity": null, "gateCode": null
   },
   "roof": {
-    "shingleStyle": null, "metalShingleGauge": null, "stories": null, "layers": null, "pitch": null, "squares": null,
+    "shingleStyle": null, "metalShingleGauge": null, "stories": null, "layers": null, "pitch": null, "squares": null, "metalSquares": null,
     "deckingType": null, "deckingDamaged": null, "deckingDamageDescription": null, "deckingNotes": null,
     "edgeFlashingType": [], "edgeMaterial": null, "edgePainted": null, "edgeDamaged": null,
     "underlaymentGrade": null, "underlaymentLayers": null,
