@@ -1,6 +1,8 @@
 export interface Env {
 	ANTHROPIC_API_KEY: string
 	GOOGLE_CLIENT_ID: string
+	/** Comma-separated OAuth client IDs of the TC/PT portals (ID-token audiences). */
+	PORTAL_GOOGLE_CLIENT_IDS: string
 	SESSION_SECRET: string
 	INSPECTIONS: R2Bucket
 	PERMISSIONS: KVNamespace

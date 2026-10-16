@@ -84,6 +84,55 @@ export async function requireGoogleAuthUser(request: Request, env: Env): Promise
 }
 
 /**
+ * Verify a Google Sign-In ID token (the `credential` the TC/PT portals get
+ * from google.accounts.id) so a portal login can mint an app session. The
+ * token must have been issued to one of the portals' own OAuth clients,
+ * listed in PORTAL_GOOGLE_CLIENT_IDS.
+ */
+export async function requireGoogleIdTokenUser(idToken: string, env: Env): Promise<AuthUser> {
+	if (!idToken || !looksLikeJwt(idToken)) throw new AuthError('Missing Google credential')
+
+	const allowedAudiences = String(env.PORTAL_GOOGLE_CLIENT_IDS || '')
+		.split(',')
+		.map(s => s.trim())
+		.filter(Boolean)
+	if (!allowedAudiences.length) throw new AuthError('Portal sign-in is not configured', 500)
+
+	// tokeninfo checks the signature and expiry; logins are infrequent, so
+	// one round-trip per sign-in is fine.
+	const resp = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`)
+	if (!resp.ok) throw new AuthError('Invalid or expired Google credential', 401)
+
+	const info = await resp.json() as {
+		aud?: string
+		iss?: string
+		exp?: string
+		email?: string
+		email_verified?: string | boolean
+		name?: string
+		picture?: string
+	}
+	if (!info.aud || !allowedAudiences.includes(info.aud)) {
+		throw new AuthError('Google credential was not issued for this app', 401)
+	}
+	if (info.iss !== 'accounts.google.com' && info.iss !== 'https://accounts.google.com') {
+		throw new AuthError('Invalid Google credential issuer', 401)
+	}
+	if (!info.exp || Number(info.exp) * 1000 <= Date.now()) {
+		throw new AuthError('Google credential expired', 401)
+	}
+	if (info.email_verified !== true && info.email_verified !== 'true') {
+		throw new AuthError('Google email is not verified', 403)
+	}
+
+	return authUserFromEmail(env, {
+		email: info.email || '',
+		name: info.name,
+		picture: info.picture,
+	})
+}
+
+/**
  * Accept either an app session JWT or a Google access token.
  * Prefer session JWTs for normal API calls after sign-in.
  */

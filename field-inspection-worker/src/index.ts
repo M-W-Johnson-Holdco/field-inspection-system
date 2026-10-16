@@ -1,8 +1,8 @@
 import systemPrompt from './prompts/parse-system-prompt.txt'
 import measureFenceSystemPrompt from './prompts/measure-fence-system-prompt.txt'
-import type { Env } from './types'
+import type { AuthUser, Env } from './types'
 import { loadPermissions, savePermissions, withBootstrapAdmins, sanitizePermissions } from './access'
-import { AuthError, authErrorResponse, requireAuthUser, requireGoogleAuthUser } from './auth'
+import { AuthError, authErrorResponse, requireAuthUser, requireGoogleAuthUser, requireGoogleIdTokenUser } from './auth'
 import { emptyCors, getCorsHeaders, jsonResponse } from './cors'
 import { folderPathParams, getInspection, listInspections, putInspection } from './inspections'
 import { createSessionToken } from './session'
@@ -31,6 +31,17 @@ export default {
 			// ── Authenticated inspection / permissions API ──
 			if (pathname === '/api/session' && request.method === 'POST') {
 				return await handleCreateSession(request, env, origin)
+			}
+			// TC/PT portals sign in with a Google ID token instead of an access token.
+			if (pathname === '/api/session/google-id' && request.method === 'POST') {
+				let body: { credential?: string }
+				try {
+					body = await request.json()
+				} catch {
+					return jsonResponse({ error: 'Invalid JSON body' }, origin, 400)
+				}
+				const user = await requireGoogleIdTokenUser(String(body?.credential || ''), env)
+				return await sessionResponse(user, env, origin)
 			}
 			if (pathname === '/api/permissions') {
 				return await handlePermissions(request, env, origin)
@@ -72,6 +83,10 @@ export default {
 
 async function handleCreateSession(request: Request, env: Env, origin: string): Promise<Response> {
 	const user = await requireGoogleAuthUser(request, env)
+	return sessionResponse(user, env, origin)
+}
+
+async function sessionResponse(user: AuthUser, env: Env, origin: string): Promise<Response> {
 	const session = await createSessionToken(user, env)
 	return jsonResponse({
 		token: session.token,

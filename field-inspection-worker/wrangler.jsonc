@@ -6,6 +6,11 @@
 	"compatibility_flags": ["nodejs_compat"],
 	"observability": { "enabled": true },
 	"upload_source_maps": true,
+	"vars": {
+		// OAuth clients of the TC and Peachtree portals; ID tokens issued to
+		// these can be exchanged for an inspection session (public values).
+		"PORTAL_GOOGLE_CLIENT_IDS": "129261519673-imu1prh6jq0p52j40mtr1rolhbp1ra8s.apps.googleusercontent.com,372381771549-jhfnp02ogcu290utsm83vk5v8pi70dfk.apps.googleusercontent.com"
+	},
 	"rules": [
 		{ "type": "Text", "globs": ["**/*.txt"], "fallthrough": true }
 	],
