@@ -1,12 +1,16 @@
-import type { AuthUser, Env } from './types'
+import type { AuthUser, Env, Role } from './types'
 
 /** App sessions last 30 days until the user explicitly signs out. */
 export const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60
+/** Portal-derived sessions are shorter so a portal role change takes effect within a week. */
+export const PORTAL_SESSION_TTL_SECONDS = 7 * 24 * 60 * 60
 
 export type SessionClaims = {
 	email: string
 	name: string
 	picture?: string
+	/** Inspection role mapped from the portal's sheet at sign-in (signed, so trusted). */
+	portalRole?: Role
 	iat: number
 	exp: number
 }
@@ -41,16 +45,22 @@ async function importHmacKey(secret: string): Promise<CryptoKey> {
 	)
 }
 
-export async function createSessionToken(user: Pick<AuthUser, 'email' | 'name' | 'picture'>, env: Env) {
+export async function createSessionToken(
+	user: Pick<AuthUser, 'email' | 'name' | 'picture'>,
+	env: Env,
+	portalRole?: Role | null,
+) {
 	if (!env.SESSION_SECRET) throw new Error('SESSION_SECRET is not configured')
 
 	const now = Math.floor(Date.now() / 1000)
+	const ttl = portalRole ? PORTAL_SESSION_TTL_SECONDS : SESSION_TTL_SECONDS
 	const claims: SessionClaims = {
 		email: user.email,
 		name: user.name,
 		...(user.picture ? { picture: user.picture } : {}),
+		...(portalRole ? { portalRole } : {}),
 		iat: now,
-		exp: now + SESSION_TTL_SECONDS,
+		exp: now + ttl,
 	}
 
 	const header = textToBase64Url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
@@ -61,7 +71,7 @@ export async function createSessionToken(user: Pick<AuthUser, 'email' | 'name' |
 	return {
 		token: `${data}.${bytesToBase64Url(signature)}`,
 		expiresAt: claims.exp * 1000,
-		expiresIn: SESSION_TTL_SECONDS,
+		expiresIn: ttl,
 	}
 }
 

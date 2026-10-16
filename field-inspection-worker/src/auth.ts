@@ -8,6 +8,8 @@ import {
 } from './access'
 import { jsonResponse } from './cors'
 import { looksLikeJwt, verifySessionToken } from './session'
+import { portalForAudience, portalInspectionRole } from './portalRoles'
+import type { Role } from './types'
 
 export class AuthError extends Error {
 	status: number
@@ -26,6 +28,7 @@ function bearerToken(request: Request): string | null {
 async function authUserFromEmail(
 	env: Env,
 	profile: { email: string; name?: string; picture?: string },
+	portalRole?: Role | null,
 ): Promise<AuthUser> {
 	const email = normalizeEmail(profile.email)
 	if (!email) throw new AuthError('Account has no email')
@@ -33,12 +36,10 @@ async function authUserFromEmail(
 	const org = orgForEmail(email)
 	if (!org) throw new AuthError('Email domain is not allowed', 403)
 
+	// The inspection permissions list wins; otherwise fall back to the role
+	// mapped from the user's portal (carried in a signed session claim).
 	const permissions = await loadPermissions(env)
-	if (!hasAppAccess(email, permissions)) {
-		throw new AuthError('You do not have access to this app', 403)
-	}
-
-	const role = roleForEmail(email, permissions)
+	const role = hasAppAccess(email, permissions) ? roleForEmail(email, permissions) : (portalRole || null)
 	if (!role) throw new AuthError('You do not have access to this app', 403)
 
 	return {
@@ -86,17 +87,15 @@ export async function requireGoogleAuthUser(request: Request, env: Env): Promise
 /**
  * Verify a Google Sign-In ID token (the `credential` the TC/PT portals get
  * from google.accounts.id) so a portal login can mint an app session. The
- * token must have been issued to one of the portals' own OAuth clients,
- * listed in PORTAL_GOOGLE_CLIENT_IDS.
+ * token must have been issued to one of the portals' own OAuth clients
+ * (PORTAL_GOOGLE_CLIENTS). Users not on the inspection permissions list get
+ * a role mapped from that portal's own UserPermissions sheet.
  */
-export async function requireGoogleIdTokenUser(idToken: string, env: Env): Promise<AuthUser> {
+export async function requireGoogleIdTokenUser(
+	idToken: string,
+	env: Env,
+): Promise<{ user: AuthUser; portalRole: Role | null }> {
 	if (!idToken || !looksLikeJwt(idToken)) throw new AuthError('Missing Google credential')
-
-	const allowedAudiences = String(env.PORTAL_GOOGLE_CLIENT_IDS || '')
-		.split(',')
-		.map(s => s.trim())
-		.filter(Boolean)
-	if (!allowedAudiences.length) throw new AuthError('Portal sign-in is not configured', 500)
 
 	// tokeninfo checks the signature and expiry; logins are infrequent, so
 	// one round-trip per sign-in is fine.
@@ -112,7 +111,8 @@ export async function requireGoogleIdTokenUser(idToken: string, env: Env): Promi
 		name?: string
 		picture?: string
 	}
-	if (!info.aud || !allowedAudiences.includes(info.aud)) {
+	const portal = info.aud ? portalForAudience(info.aud, env) : null
+	if (!portal) {
 		throw new AuthError('Google credential was not issued for this app', 401)
 	}
 	if (info.iss !== 'accounts.google.com' && info.iss !== 'https://accounts.google.com') {
@@ -125,11 +125,20 @@ export async function requireGoogleIdTokenUser(idToken: string, env: Env): Promi
 		throw new AuthError('Google email is not verified', 403)
 	}
 
-	return authUserFromEmail(env, {
-		email: info.email || '',
-		name: info.name,
-		picture: info.picture,
-	})
+	const email = normalizeEmail(info.email || '')
+	let portalRole: Role | null = null
+	if (!hasAppAccess(email, await loadPermissions(env))) {
+		try {
+			portalRole = await portalInspectionRole(portal, email, env)
+		} catch (err) {
+			console.error('[portal role]', err)
+			throw new AuthError('Could not check your portal role, try again shortly', 503)
+		}
+		if (!portalRole) throw new AuthError('Your portal role does not include inspections', 403)
+	}
+
+	const user = await authUserFromEmail(env, { email, name: info.name, picture: info.picture }, portalRole)
+	return { user, portalRole }
 }
 
 /**
@@ -147,7 +156,7 @@ export async function requireAuthUser(request: Request, env: Env): Promise<AuthU
 			email: claims.email,
 			name: claims.name,
 			picture: claims.picture,
-		})
+		}, claims.portalRole)
 	}
 
 	return requireGoogleAuthUser(request, env)

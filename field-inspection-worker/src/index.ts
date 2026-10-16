@@ -1,6 +1,6 @@
 import systemPrompt from './prompts/parse-system-prompt.txt'
 import measureFenceSystemPrompt from './prompts/measure-fence-system-prompt.txt'
-import type { AuthUser, Env } from './types'
+import type { AuthUser, Env, Role } from './types'
 import { loadPermissions, savePermissions, withBootstrapAdmins, sanitizePermissions } from './access'
 import { AuthError, authErrorResponse, requireAuthUser, requireGoogleAuthUser, requireGoogleIdTokenUser } from './auth'
 import { emptyCors, getCorsHeaders, jsonResponse } from './cors'
@@ -40,8 +40,8 @@ export default {
 				} catch {
 					return jsonResponse({ error: 'Invalid JSON body' }, origin, 400)
 				}
-				const user = await requireGoogleIdTokenUser(String(body?.credential || ''), env)
-				return await sessionResponse(user, env, origin)
+				const { user, portalRole } = await requireGoogleIdTokenUser(String(body?.credential || ''), env)
+				return await sessionResponse(user, env, origin, portalRole)
 			}
 			if (pathname === '/api/permissions') {
 				return await handlePermissions(request, env, origin)
@@ -86,8 +86,8 @@ async function handleCreateSession(request: Request, env: Env, origin: string): 
 	return sessionResponse(user, env, origin)
 }
 
-async function sessionResponse(user: AuthUser, env: Env, origin: string): Promise<Response> {
-	const session = await createSessionToken(user, env)
+async function sessionResponse(user: AuthUser, env: Env, origin: string, portalRole?: Role | null): Promise<Response> {
+	const session = await createSessionToken(user, env, portalRole)
 	return jsonResponse({
 		token: session.token,
 		expiresAt: session.expiresAt,
