@@ -73,12 +73,18 @@ export async function verifySessionToken(token: string, env: Env): Promise<Sessi
 	const [header, payload, sig] = parts
 	const data = `${header}.${payload}`
 	const key = await importHmacKey(env.SESSION_SECRET)
-	const ok = await crypto.subtle.verify(
-		'HMAC',
-		key,
-		base64UrlToBytes(sig),
-		new TextEncoder().encode(data),
-	)
+	let ok = false
+	try {
+		ok = await crypto.subtle.verify(
+			'HMAC',
+			key,
+			base64UrlToBytes(sig),
+			new TextEncoder().encode(data),
+		)
+	} catch {
+		// Malformed base64 in the signature — an invalid token, not a server error.
+		return null
+	}
 	if (!ok) return null
 
 	try {
