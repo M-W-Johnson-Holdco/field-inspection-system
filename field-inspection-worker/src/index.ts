@@ -16,16 +16,19 @@ export default {
 			return emptyCors(origin)
 		}
 
-		// ── AI routes (unchanged auth model: no Google token required) ──
-		if (request.method === 'POST' && pathname === '/measure-fence') {
-			return handleMeasureFence(request, env, origin)
-		}
-		if (request.method === 'POST' && (pathname === '/' || pathname === '')) {
-			return handleParseTranscript(request, env, origin)
-		}
-
-		// ── Authenticated inspection / permissions API ──
 		try {
+			// ── AI routes ── each call bills the Anthropic key, so they require
+			// the same signed-in session as the rest of the API.
+			if (request.method === 'POST' && pathname === '/measure-fence') {
+				await requireAuthUser(request, env)
+				return await handleMeasureFence(request, env, origin)
+			}
+			if (request.method === 'POST' && (pathname === '/' || pathname === '')) {
+				await requireAuthUser(request, env)
+				return await handleParseTranscript(request, env, origin)
+			}
+
+			// ── Authenticated inspection / permissions API ──
 			if (pathname === '/api/session' && request.method === 'POST') {
 				return await handleCreateSession(request, env, origin)
 			}

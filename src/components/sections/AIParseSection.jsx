@@ -1,8 +1,8 @@
 import { useInspection } from '../../context/InspectionContext'
 import { formatPitch, parsePitchNumerator } from '../../utils/pitch'
 import { formatPropertyAddress } from '../../utils/address'
-
-const WORKER_URL = 'https://field-inspection-worker.k-liss.workers.dev'
+import { useAuth } from '../../context/AuthContext'
+import { WORKER_URL } from '../../lib/inspectionApi'
 
 // Maps AI JSON roof keys → { itemId, fieldLabel }
 const ROOF_MAP = [
@@ -633,6 +633,7 @@ function applyParsed(parsed, ctx) {
 // ── Component ─────────────────────────────────────────────────────
 export default function AIParseSection() {
   const ctx = useInspection()
+  const { ensureAccessToken, recoverFromTokenExpiry } = useAuth()
   const { aiParseState, setAiParseState } = ctx
   const { transcript, status, statusMsg, flags } = aiParseState
 
@@ -654,14 +655,24 @@ export default function AIParseSection() {
       alert('Paste a transcript first.')
       return
     }
+    // Parsing bills the Anthropic key, so the worker requires the signed-in
+    // session; a null token means it lapsed and the re-auth modal is showing.
+    const token = await ensureAccessToken()
+    if (!token) return
     setAiParseState(prev => ({ ...prev, status: 'parsing', statusMsg: 'Sending transcript to AI — this takes 10–20 seconds…', flags: [] }))
 
     try {
       const res = await fetch(WORKER_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ transcript: transcript.trim() }),
       })
+
+      if (res.status === 401) {
+        await recoverFromTokenExpiry()
+        setAiParseState(prev => ({ ...prev, status: 'error', statusMsg: 'Your session expired — sign in again, then tap Parse. Your transcript is still here.' }))
+        return
+      }
 
       const json = await res.json()
 
