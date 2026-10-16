@@ -2,33 +2,40 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { useAuth } from './AuthContext'
 import {
   DEFAULT_PERMISSIONS,
+  ORG_FOLDERS,
+  ROLES,
   hasAppAccess,
-  isAccessAdmin,
+  orgForEmail,
   roleForEmail,
-  viewableOrgs,
 } from '../lib/accessConfig'
-import { loadPermissions, savePermissions } from '../lib/permissionsService'
+import { loadPermissionsAndMe, savePermissions } from '../lib/permissionsService'
 
 const PermissionsContext = createContext(null)
 
 export function PermissionsProvider({ children }) {
   const { accessToken, user, logout, ensureAccessToken } = useAuth()
   const [permissions, setPermissions] = useState(DEFAULT_PERMISSIONS)
+  // Server's view of the signed-in user. Portal-mapped users aren't on the
+  // permissions list, so their role and access come from here.
+  const [me, setMe] = useState(null)
   const [status, setStatus] = useState('idle') // idle | loading | ready | error
 
   const reloadPermissions = useCallback(async () => {
     if (!accessToken) {
       setPermissions(DEFAULT_PERMISSIONS)
+      setMe(null)
       setStatus('idle')
       return
     }
     setStatus('loading')
     try {
-      const next = await loadPermissions(accessToken)
-      setPermissions(next)
+      const next = await loadPermissionsAndMe(accessToken)
+      setPermissions(next.permissions)
+      setMe(next.me)
       setStatus('ready')
     } catch {
       setPermissions(DEFAULT_PERMISSIONS)
+      setMe(null)
       setStatus('error')
     }
   }, [accessToken])
@@ -41,10 +48,10 @@ export function PermissionsProvider({ children }) {
   useEffect(() => {
     if (!user?.email || !accessToken) return
     if (status !== 'ready' && status !== 'error') return
-    if (!hasAppAccess(user.email, permissions)) {
+    if (!me && !hasAppAccess(user.email, permissions)) {
       logout()
     }
-  }, [user?.email, accessToken, status, permissions, logout])
+  }, [user?.email, accessToken, status, permissions, me, logout])
 
   const updatePermissions = useCallback(async (nextPermissions) => {
     const token = await ensureAccessToken()
@@ -55,7 +62,9 @@ export function PermissionsProvider({ children }) {
     return result
   }, [ensureAccessToken])
 
-  const role = roleForEmail(user?.email, permissions)
+  const role = me?.role || roleForEmail(user?.email, permissions)
+  const ownOrg = me?.org || orgForEmail(user?.email)
+  const viewable = !role ? [] : role === ROLES.admin ? [ORG_FOLDERS.PT, ORG_FOLDERS.TC] : (ownOrg ? [ownOrg] : [])
 
   const value = useMemo(() => ({
     permissions,
@@ -63,9 +72,10 @@ export function PermissionsProvider({ children }) {
     role,
     reloadPermissions,
     updatePermissions,
-    isAccessAdmin: isAccessAdmin(user?.email, permissions),
-    viewableOrgs: viewableOrgs(user?.email, permissions),
-  }), [permissions, status, role, reloadPermissions, updatePermissions, user?.email])
+    isAccessAdmin: role === ROLES.admin,
+    viewableOrgs: viewable,
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [permissions, status, role, reloadPermissions, updatePermissions, viewable.join(',')])
 
   return (
     <PermissionsContext.Provider value={value}>

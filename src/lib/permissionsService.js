@@ -6,7 +6,7 @@ import {
   ROLES,
   withBootstrapAdmins,
 } from './accessConfig'
-import { fetchPermissions, putPermissions } from './inspectionApi'
+import { fetchPermissions, fetchPermissionsAndMe, putPermissions } from './inspectionApi'
 
 /** Migrate legacy permissions.json shapes into the users list. */
 function migrateLegacyPermissions(raw) {
@@ -51,6 +51,20 @@ export async function loadPermissions(token) {
     // Re-throw auth expiry so callers can recover; soft-fail other errors at login.
     if (err?.name === 'TokenExpiredError') throw err
     return withBootstrapAdmins({ ...DEFAULT_PERMISSIONS })
+  }
+}
+
+/** Like loadPermissions, plus the server's `me` ({ email, role, org }) or null. */
+export async function loadPermissionsAndMe(token) {
+  try {
+    const { permissions, me } = await fetchPermissionsAndMe(token)
+    return {
+      permissions: permissions ? sanitizePermissions(permissions) : withBootstrapAdmins({ ...DEFAULT_PERMISSIONS }),
+      me,
+    }
+  } catch (err) {
+    if (err?.name === 'TokenExpiredError') throw err
+    return { permissions: withBootstrapAdmins({ ...DEFAULT_PERMISSIONS }), me: null }
   }
 }
 

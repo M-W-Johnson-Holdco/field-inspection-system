@@ -1,4 +1,5 @@
 import { useAuth } from '../context/AuthContext'
+import { EMBEDDED } from '../lib/embed'
 
 export default function ReAuthModal() {
   const { tokenExpired, setTokenExpired, reLogin } = useAuth()
@@ -16,8 +17,13 @@ export default function ReAuthModal() {
         <div className="reauth-modal__icon">⚠️</div>
         <h2 className="reauth-modal__title">Session Expired</h2>
         <p className="reauth-modal__msg">
-          Your session has expired. Sign in again to continue saving and opening inspections.
+          {EMBEDDED
+            ? 'Your inspection session has expired. Tap Reconnect. If that does not work, sign out of the portal and sign back in.'
+            : 'Your session has expired. Sign in again to continue saving and opening inspections.'}
         </p>
+        {EMBEDDED ? (
+          <button className="reauth-modal__btn" onClick={handleSignIn}>Reconnect</button>
+        ) : (
         <button className="reauth-modal__btn" onClick={handleSignIn}>
           <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style={{ flexShrink: 0 }}>
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -27,6 +33,7 @@ export default function ReAuthModal() {
           </svg>
           Sign in with Google
         </button>
+        )}
       </div>
     </>
   )

@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useInspection } from '../context/InspectionContext'
 import { brandForEmail, orgForEmail } from '../lib/accessConfig'
+import { EMBEDDED } from '../lib/embed'
 import { ChevronDown } from 'lucide-react'
 import tcLogo from '../assets/tc_logo.png'
 import ptLogo from '../assets/pt_logo.png'
@@ -105,7 +106,8 @@ export default function Header() {
           )}
           <div>
             <p className="app-header__user-name">{user?.name}</p>
-            <button className="link-button" onClick={handleLogout}>Sign out</button>
+            {/* Embedded: signing out happens in the portal. */}
+            {!EMBEDDED && <button className="link-button" onClick={handleLogout}>Sign out</button>}
           </div>
         </div>
       </div>

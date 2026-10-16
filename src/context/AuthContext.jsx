@@ -3,6 +3,7 @@ import { useGoogleLogin, useGoogleOAuth } from '@react-oauth/google'
 import { hasAppAccess, isAllowedDomainEmail, normalizeEmail } from '../lib/accessConfig'
 import { createAppSession } from '../lib/inspectionApi'
 import { loadPermissions } from '../lib/permissionsService'
+import { EMBEDDED, onPortalMessage, postToPortal } from '../lib/embed'
 
 const AuthContext = createContext(null)
 
@@ -61,6 +62,8 @@ export function AuthProvider({ children }) {
   })
   const [accessToken, setAccessToken] = useState(null)
   const [tokenExpired, setTokenExpired] = useState(false)
+  // Embedded in a portal: why the portal couldn't hand over a session.
+  const [embedError, setEmbedError] = useState('')
 
   const userRef = useRef(user)
   const accessTokenRef = useRef(accessToken)
@@ -164,7 +167,9 @@ export function AuthProvider({ children }) {
     pendingTokenRef.current = { resolve, timeoutId, promise }
 
     try {
-      requestTokenRef.current?.({ prompt: 'select_account' })
+      // Embedded: the portal owns sign-in, so ask it for a fresh session.
+      if (EMBEDDED) postToPortal({ type: 'insp:need-session' })
+      else requestTokenRef.current?.({ prompt: 'select_account' })
     } catch (err) {
       console.error('Interactive token request failed to start:', err)
       resolvePending(false)
@@ -257,6 +262,24 @@ export function AuthProvider({ children }) {
     setTokenExpired(true)
   }, [user, scriptLoadedSuccessfully])
 
+  // Embedded: take the session the portal's login created.
+  useEffect(() => {
+    if (!EMBEDDED) return undefined
+    const off = onPortalMessage((msg) => {
+      if (msg.type === 'insp:session' && msg.token && msg.expiresAt) {
+        bootstrapDoneRef.current = true
+        setEmbedError('')
+        applySession({ token: msg.token, expiresAt: msg.expiresAt }, toUserData(msg.user || {}))
+        resolvePending(true, msg.token)
+      } else if (msg.type === 'insp:no-session') {
+        setEmbedError(msg.reason || 'Sign out of the portal and sign back in to use inspections.')
+        resolvePending(false)
+      }
+    })
+    postToPortal({ type: 'insp:ready' })
+    return off
+  }, [])
+
   useEffect(() => () => {
     resolvePending(false)
   }, [])
@@ -267,6 +290,7 @@ export function AuthProvider({ children }) {
       accessToken,
       tokenExpired,
       setTokenExpired,
+      embedError,
       login,
       reLogin,
       logout,

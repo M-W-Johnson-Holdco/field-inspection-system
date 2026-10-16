@@ -156,6 +156,15 @@ export async function fetchPermissions(token) {
   return data?.permissions ?? data
 }
 
+/**
+ * Permissions plus `me` — the server's view of the signed-in user, whose
+ * role may come from the portal (and so not appear in the permissions list).
+ */
+export async function fetchPermissionsAndMe(token) {
+  const data = await apiFetch('/api/permissions', token)
+  return { permissions: data?.permissions ?? data, me: data?.me || null }
+}
+
 export async function putPermissions(token, permissions) {
   const data = await apiFetch('/api/permissions', token, {
     method: 'PUT',

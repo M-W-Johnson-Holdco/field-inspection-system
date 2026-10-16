@@ -4,6 +4,18 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import { PermissionsProvider } from './context/PermissionsContext'
 import LoginScreen from './components/LoginScreen'
 import AppShell from './components/AppShell'
+import { EMBEDDED } from './lib/embed'
+
+// Embedded in a portal tab: no Google sign-in here — wait for the portal's session.
+function EmbedConnecting() {
+  const { embedError } = useAuth()
+  return (
+    <div className="coming-soon app-card" style={{ margin: '24px auto', maxWidth: 420, textAlign: 'center' }}>
+      <p className="section-eyebrow">Inspections</p>
+      <p className="coming-soon__sub">{embedError || 'Connecting to your portal sign-in…'}</p>
+    </div>
+  )
+}
 
 function ProtectedRoute({ children }) {
   const { user } = useAuth()
@@ -16,7 +28,7 @@ function AppRoutes() {
     <Routes>
       <Route
         path="/login"
-        element={user ? <Navigate to="/" replace /> : <LoginScreen />}
+        element={user ? <Navigate to="/" replace /> : (EMBEDDED ? <EmbedConnecting /> : <LoginScreen />)}
       />
       <Route
         path="/"
