@@ -113,7 +113,7 @@ function calculateCompletion(data) {
   const totals = { filled: 0, total: 0 }
   const ji = data.jobInfo || {}
 
-  ;['cust', 'preferredContact', 'pm', 'insp', 'ins', 'claim', 'claimFileDate', 'stormDate', 'lossType', 'frontOfRiskDirection'].forEach(key => {
+  ;['cust', 'pm', 'insp', 'ins', 'claim', 'claimFileDate', 'stormDate', 'lossType', 'frontOfRiskDirection'].forEach(key => {
     countValue(ji[key], totals)
   })
   const lossTypes = Array.isArray(ji.lossType) ? ji.lossType : []
@@ -128,13 +128,6 @@ function calculateCompletion(data) {
   if (ji.residenceType === 'Rental') {
     countValue(ji.tenantname, totals)
     countValue(ji.tenantphone, totals, isValidPhone)
-  }
-  countValue(ji.isMainContact, totals)
-  if (ji.isMainContact === 'Yes') {
-    countValue(ji.contactName, totals)
-    countValue(ji.contactRelationship, totals)
-    countValue(ji.contactPhone, totals, isValidPhone)
-    countValue(ji.contactEmail, totals, isValidEmail)
   }
   countValue(ji.gatedCommunity, totals)
   if (ji.gatedCommunity === 'Yes') {

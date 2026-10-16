@@ -8,7 +8,6 @@ import { formatPropertyAddress } from '../../utils/address'
 import { EMBEDDED } from '../../lib/embed'
 import AcuLynxCard from '../AcuLynxCard'
 
-const CONTACT_OPTIONS = ['Phone', 'Email', 'Text']
 const LOSS_TYPE_OPTIONS = [
   'Wind',
   'Hail',
@@ -214,32 +213,11 @@ export default function JobInfo() {
     )
   }
 
-  function toggleContact(val) {
-    const cur = Array.isArray(ji.preferredContact) ? ji.preferredContact : []
-    const nextSelected = cur.includes(val)
-      ? cur.filter(v => v !== val)
-      : [...cur, val]
-    updateJobInfo(
-      'preferredContact',
-      CONTACT_OPTIONS.filter(option => nextSelected.includes(option)),
-    )
-  }
-
   function setLossTypeSelection(nextSelected) {
     updateJobInfo(
       'lossType',
       LOSS_TYPE_OPTIONS.filter(option => nextSelected.includes(option)),
     )
-  }
-
-  function setMainContact(val) {
-    updateJobInfo('isMainContact', val)
-    if (val !== 'Yes') {
-      updateJobInfo('contactName', '')
-      updateJobInfo('contactRelationship', '')
-      updateJobInfo('contactPhone', '')
-      updateJobInfo('contactEmail', '')
-    }
   }
 
   function setResidence(val) {
@@ -285,16 +263,6 @@ export default function JobInfo() {
   const addressErrors = validateAddressParts(addressDraft)
   const showAddressErrors = addressTouched && hasAddressErrors(addressErrors)
   const addressCanComplete = !hasAddressErrors(addressErrors)
-  const preferredContactSelected = Array.isArray(ji.preferredContact) ? ji.preferredContact : []
-  const preferredContactOrdered = CONTACT_OPTIONS.filter(option => preferredContactSelected.includes(option))
-  const preferredContactDisplayValue = preferredContactOrdered.length ? '__selected__' : ''
-  const preferredContactDisplayLabel = preferredContactOrdered.length
-    ? preferredContactOrdered.join(', ')
-    : 'Select'
-  const preferredContactSelectClass = withSelectPlaceholderClass(
-    'field-select compact-select field-select--native-multi-overlay',
-    preferredContactDisplayValue,
-  )
   const lossTypeSelected = Array.isArray(ji.lossType) ? ji.lossType : []
   const lossTypeOrdered = LOSS_TYPE_OPTIONS.filter(option => lossTypeSelected.includes(option))
   const lossTypeDisplayValue = lossTypeOrdered.length ? '__selected__' : ''
@@ -332,55 +300,6 @@ export default function JobInfo() {
                 {field('phone', 'Customer Phone', { type: 'tel', inputMode: 'tel', placeholder: '(214) 555-0100', validation: 'phone', required: true })}
                 {field('email', 'Customer Email', { type: 'email', placeholder: 'john@email.com', validation: 'email', required: true })}
 
-                <div className="form-field form-field--full">
-                  <label className="form-label">Main Contact?</label>
-                  <select
-                    className={withSelectPlaceholderClass('field-select compact-select', ji.isMainContact)}
-                    value={ji.isMainContact || ''}
-                    onChange={e => setMainContact(e.target.value)}
-                  >
-                    <option value="">Select</option>
-                    <option value="Yes">Yes</option>
-                    <option value="No">No</option>
-                    <option value="N/A">N/A</option>
-                  </select>
-                </div>
-
-                {(ji.isMainContact === 'Yes') && (
-                  <>
-                    {field('contactName', 'Main Contact Name', { full: true, placeholder: 'Full name', required: true })}
-                    {field('contactRelationship', 'Relationship to Property Owner', { full: true, placeholder: 'e.g. Spouse, Property manager', required: true })}
-                    {field('contactPhone', 'Main Contact Phone', { type: 'tel', inputMode: 'tel', placeholder: '(214) 555-0101', validation: 'phone', required: true })}
-                    {field('contactEmail', 'Main Contact Email', { type: 'email', placeholder: 'contact@email.com', validation: 'email', required: true })}
-                  </>
-                )}
-
-                <div className="form-field form-field--full">
-                  <label className="form-label">
-                    Preferred Contact Method
-                    <span className="form-label__hint"> (SELECT ALL THAT APPLY)</span>
-                  </label>
-                  <div className={`native-multi-face${preferredContactOrdered.length ? '' : ' native-multi-face--placeholder'}`}>
-                    <span className="native-multi-face__text">{preferredContactDisplayLabel}</span>
-                    <select
-                      className={preferredContactSelectClass}
-                      value={preferredContactDisplayValue}
-                      aria-label="Preferred Contact Method"
-                      onChange={e => {
-                        const next = e.target.value
-                        if (!next || next === '__selected__') return
-                        toggleContact(next)
-                      }}
-                    >
-                      <option value={preferredContactDisplayValue} hidden>{preferredContactDisplayLabel}</option>
-                      {CONTACT_OPTIONS.map(option => (
-                        <option key={option} value={option}>
-                          {preferredContactOrdered.includes(option) ? `✓ ${option}` : option}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
               </div>
             </JobInfoGroup>
 
