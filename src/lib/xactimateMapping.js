@@ -1,5 +1,5 @@
 import { isRoofItemActive } from '../utils/roofItemStatus'
-import { SQ_METAL_KEY, SQ_MINUS_METAL_KEY } from '../data/roofItems'
+import { SQ_METAL_KEY, SQ_MINUS_METAL_KEY, SQ_TOTAL_KEY } from '../data/roofItems'
 import { fenceTotalLf } from '../utils/fenceLength'
 import { measurementToDecimalFeet, measurementToDecimalInches } from '../utils/measurement'
 import { exhaustStackSizeBucketFromFields } from '../utils/exhaustStackSize'
@@ -58,12 +58,19 @@ export const ROOF_LINE_ITEMS = {
     const shingleStyles = styles.filter(s => s !== 'Metal')
     const hasMetal = styles.includes('Metal') || num(fields, SQ_METAL_KEY) != null
     const note = `${num(fields, 'Stories') ?? '?'} stories, ${num(fields, 'Layers') ?? '?'} layer(s), predominant pitch ${str(fields, 'Predominant Pitch (x/12)') || str(fields, 'Predominant Pitch') || '?'}`
+    const total = num(fields, SQ_TOTAL_KEY)
+    const metalSq = num(fields, SQ_METAL_KEY)
+    let shingleSq = num(fields, SQ_MINUS_METAL_KEY)
+    if (shingleSq == null && total != null) {
+      if (!hasMetal) shingleSq = total
+      else if (metalSq != null) shingleSq = Math.max(0, total - metalSq)
+    }
     const lines = []
-    if (!hasMetal || shingleStyles.length || num(fields, SQ_MINUS_METAL_KEY) != null) {
+    if (!hasMetal || shingleStyles.length || shingleSq != null) {
       lines.push({
         trade: 'Roofing', category: 'RFG',
         description: `Comp. shingle - ${shingleStyles.join('/') || 'unspecified style'}`,
-        unit: 'SQ', qty: num(fields, SQ_MINUS_METAL_KEY),
+        unit: 'SQ', qty: shingleSq,
         damaged: null,
         note,
       })

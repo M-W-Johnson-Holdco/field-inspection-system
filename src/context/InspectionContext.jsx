@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useRef } from 'react'
 import { idbSave, idbLoad } from '../lib/idb'
-import { LEGACY_SQ_KEY, ROOF_ITEMS, SQ_MINUS_METAL_KEY } from '../data/roofItems'
+import { LEGACY_SQ_KEY, ROOF_ITEMS, SQ_MINUS_METAL_KEY, SQ_TOTAL_KEY } from '../data/roofItems'
 import { ELEV_ITEMS, DIRECTIONS, ELEV_ADDMORE_IDS } from '../data/elevItems'
 import { EXTERIOR_ITEMS } from '../data/exteriorItems'
 import { formatPitch, parsePitchNumerator } from '../utils/pitch'
@@ -139,7 +139,7 @@ function calculateCompletion(data) {
     if (!item || !isRoofItemActive(item)) return
 
     ;(itemDef.fields || []).forEach(field => {
-      if (!isFieldVisible(field, item.fields)) return
+      if (field.optional || !isFieldVisible(field, item.fields)) return
       countValue(item.fields?.[field.l], totals)
     })
     if (itemDef.flags?.includes('D')) countValue(item.fields?._damage, totals)
@@ -1139,9 +1139,9 @@ function normalizeRi0(roofData) {
     fields[PREDOMINANT_PITCH_KEY] = formatPitch(parsePitchNumerator(fields[PREDOMINANT_PITCH_KEY], 0))
   }
 
-  // "SQ's" was split into SQ's (Minus Metal) + Metal SQ's.
-  if (fields[LEGACY_SQ_KEY] != null && fields[LEGACY_SQ_KEY] !== '' && (fields[SQ_MINUS_METAL_KEY] == null || fields[SQ_MINUS_METAL_KEY] === '')) {
-    fields[SQ_MINUS_METAL_KEY] = fields[LEGACY_SQ_KEY]
+  // The old single "SQ's" was the report total; it's now SQ's (From XML).
+  if (fields[LEGACY_SQ_KEY] != null && fields[LEGACY_SQ_KEY] !== '' && (fields[SQ_TOTAL_KEY] == null || fields[SQ_TOTAL_KEY] === '')) {
+    fields[SQ_TOTAL_KEY] = fields[LEGACY_SQ_KEY]
   }
   delete fields[LEGACY_SQ_KEY]
 
@@ -3441,7 +3441,7 @@ export function InspectionProvider({ children }) {
         const ri0 = roofData.ri0
         const fields = { ...ri0.fields }
         if (parsed.pitch) fields['Predominant Pitch (x/12)'] = parsed.pitch
-        if (parsed.squares != null && parsed.squares > 0) fields[SQ_MINUS_METAL_KEY] = String(parsed.squares)
+        if (parsed.squares != null && parsed.squares > 0) fields[SQ_TOTAL_KEY] = String(parsed.squares)
         roofData.ri0 = { ...ri0, fields }
       }
 

@@ -15,7 +15,7 @@ function buildPreviewRows(parsed, existing) {
     rows.push({ label: 'Predominant Pitch (x/12)', value: pitch, overwrite: Boolean(existing?.pitch) })
   }
   if (squares != null && squares > 0) {
-    rows.push({ label: "SQ's (Minus Metal)", value: String(squares), overwrite: Boolean(existing?.squares) })
+    rows.push({ label: "SQ's (From XML)", value: String(squares), overwrite: Boolean(existing?.squares) })
   }
   if (lineLengths?.RIDGE > 0) {
     rows.push({
