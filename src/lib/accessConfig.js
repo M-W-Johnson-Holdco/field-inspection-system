@@ -45,7 +45,6 @@ export const ROLE_DESCRIPTIONS = {
 
 // First admins who can open Access Settings before permissions.json exists in storage.
 export const BOOTSTRAP_ACCESS_ADMINS = [
-  'j.gil@peachtreerestorations.com',
   'k.liss@peachtreerestorations.com',
   'r.deering@peachtreerestorations.com',
   'mj@peachtreerestorations.com',

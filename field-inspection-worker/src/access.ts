@@ -9,7 +9,6 @@ const DOMAIN_TO_ORG: Record<string, OrgKey> = {
 }
 
 export const BOOTSTRAP_ACCESS_ADMINS = [
-	'j.gil@peachtreerestorations.com',
 	'k.liss@peachtreerestorations.com',
 	'r.deering@peachtreerestorations.com',
 	'mj@peachtreerestorations.com',
