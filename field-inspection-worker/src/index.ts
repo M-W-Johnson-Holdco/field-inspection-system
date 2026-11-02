@@ -7,6 +7,7 @@ import { emptyCors, getCorsHeaders, jsonResponse } from './cors'
 import { folderPathParams, getInspection, listInspections, putInspection } from './inspections'
 import { createSessionToken } from './session'
 import { transcribeAudio } from './transcribe'
+import { handleWoTradesFromPdfs } from './woTrades'
 
 export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
@@ -23,6 +24,11 @@ export default {
 			if (request.method === 'POST' && pathname === '/measure-fence') {
 				await requireAuthUser(request, env)
 				return await handleMeasureFence(request, env, origin)
+			}
+			// TC portal Work Order: worksheet + estimate PDFs → Other Trades rows.
+			if (request.method === 'POST' && pathname === '/wo-trades-from-pdfs') {
+				await requireAuthUser(request, env)
+				return await handleWoTradesFromPdfs(request, env, origin)
 			}
 			if (request.method === 'POST' && (pathname === '/' || pathname === '')) {
 				await requireAuthUser(request, env)
