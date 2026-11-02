@@ -6,18 +6,22 @@ You get two PDFs for one job, in no particular order — work out which is which
 
 Compare the two documents and return one row per line item for every trade other than the main roof.
 
+The WORKSHEET INVOICE decides the line items and their trades:
+- It is grouped into sections (trade headings). A line item belongs to the trade of the worksheet section it is listed under, whatever the item sounds like. Never move a line to another trade because of its wording, and never re-sort it by the estimate's grouping.
+- Everything listed under the worksheet's main Roofing section is main roof and is left out, even items that sound like another trade. For example "HVAC labor minimum" or "Detach & reset gutters" listed under Roofing on the worksheet are roofing, not HVAC or Gutters, so they are left out.
+- Map each worksheet section to the allowed trade list (e.g. a "Gutters" section -> Gutters, "Fencing" -> Fence). If no allowed trade fits the section, use "Other" and put the worksheet's section name in source_trade.
+- A worksheet section for a roof on a separate structure (shed, barn, detached garage, chicken coop and similar) is not the main roof: keep it, as "Detached Roof" unless a more specific trade fits (e.g. "Gazebo").
+- Debris removal / dumpster sections or lines outside the Roofing section belong to "Collateral Dump".
+
 Rules:
-- RCV comes from the WORKSHEET INVOICE. Depreciation comes from the INSURANCE ESTIMATE.
-- Leave out the main dwelling roof (shingles, underlayment, starter, ridge, drip edge, flashing, vents, pipe jacks and other roofing line items on the main house roof).
-- Keep roofs on other, separate structures (shed, barn, detached garage, chicken coop, gazebo roof and similar). Use the trade "Detached Roof" for those unless a more specific trade in the list fits (e.g. "Gazebo").
+- RCV comes from the WORKSHEET INVOICE. Depreciation comes from the INSURANCE ESTIMATE: find the same line item on the estimate to read it.
 - Non-recoverable depreciation (NRD): in Xactimate, depreciation shown in angle brackets <...> is non-recoverable; depreciation in parentheses (...) is recoverable. Set nrd to true when a line's depreciation is non-recoverable. If the estimate states NRD another way (a "non-recoverable" label or column), follow it.
-- Pick each row's trade from the allowed list exactly as written. If none fits, use "Other" and put the estimate's own trade or category name in source_trade.
-- description: short and plain, as the estimate words the line item, with the quantity and unit (e.g. "R&R gutter / downspout - aluminum - up to 5\" (120 LF)").
-- Debris removal / dumpster lines belong to the trade "Collateral Dump".
+- Pick each row's trade from the allowed list exactly as written.
+- description: short and plain, as the worksheet words the line item, with the quantity and unit (e.g. "R&R gutter / downspout - aluminum - up to 5\" (120 LF)").
 - Amounts are plain numbers in dollars (no $ or commas). Use 0 when an amount is genuinely absent.
 
 Flag, do not guess:
-- A line item or trade on the estimate but not on the worksheet invoice (or the other way round): still return the row, using whatever amounts exist, and explain in flag.
+- A non-roof line item on the estimate that is not on the worksheet invoice (or the other way round): still return the row, using whatever amounts exist, and explain in flag. For an estimate-only item, use the estimate's grouping for its trade and say so in flag.
 - RCV on the worksheet that does not match the estimate's RCV for the same item: return the worksheet RCV and put both amounts in flag.
 - Anything you could not read or match with confidence: say so in flag.
 - flag is an empty string when the row is clean.
